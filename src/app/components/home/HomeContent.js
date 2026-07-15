@@ -15,7 +15,7 @@ import {
   FolderHeart,
   Music,
   MoreVertical,
-  X
+  X,
 } from "lucide-react";
 
 export default function HomeContent({
@@ -33,7 +33,7 @@ export default function HomeContent({
   setNewPlaylistName,
   setActiveMenuSongId,
   handleCreatePlaylist,
-  toggleSongMenu
+  toggleSongMenu,
 }) {
   const {
     songs,
@@ -45,33 +45,35 @@ export default function HomeContent({
     playlists,
     addSongToPlaylist,
     removeSongFromPlaylist,
-    recentlyPlayed
+    recentlyPlayed,
   } = useAudio();
 
   const genres = ["All", "Lo-Fi", "Synthwave", "Pop", "Rock"];
 
   const getFilteredSongs = () => {
-    let list = [...songs];
+    const safeSongs = Array.isArray(songs) ? songs : [];
+    let list = [...safeSongs];
     if (activeTab === "favorites") {
-      list = list.filter(song => favorites.includes(song.id));
+      list = list.filter((song) => favorites.includes(song.id));
     } else if (activeTab === "playlist" && activePlaylistId) {
-      const playlist = playlists.find(p => p.id === activePlaylistId);
+      const playlist = playlists.find((p) => p.id === activePlaylistId);
       if (playlist) {
-        list = list.filter(song => playlist.songIds.includes(song.id));
+        list = list.filter((song) => playlist.songIds.includes(song.id));
       } else {
         list = [];
       }
     }
     if (selectedGenre !== "All") {
-      list = list.filter(song => song.genre === selectedGenre);
+      list = list.filter((song) => song.genre === selectedGenre);
     }
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
+    const trimmedQuery = (searchQuery || "").toString().trim();
+    if (trimmedQuery !== "") {
+      const query = trimmedQuery.toLowerCase();
       list = list.filter(
-        song =>
+        (song) =>
           song.title.toLowerCase().includes(query) ||
           song.artist.toLowerCase().includes(query) ||
-          song.album.toLowerCase().includes(query)
+          song.album.toLowerCase().includes(query),
       );
     }
     return list;
@@ -81,12 +83,12 @@ export default function HomeContent({
 
   const getRecentlyPlayedSongs = () => {
     return recentlyPlayed
-      .map(id => songs.find(s => s.id === id))
+      .map((id) => songs.find((s) => s.id === id))
       .filter(Boolean);
   };
 
   const recentlyPlayedList = getRecentlyPlayedSongs();
-  const activePlaylist = playlists.find(p => p.id === activePlaylistId);
+  const activePlaylist = playlists.find((p) => p.id === activePlaylistId);
 
   useEffect(() => {
     const handleOutsideClick = () => setActiveMenuSongId(null);
@@ -99,25 +101,38 @@ export default function HomeContent({
       {/* MOBILE NAVIGATION BAR */}
       <div className="md:hidden flex flex-wrap gap-2 pb-2 border-b border-gray-200">
         <button
-          onClick={() => { setActiveTab("discover"); setActivePlaylistId(null); }}
+          onClick={() => {
+            setActiveTab("discover");
+            setActivePlaylistId(null);
+          }}
           className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-            activeTab === "discover" ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600"
+            activeTab === "discover"
+              ? "bg-gray-900 text-white"
+              : "bg-white border border-gray-200 text-gray-600"
           }`}
         >
           Browse
         </button>
         <button
-          onClick={() => { setActiveTab("favorites"); setActivePlaylistId(null); }}
+          onClick={() => {
+            setActiveTab("favorites");
+            setActivePlaylistId(null);
+          }}
           className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-            activeTab === "favorites" ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600"
+            activeTab === "favorites"
+              ? "bg-gray-900 text-white"
+              : "bg-white border border-gray-200 text-gray-600"
           }`}
         >
           Favorites ({favorites.length})
         </button>
-        {playlists.map(list => (
+        {playlists.map((list) => (
           <button
             key={list.id}
-            onClick={() => { setActiveTab("playlist"); setActivePlaylistId(list.id); }}
+            onClick={() => {
+              setActiveTab("playlist");
+              setActivePlaylistId(list.id);
+            }}
             className={`px-3 py-1.5 rounded-full text-xs font-medium ${
               activeTab === "playlist" && activePlaylistId === list.id
                 ? "bg-gray-900 text-white"
@@ -174,49 +189,51 @@ export default function HomeContent({
       </div>
 
       {/* RECENTLY PLAYED */}
-      {activeTab === "discover" && recentlyPlayedList.length > 0 && !searchQuery && (
-        <div className="space-y-3.5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            Recently Played
-          </h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {recentlyPlayedList.map(song => (
-              <div
-                key={`recent-${song.id}`}
-                onClick={() => playSong(song)}
-                className="flex-shrink-0 w-32 group cursor-pointer"
-              >
-                <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-gray-200/60 shadow-sm bg-white mb-2">
-                  <img
-                    src={song.coverUrl}
-                    alt={song.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-md scale-90 group-hover:scale-100 transition-transform">
-                      {currentSong?.id === song.id && isPlaying ? (
-                        <Pause className="w-4 h-4 text-gray-800 fill-current" />
-                      ) : (
-                        <Play className="w-4 h-4 text-gray-800 fill-current ml-0.5" />
-                      )}
+      {activeTab === "discover" &&
+        recentlyPlayedList.length > 0 &&
+        !searchQuery && (
+          <div className="space-y-3.5">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              Recently Played
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {recentlyPlayedList.map((song) => (
+                <div
+                  key={`recent-${song.id}`}
+                  onClick={() => playSong(song)}
+                  className="flex-shrink-0 w-32 group cursor-pointer"
+                >
+                  <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-gray-200/60 shadow-sm bg-white mb-2">
+                    <img
+                      src={song.coverUrl}
+                      alt={song.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-md scale-90 group-hover:scale-100 transition-transform">
+                        {currentSong?.id === song.id && isPlaying ? (
+                          <Pause className="w-4 h-4 text-gray-800 fill-current" />
+                        ) : (
+                          <Play className="w-4 h-4 text-gray-800 fill-current ml-0.5" />
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <span className="font-medium text-xs text-gray-800 block truncate group-hover:underline">
+                    {song.title}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block truncate">
+                    {song.artist}
+                  </span>
                 </div>
-                <span className="font-medium text-xs text-gray-800 block truncate group-hover:underline">
-                  {song.title}
-                </span>
-                <span className="text-[10px] text-gray-400 block truncate">
-                  {song.artist}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* GENRE FILTER TABS */}
       <div className="flex gap-1.5 border-b border-gray-200/80 pb-0.5">
-        {genres.map(genre => (
+        {genres.map((genre) => (
           <button
             key={genre}
             onClick={() => setSelectedGenre(genre)}
@@ -279,7 +296,9 @@ export default function HomeContent({
                             className="w-9 h-9 object-cover rounded border border-gray-100"
                           />
                           <div className="min-w-0">
-                            <span className={`font-medium block truncate ${isCurrent ? "text-indigo-600" : "text-gray-800"}`}>
+                            <span
+                              className={`font-medium block truncate ${isCurrent ? "text-indigo-600" : "text-gray-800"}`}
+                            >
                               {song.title}
                             </span>
                             <span className="text-xs text-gray-400 block truncate">
@@ -301,14 +320,21 @@ export default function HomeContent({
                         {song.duration}
                       </td>
 
-                      <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="py-3 px-4 text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => toggleFavorite(song.id)}
                             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                            title={isFavorite ? "Remove favorite" : "Mark favorite"}
+                            title={
+                              isFavorite ? "Remove favorite" : "Mark favorite"
+                            }
                           >
-                            <Heart className={`w-3.5 h-3.5 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-gray-600"}`} />
+                            <Heart
+                              className={`w-3.5 h-3.5 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-gray-600"}`}
+                            />
                           </button>
 
                           <div className="relative">
@@ -326,14 +352,19 @@ export default function HomeContent({
                                   Add to Playlist
                                 </div>
                                 {playlists.length > 0 ? (
-                                  playlists.map(list => {
-                                    const isInPlaylist = list.songIds.includes(song.id);
+                                  playlists.map((list) => {
+                                    const isInPlaylist = list.songIds.includes(
+                                      song.id,
+                                    );
                                     return (
                                       <button
                                         key={`drop-${list.id}`}
                                         onClick={() => {
                                           if (isInPlaylist) {
-                                            removeSongFromPlaylist(list.id, song.id);
+                                            removeSongFromPlaylist(
+                                              list.id,
+                                              song.id,
+                                            );
                                           } else {
                                             addSongToPlaylist(list.id, song.id);
                                           }
@@ -341,7 +372,9 @@ export default function HomeContent({
                                         }}
                                         className="w-full px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex items-center justify-between"
                                       >
-                                        <span className="truncate">{list.name}</span>
+                                        <span className="truncate">
+                                          {list.name}
+                                        </span>
                                         {isInPlaylist ? (
                                           <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1 py-0.2 rounded font-semibold border border-indigo-100 flex-shrink-0">
                                             Added
@@ -357,19 +390,23 @@ export default function HomeContent({
                                     No custom playlists
                                   </div>
                                 )}
-                                {activeTab === "playlist" && activePlaylistId && (
-                                  <div className="border-t border-gray-100 mt-1">
-                                    <button
-                                      onClick={() => {
-                                        removeSongFromPlaylist(activePlaylistId, song.id);
-                                        setActiveMenuSongId(null);
-                                      }}
-                                      className="w-full px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 text-left font-medium"
-                                    >
-                                      Remove from this playlist
-                                    </button>
-                                  </div>
-                                )}
+                                {activeTab === "playlist" &&
+                                  activePlaylistId && (
+                                    <div className="border-t border-gray-100 mt-1">
+                                      <button
+                                        onClick={() => {
+                                          removeSongFromPlaylist(
+                                            activePlaylistId,
+                                            song.id,
+                                          );
+                                          setActiveMenuSongId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 text-left font-medium"
+                                      >
+                                        Remove from this playlist
+                                      </button>
+                                    </div>
+                                  )}
                               </div>
                             )}
                           </div>
@@ -392,7 +429,9 @@ export default function HomeContent({
         ) : (
           <div className="p-12 text-center text-gray-400">
             <Music className="w-8 h-8 mx-auto text-gray-300 mb-3" />
-            <span className="font-medium block text-gray-500">No songs found</span>
+            <span className="font-medium block text-gray-500">
+              No songs found
+            </span>
             <span className="text-xs block mt-1">
               Try adjusting your search query, genre filter, or playlist.
             </span>
@@ -405,7 +444,9 @@ export default function HomeContent({
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <span className="font-semibold text-gray-800 text-sm">Create New Playlist</span>
+              <span className="font-semibold text-gray-800 text-sm">
+                Create New Playlist
+              </span>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"
