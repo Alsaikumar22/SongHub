@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAudio } from "./context/audio-context";
 import { useSearch } from "./context/search-context";
+import BrowseByLetterSection from "./components/browse/BrowseByLetterSection";
 import {
   ChevronLeft,
   Compass,
@@ -528,6 +529,11 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
+
+            {/* Browse By Letter Section */}
+            {activeTab === "discover" && !searchQuery && (
+              <BrowseByLetterSection />
+            )}
 
             {/* Box 4 — Genre Tabs */}
             <div className="flex gap-1.5 border-b border-[rgba(212,163,42,0.18)] pb-0.5">
