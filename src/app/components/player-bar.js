@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAudio } from "../context/audio-context";
 import {
   Play,
@@ -16,6 +17,28 @@ import {
   Maximize2,
   ListMusic
 } from "lucide-react";
+
+// Inline MicVocal SVG to bypass Turbopack / lucide caching errors
+function MicIcon({ className }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12" />
+      <path d="M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5" />
+      <circle cx="16" cy="7" r="5" />
+    </svg>
+  );
+}
 
 export default function PlayerBar() {
   const {
@@ -37,18 +60,19 @@ export default function PlayerBar() {
     setIsLooping,
     setIsShuffled,
     favorites,
-    toggleFavorite
+    toggleFavorite,
+    setViewedSongId
   } = useAudio();
 
+  const pathname = usePathname();
   const [sliderVal, setSliderVal] = useState(0);
   const [isClient, setIsClient] = useState(false);
+  const isLyricsPage = currentSong && pathname === `/song/${currentSong.id}`;
 
-  // Sync client side to avoid SSR mismatch on initial mount
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Update slider position as song plays
   useEffect(() => {
     setSliderVal(progress);
   }, [progress]);
@@ -71,12 +95,15 @@ export default function PlayerBar() {
   const isFavorited = currentSong && favorites.includes(currentSong.id);
 
   return (
-    <div className="h-22 bg-gray-950/95 backdrop-blur-md border-t border-gray-800 px-4 md:px-8 flex items-center justify-between shrink-0 transition-all duration-300">
+    <div className="h-22 bg-canvas/95 backdrop-blur-md border-t border-line-muted px-4 md:px-8 flex items-center justify-between shrink-0 transition-all duration-300">
       {/* Left section: Song Details */}
       <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
         {currentSong ? (
           <>
-            <Link href={`/song/${currentSong.id}`} className="group relative block overflow-hidden rounded-md border border-gray-700 flex-shrink-0">
+            <Link
+              href={`/song/${currentSong.id}`}
+              className="group relative block overflow-hidden rounded-md border border-line flex-shrink-0 cursor-pointer"
+            >
               <img
                 src={currentSong.coverUrl}
                 alt={currentSong.title}
@@ -89,38 +116,40 @@ export default function PlayerBar() {
             <div className="overflow-hidden">
               <Link
                 href={`/song/${currentSong.id}`}
-                className="font-medium text-sm text-gray-100 hover:text-gray-300 block truncate hover:underline"
+                className={`font-medium text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer ${
+                  currentSong.teluguTitle ? "font-telugu" : ""
+                }`}
               >
-                {currentSong.title}
+                {currentSong.teluguTitle || currentSong.title}
               </Link>
-              <span className="text-xs text-gray-400 block truncate">
+              <span className="text-xs text-muted block truncate">
                 {currentSong.artist}
               </span>
             </div>
             <button
               onClick={() => toggleFavorite(currentSong.id)}
-              className="p-1 hover:bg-gray-800 rounded-full group transition-colors flex-shrink-0 cursor-pointer"
+              className="p-1 hover:bg-card-hover rounded-full group transition-colors flex-shrink-0 cursor-pointer"
               aria-label="Add to favorites"
             >
               <Heart
                 className={`w-4 h-4 transition-transform group-active:scale-90 ${
                   isFavorited
                     ? "fill-red-500 text-red-500"
-                    : "text-gray-500 hover:text-gray-300"
+                    : "text-dim hover:text-handle"
                 }`}
               />
             </button>
           </>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-md bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500">
+            <div className="w-12 h-12 rounded-md bg-card-hover border border-line flex items-center justify-center text-dim">
               <ListMusic className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-500 block">
+              <span className="text-sm font-medium text-dim block">
                 No Track Selected
               </span>
-              <span className="text-xs text-gray-500 block">
+              <span className="text-xs text-dim block">
                 Select a song to start
               </span>
             </div>
@@ -134,7 +163,7 @@ export default function PlayerBar() {
           <button
             onClick={() => setIsShuffled(!isShuffled)}
             className={`p-1.5 rounded-full transition-all cursor-pointer ${
-              isShuffled ? "text-indigo-400 bg-indigo-950/50 font-semibold" : "text-gray-500 hover:text-gray-300"
+              isShuffled ? "text-title bg-card-hover font-semibold" : "text-dim hover:text-handle"
             }`}
             title="Shuffle"
             disabled={!currentSong}
@@ -144,7 +173,7 @@ export default function PlayerBar() {
 
           <button
             onClick={prevSong}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors active:scale-95 cursor-pointer"
+            className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
             title="Previous Song"
             disabled={!currentSong}
           >
@@ -155,8 +184,8 @@ export default function PlayerBar() {
             onClick={togglePlay}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm cursor-pointer ${
               isPlaying
-                ? "bg-gray-900 text-white hover:bg-gray-800"
-                : "bg-gray-800 text-gray-100 hover:bg-gray-700 border border-gray-700"
+                ? "bg-card text-white hover:bg-card-hover"
+                : "bg-card-hover text-title hover:bg-line border border-line"
             }`}
             title={isPlaying ? "Pause" : "Play"}
           >
@@ -169,7 +198,7 @@ export default function PlayerBar() {
 
           <button
             onClick={nextSong}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors active:scale-95 cursor-pointer"
+            className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
             title="Next Song"
             disabled={!currentSong}
           >
@@ -179,7 +208,7 @@ export default function PlayerBar() {
           <button
             onClick={() => setIsLooping(!isLooping)}
             className={`p-1.5 rounded-full transition-all cursor-pointer ${
-              isLooping ? "text-indigo-400 bg-indigo-950/50 font-semibold" : "text-gray-500 hover:text-gray-300"
+              isLooping ? "text-title bg-card-hover font-semibold" : "text-dim hover:text-handle"
             }`}
             title="Loop"
             disabled={!currentSong}
@@ -190,7 +219,7 @@ export default function PlayerBar() {
 
         {/* Timeline Slider */}
         <div className="w-full flex items-center gap-3">
-          <span className="text-[10px] text-gray-400 tabular-nums w-8 text-right">
+          <span className="text-[10px] text-muted tabular-nums w-8 text-right">
             {formatTime(sliderVal)}
           </span>
           <div className="relative flex-1 group py-2 cursor-pointer">
@@ -203,24 +232,22 @@ export default function PlayerBar() {
               disabled={!currentSong}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-            {/* Custom Track */}
-            <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-1 w-full bg-line rounded-full overflow-hidden">
               <div
-                className="h-full bg-gray-500 group-hover:bg-indigo-600 rounded-full transition-all duration-75"
+                className="h-full bg-dim group-hover:bg-handle rounded-full transition-all duration-75"
                 style={{
                   width: `${(sliderVal / (duration || 100)) * 100}%`
                 }}
               />
             </div>
-            {/* Custom Handle */}
             <div
-              className="absolute w-2.5 h-2.5 bg-gray-200 border border-gray-900 rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+              className="absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
               style={{
                 left: `calc(${(sliderVal / (duration || 100)) * 100}% - 5px)`
               }}
             />
           </div>
-          <span className="text-[10px] text-gray-400 tabular-nums w-8">
+          <span className="text-[10px] text-muted tabular-nums w-8">
             {formatTime(duration)}
           </span>
         </div>
@@ -228,9 +255,27 @@ export default function PlayerBar() {
 
       {/* Right section: Volume & Options */}
       <div className="flex items-center gap-3 w-1/4 justify-end min-w-[150px]">
+        {currentSong ? (
+          <Link
+            href={isLyricsPage ? "/" : `/song/${currentSong.id}`}
+            className={`p-1.5 rounded-full transition-all cursor-pointer ${
+              isLyricsPage
+                ? "text-title bg-card-hover font-semibold"
+                : "text-muted hover:text-copy hover:bg-card-hover"
+            }`}
+            title={isLyricsPage ? "Close Lyrics" : "Lyrics"}
+          >
+            <MicIcon className="w-4 h-4" />
+          </Link>
+        ) : (
+          <span className="p-1.5 text-muted">
+            <MicIcon className="w-4 h-4" />
+          </span>
+        )}
+
         <button
           onClick={toggleMute}
-          className="p-1.5 text-gray-400 hover:text-gray-200 rounded-full hover:bg-gray-800 cursor-pointer"
+          className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
           title={isMuted ? "Unmute" : "Mute"}
         >
           {isMuted || volume === 0 ? (
@@ -250,18 +295,16 @@ export default function PlayerBar() {
             onChange={(e) => adjustVolume(parseFloat(e.target.value))}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           />
-          {/* Custom Volume Track */}
-          <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-1 w-full bg-line rounded-full overflow-hidden">
             <div
-              className="h-full bg-gray-400 group-hover:bg-indigo-600 rounded-full"
+              className="h-full bg-muted group-hover:bg-handle rounded-full"
               style={{
                 width: `${(isMuted ? 0 : volume) * 100}%`
               }}
             />
           </div>
-          {/* Custom Volume Handle */}
           <div
-            className="absolute w-2.5 h-2.5 bg-gray-300 border border-gray-900 rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+            className="absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
             style={{
               left: `calc(${(isMuted ? 0 : volume) * 100}% - 5px)`
             }}

@@ -1,21 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=NTR&display=swap');
 @import "tailwindcss";
 
+.font-telugu {
+  font-family: 'NTR', sans-serif;
+}
+
+.font-lato {
+  font-family: 'Lato', sans-serif;
+}
+
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --card: #121212;
+  --card-hover: #1e1e1e;
+  --input: rgba(24, 24, 24, 0.8);
+  --canvas: #070707;
+  --line: #282828;
+  --line-muted: #181818;
+  --title: #ffffff;
+  --copy: #e5e7eb;
+  --muted: #a7a7a7;
+  --dim: #727272;
+  --handle: #b3b3b3;
+  --accent: #1db954;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-input: var(--input);
+  --color-canvas: var(--canvas);
+  --color-line: var(--line);
+  --color-line-muted: var(--line-muted);
+  --color-title: var(--title);
+  --color-copy: var(--copy);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-handle: var(--handle);
+  --color-accent: var(--accent);
+  --font-sans: 'Lato', var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--title);
+  font-family: 'Lato', Arial, Helvetica, sans-serif;
 }
 
 @keyframes bounce-bar {
@@ -61,3 +90,30 @@ body {
   animation-delay: 0.3s;
 }
 
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
