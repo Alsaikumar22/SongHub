@@ -124,6 +124,51 @@ export const MOCK_SONGS = [
     bpm: 65,
     plays: 95403,
     lyrics: "[00:00] (Rain drops on window, glass clinking)\n[00:30] Warm coffee, dim jazz lights\n[01:00] Escaping the cold city nights\n[01:30] Piano chords strike a mellow chord\n[02:00] Standard worries are ignored\n[02:40] (Double bass and drums swing)\n[03:30] Double shots of espresso and blues\n[04:20] Nothing left for us to lose"
+  },
+  {
+    id: "adavi-chetla-naduma",
+    title: "అడవి చెట్ల నడుమ",
+    artist: "O Yaathrikudaa",
+    album: "Worship Sessions",
+    genre: "Rock",
+    duration: "4:15",
+    durationSec: 255,
+    coverUrl: "/worship_forest.png",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    releaseYear: 2024,
+    bpm: 78,
+    plays: 2150000,
+    lyrics: "ఓ యాత్రికుడా ఓహో యాత్రికుడా\nబ్రతుకు ప్రయాణములో గమ్యమెంత దూరమో తెలుసా..\nఓ బాటసారి ఓహో బాటసారి\nజీవిత యాత్రలో కాలమెంత విశాలమో తెలుసా\nగుండె ఆగిపోగానే ఊపిరి ఆగిపోతుంది\nనాడి నిలిచిపోగానే ఆత్మ ఎగిరిపోతుంది\nఅంతా ఆ దైవ నిర్ణయం\nమనిషి కాలగత దేవుని ఆదేశం\nపుట్టగానే తొట్టెలో వేస్తారు\nగిట్టగానే పెట్టెలో మూస్తారు\nజాగు చేయక కాటికి మోస్తారు\nఆరడుగుల గుంటలో తోస్తారు\nబ్రతుకు మూల్యమింతే – మనిషికి ఉన్న విలువంతే",
+    lyricsTelugu: [
+      "ఓ యాత్రికుడా ఓహో యాత్రికుడా",
+      "బ్రతుకు ప్రయాణములో గమ్యమెంత దూరమో తెలుసా..",
+      "ఓ బాటసారి ఓహో బాటసారి",
+      "జీవిత యాత్రలో కాలమెంత విశాలమో తెలుసా",
+      "గుండె ఆగిపోగానే ఊపిరి ఆగిపోతుంది",
+      "నాడి నిలిచిపోగానే ఆత్మ ఎగిరిపోతుంది",
+      "అంతా ఆ దైవ నిర్ణయం",
+      "మనిషి కాలగత దేవుని ఆదేశం",
+      "పుట్టగానే తొట్టెలో వేస్తారు",
+      "గిట్టగానే పెట్టెలో మూస్తారు",
+      "జాగు చేయక కాటికి మోస్తారు",
+      "ఆరడుగుల గుంటలో తోస్తారు",
+      "ఆశించినవేవి నీవెంటారావు"
+    ],
+    lyricsEnglish: [
+      "O Yaathrikudaa Oho Yaathrikudaa",
+      "Brathuku Prayanamulo Gamyamentha Dooramo Telusa..",
+      "O Baatasari Oho Baatasari",
+      "Jeevitha Yaathralo Kaalamentha Vishaalamo Telusa",
+      "Gunde Aagipogaane Oopiri Aagipothundi",
+      "Naadi Nilichipogaane Aathma Egiripothundi",
+      "Antha Aa Daiva Nirnayam",
+      "Manishi Kaalagatha Devuni Aadesham",
+      "Puttagaane Thottelo Vesthaaru",
+      "Gittagaane Pettelo Moosthaaru",
+      "Jaagu Cheyaka Kaatiki Mosthaaru",
+      "Aaradugula Guntalo Thosthaaru",
+      "Aashinchinavevi Neeventaraavu"
+    ]
   }
 ];
 
