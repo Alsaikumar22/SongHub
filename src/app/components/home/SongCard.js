@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Play, Pause } from "lucide-react";
+import SongArtwork from "../ui/SongArtwork";
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md" }) {
   const isCurrent = currentSong?.id === song.id;
@@ -21,10 +22,10 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           isSmall ? "mb-2" : "mb-3"
         }`}
       >
-        <img
-          src={song.coverUrl}
-          alt={song.teluguTitle || song.title}
+        <SongArtwork
+          song={song}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          iconSize="w-8 h-8"
         />
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <div

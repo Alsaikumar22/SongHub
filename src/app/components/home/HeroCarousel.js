@@ -4,57 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAudio } from "../../context/audio-context";
 import { Play } from "lucide-react";
-
-const CAROUSEL_SLIDES = [
-  {
-    id: "adavi-chetla-naduma",
-    title: "అడవి చెట్ల నడుమ",
-    subtitle: "ADAVI CHETLA NADUMA",
-    artist: "O Yaathrikudaa",
-    label: "✨ SONGS OF THE WEEK",
-    bgUrl: "/worship_forest.png",
-  },
-  {
-    id: "1",
-    title: "Ambient Gold",
-    subtitle: "AMBIENT GOLD",
-    artist: "Lofi Dreamer",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "2",
-    title: "Synthwave Breeze",
-    subtitle: "SYNTHWAVE BREEZE",
-    artist: "Retro Horizon",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "3",
-    title: "Pop Neon",
-    subtitle: "POP NEON",
-    artist: "Starlight",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "4",
-    title: "Melancholy Rock",
-    subtitle: "MELANCHOLY ROCK",
-    artist: "Dark Antlers",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "5",
-    title: "Chilled Beats",
-    subtitle: "CHILLED BEATS",
-    artist: "Summer Chill",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&auto=format&fit=crop&q=80",
-  },
-];
+import { CAROUSEL_SLIDES } from "@/data/carousel";
 
 export default function HeroCarousel() {
   const { songs, playSong } = useAudio();
@@ -68,7 +18,7 @@ export default function HeroCarousel() {
   }, []);
 
   return (
-    <div className="relative w-full h-[400px] rounded-[32px] overflow-hidden bg-card border border-line/20 shadow-2xl flex items-center group">
+    <div className="relative w-full min-h-[380px] md:h-[400px] rounded-2xl md:rounded-[32px] overflow-hidden bg-card border border-line/20 shadow-2xl flex items-center group">
       {/* Ambient Blurred Background using current slide cover */}
       <div
         className="absolute inset-0 bg-cover bg-center blur-[80px] opacity-25 scale-110 pointer-events-none transition-all duration-1000 ease-in-out"
@@ -85,10 +35,10 @@ export default function HeroCarousel() {
         return (
           <div
             key={slide.id}
-            className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12 px-8 md:px-12 w-full animate-in fade-in slide-in-from-right-4 duration-500"
+            className="relative z-10 flex flex-col md:flex-row items-center gap-5 md:gap-12 px-5 md:px-12 pt-6 pb-12 md:py-0 w-full animate-in fade-in slide-in-from-right-4 duration-500"
           >
             {/* Left: Artwork */}
-            <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-line flex-shrink-0 relative group/art select-none">
+            <div className="w-32 h-32 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-line flex-shrink-0 relative group/art select-none">
               <img
                 src={slide.bgUrl}
                 alt={slide.title}
@@ -103,7 +53,7 @@ export default function HeroCarousel() {
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-title/15 text-title text-[10px] font-bold tracking-widest uppercase">
                   {slide.label}
                 </span>
-                <h2 className={`text-white text-3xl md:text-5xl font-black tracking-tight leading-tight truncate drop-shadow-md ${
+                <h2 className={`text-white text-2xl md:text-5xl font-black tracking-tight leading-tight truncate drop-shadow-md ${
                   slide.id === "adavi-chetla-naduma" ? "font-telugu" : "font-lato"
                 }`}>
                   {slide.title}
@@ -140,7 +90,7 @@ export default function HeroCarousel() {
       })}
 
       {/* Pagination dots */}
-      <div className="absolute bottom-6 right-8 z-20 flex gap-2">
+      <div className="absolute bottom-4 md:bottom-6 left-1/2 md:left-auto md:right-8 -translate-x-1/2 md:translate-x-0 z-20 flex gap-2">
         {CAROUSEL_SLIDES.map((_, idx) => (
           <button
             key={idx}

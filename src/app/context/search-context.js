@@ -6,8 +6,9 @@ const SearchContext = createContext(null);
 
 export function SearchProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFullResults, setShowFullResults] = useState(false);
   return (
-    <SearchContext.Provider value={{ searchQuery, setSearchQuery }}>
+    <SearchContext.Provider value={{ searchQuery, setSearchQuery, showFullResults, setShowFullResults }}>
       {children}
     </SearchContext.Provider>
   );

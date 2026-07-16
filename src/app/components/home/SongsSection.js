@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 import SongCard from "./SongCard";
+import SongArtwork from "../ui/SongArtwork";
 
 const TELUGU_ALPHABET_ORDER = [
   "అ", "ఆ", "ఇ", "ఈ", "ఉ", "ఊ", "ఋ", "ౠ", "ఎ", "ఏ", "ఐ", "ఒ", "ఓ", "ఔ", "అం", "అః",
@@ -13,7 +14,16 @@ const TELUGU_ALPHABET_ORDER = [
 
 function teluguSort(a, b) {
   const o = TELUGU_ALPHABET_ORDER;
-  return (o.indexOf(a) === -1 ? 999 : o.indexOf(a)) - (o.indexOf(b) === -1 ? 999 : o.indexOf(b));
+  const idxA = o.indexOf(a);
+  const idxB = o.indexOf(b);
+  
+  if (idxA !== -1 && idxB !== -1) {
+    return idxA - idxB;
+  }
+  if (idxA !== -1) return -1;
+  if (idxB !== -1) return 1;
+  
+  return a.localeCompare(b);
 }
 
 export default function SongsSection({
@@ -27,20 +37,53 @@ export default function SongsSection({
   const sectionRefs = useRef({});
   const scrollRefs = useRef({});
   const [activeLetter, setActiveLetter] = useState(selectedLetter || null);
+  const [scriptLang, setScriptLang] = useState("telugu");
 
   const letterGroups = useMemo(() => {
     const groups = {};
     const safeSongs = Array.isArray(songs) ? songs : [];
     safeSongs.forEach((song) => {
-      const letter = song.teluguFirstLetter;
-      if (!letter) return;
-      if (!groups[letter]) groups[letter] = [];
-      groups[letter].push(song);
+      // 1. Group under Telugu letter
+      if (song.teluguFirstLetter) {
+        const tLetter = song.teluguFirstLetter;
+        if (!groups[tLetter]) groups[tLetter] = [];
+        groups[tLetter].push(song);
+      }
+      
+      // 2. Group under English letter if the title starts with an English character
+      const firstChar = song.title ? song.title.charAt(0).toUpperCase() : "";
+      if (/[A-Z]/.test(firstChar)) {
+        if (!groups[firstChar]) groups[firstChar] = [];
+        if (!groups[firstChar].includes(song)) {
+          groups[firstChar].push(song);
+        }
+      }
     });
     return groups;
   }, [songs]);
 
-  const availableLetters = useMemo(() => Object.keys(letterGroups).sort(teluguSort), [letterGroups]);
+  const availableLetters = useMemo(() => {
+    const letters = Object.keys(letterGroups);
+    if (scriptLang === "telugu") {
+      return letters.filter((l) => !/[A-Z]/.test(l)).sort(teluguSort);
+    } else {
+      return letters.filter((l) => /[A-Z]/.test(l)).sort();
+    }
+  }, [letterGroups, scriptLang]);
+
+  // Auto-adjust active letter on script/language toggle
+  useEffect(() => {
+    if (availableLetters.length > 0) {
+      if (!availableLetters.includes(activeLetter)) {
+        setTimeout(() => {
+          setActiveLetter(availableLetters[0]);
+          if (selectedLetter) {
+            setSelectedLetter(availableLetters[0]);
+          }
+        }, 0);
+      }
+    }
+  }, [scriptLang, availableLetters]);
 
   const scrollRow = (letter, direction) => {
     const el = scrollRefs.current[letter];
@@ -55,7 +98,9 @@ export default function SongsSection({
 
   useEffect(() => {
     if (selectedLetter) {
-      setActiveLetter(selectedLetter);
+      setTimeout(() => {
+        setActiveLetter(selectedLetter);
+      }, 0);
       return;
     }
 
@@ -105,16 +150,43 @@ export default function SongsSection({
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-20 bg-card -mt-4 pt-4 -mx-4 px-4 pb-3 border-b border-line/30 shadow-sm mb-2">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="sticky top-0 z-20 bg-card/90 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
+        {/* Immersive Script Selector */}
+        <div className="flex bg-card-hover/60 p-0.5 rounded-xl border border-white/5 self-start shadow-inner">
+          <button
+            onClick={() => setScriptLang("telugu")}
+            className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              scriptLang === "telugu"
+                ? "bg-white text-black shadow-sm font-black"
+                : "text-muted hover:text-white"
+            }`}
+          >
+            Telugu (తెలుగు)
+          </button>
+          <button
+            onClick={() => setScriptLang("english")}
+            className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              scriptLang === "english"
+                ? "bg-white text-black shadow-sm font-black"
+                : "text-muted hover:text-white"
+            }`}
+          >
+            English (A-Z)
+          </button>
+        </div>
+
+        {/* Letters Scroll List */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {availableLetters.map((letter) => (
             <button
               key={letter}
               onClick={() => handleLetterClick(letter)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 cursor-pointer font-telugu ${
+              className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm md:text-base font-black transition-all shrink-0 cursor-pointer ${
+                /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+              } ${
                 activeLetter === letter
-                  ? "bg-title text-canvas"
-                  : "bg-card-hover text-white hover:bg-line/60"
+                  ? "bg-title text-canvas scale-105 shadow-sm"
+                  : "bg-card-hover text-white/90 hover:bg-line/60"
               }`}
             >
               {letter}
@@ -134,7 +206,9 @@ export default function SongsSection({
               Back to Browse
             </button>
             <div className="flex items-end gap-4">
-              <div className="w-20 h-20 rounded-2xl bg-card-hover flex items-center justify-center border border-line/45 text-white font-bold text-4xl shadow-md font-telugu select-none shrink-0">
+              <div className={`w-20 h-20 rounded-2xl bg-card-hover flex items-center justify-center border border-line/45 text-white font-bold text-4xl shadow-md select-none shrink-0 ${
+                /[A-Z]/.test(selectedLetter) ? "font-sans" : "font-telugu"
+              }`}>
                 {selectedLetter}
               </div>
               <div className="min-w-0">
@@ -142,7 +216,7 @@ export default function SongsSection({
                   Alphabet Browser
                 </span>
                 <h1 className="text-white text-2xl font-extrabold tracking-tight truncate">
-                  Songs starting with "{selectedLetter}"
+                  Songs starting with &ldquo;{selectedLetter}&rdquo;
                 </h1>
                 <p className="text-xs text-muted mt-1">
                   {letterGroups[selectedLetter]?.length || 0} track{letterGroups[selectedLetter]?.length !== 1 && "s"}
@@ -187,10 +261,10 @@ export default function SongsSection({
 
                     {/* Column 2: Cover Art, Title, Artist */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <img
-                        src={song.coverUrl}
-                        alt={song.title}
+                      <SongArtwork
+                        song={song}
                         className="w-10 h-10 object-cover rounded-lg border border-line/30 shrink-0"
+                        iconSize="w-4 h-4"
                       />
                       <div className="min-w-0 flex-1">
                         <span className={`font-semibold text-sm block truncate ${
@@ -225,7 +299,9 @@ export default function SongsSection({
             >
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-white font-telugu">{letter}</span>
+                  <span className={`text-2xl font-bold text-white ${
+                    /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+                  }`}>{letter}</span>
                   <span className="text-xs text-muted/80 font-medium ml-1">({letterGroups[letter].length})</span>
                 </div>
                 <div className="flex items-center gap-3">

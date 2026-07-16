@@ -1,23 +1,20 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAudio } from "../../context/audio-context";
-import {
-  ArrowLeft,
-  Play,
-  Pause,
-  Heart,
-  Plus,
-  Music,
-  Check
-} from "lucide-react";
+import { ArrowLeft, Music } from "lucide-react";
+import SongHero from "../../components/song/SongHero";
+import SongLyrics, { LanguageSegmented } from "../../components/song/SongLyrics";
+import { extractDominantColor } from "../../utils/extract-color";
 
-export default function SongPage({ params }) {
+function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showImmersiveLyrics = searchParams.get("view") === "lyrics";
 
   const {
     songs,
@@ -32,24 +29,29 @@ export default function SongPage({ params }) {
   } = useAudio();
 
   const [song, setSong] = useState(null);
-  const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState("lyrics"); // lyrics | video
-  const [selectedLanguage, setSelectedLanguage] = useState("తెలుగు"); // తెలుగు | English | Line by Line
-  const [shareNotification, setShareNotification] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("telugu");
+  const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
 
   useEffect(() => {
-    // Find the song details
     const foundSong = songs.find(s => s.id === id);
     if (foundSong) {
-      setSong(foundSong);
+      setTimeout(() => {
+        setSong(foundSong);
+      }, 0);
     }
   }, [id, songs]);
 
+  useEffect(() => {
+    if (song?.coverUrl) {
+      extractDominantColor(song.coverUrl).then(setGradientColor);
+    }
+  }, [song]);
+
   if (!song) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center h-full">
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
         <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-white font-lato">Finding song...</h2>
+        <h2 className="text-xl font-bold text-white">Finding song...</h2>
         <Link href="/" className="mt-4 text-sm text-title hover:underline">
           Return to home
         </Link>
@@ -57,298 +59,128 @@ export default function SongPage({ params }) {
     );
   }
 
-  const isCurrentSong = currentSong?.id === song.id;
   const isFavorited = favorites.includes(song.id);
 
-  const handlePlayClick = () => {
-    playSong(song);
-  };
+    const hasDualLyrics = !!(
+      song &&
+      Array.isArray(song.lyricsTelugu) &&
+      Array.isArray(song.lyricsEnglish) &&
+      song.lyricsTelugu.length > 0 &&
+      song.lyricsEnglish.length > 0
+    );
 
-  const handleShareClick = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setShareNotification(true);
-      setTimeout(() => setShareNotification(false), 2000);
-    }
-  };
+  const { r, g, b } = gradientColor;
 
-  const renderLyrics = () => {
-    if (song.lyricsTelugu && song.lyricsEnglish) {
-      if (selectedLanguage === "తెలుగు") {
-        return (
-          <div className="space-y-4 text-center md:text-left transition-all duration-300">
-            {song.lyricsTelugu.map((line, idx) => (
-              <p key={idx} className="text-white text-[22px] font-semibold leading-[1.9] transition-all hover:text-title">
-                {line}
-              </p>
-            ))}
-          </div>
-        );
-      } else if (selectedLanguage === "English") {
-        return (
-          <div className="space-y-4 text-center md:text-left transition-all duration-300">
-            {song.lyricsEnglish.map((line, idx) => (
-              <p key={idx} className="text-muted text-[22px] font-semibold leading-[1.9] transition-all hover:text-title">
-                {line}
-              </p>
-            ))}
-          </div>
-        );
-      } else {
-        // Line by Line (row-aligned table/grid)
-        return (
-          <div className="space-y-4 w-full transition-all duration-300">
-            {song.lyricsTelugu.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-2 gap-8 py-3 border-b border-line-muted hover:bg-card-hover/40 px-4 rounded-xl transition-all">
-                <div className="text-right text-white text-[22px] font-semibold leading-[1.9] pr-4">{line}</div>
-                <div className="text-left text-muted text-[22px] font-semibold leading-[1.9] pl-4">{song.lyricsEnglish[idx]}</div>
-              </div>
-            ))}
-          </div>
-        );
-      }
-    } else {
-      // Fallback for standard mock songs
-      const lines = song.lyrics ? song.lyrics.split("\n") : ["Lyrics are not available for this track."];
-      return (
-        <div className="space-y-4 text-center md:text-left transition-all duration-300">
-          {lines.map((line, idx) => (
-            <p key={idx} className="text-white text-[22px] font-semibold leading-[1.9] transition-all hover:text-title">
-              {line.replace(/\[\d{2}:\d{2}\]/g, "").trim()}
-            </p>
-          ))}
-        </div>
-      );
-    }
-  };
+  // 1. IMMERSIVE LYRICS FULL SCREEN VIEW (?view=lyrics)
+  if (showImmersiveLyrics) {
+    return (
+      <div
+        className="relative flex-1 flex flex-col h-full overflow-hidden bg-[#070707] transition-all duration-500 ease-out"
+        style={{
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.32) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.10) 45%, #070707 100%)`,
+        }}
+      >
+        {/* Minimal ghost back link (no black box) */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-5 left-5 z-40 flex items-center gap-1.5 text-white/55 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+          title="Back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </button>
 
-  return (
-    <div className="flex-1 overflow-y-auto bg-transparent py-4 px-2 md:px-6 min-w-0">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Navigation header */}
-        <div className="flex items-center">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-card border border-line hover:border-dim rounded-xl text-xs font-semibold text-muted hover:text-white transition-all shadow-sm cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Go Back</span>
-          </button>
-        </div>
-
-        {/* Hero Section Flat Layout */}
-        <div className="flex flex-col md:flex-row gap-8 items-end pb-8 border-b border-line/20 relative z-10">
-          {/* Left: Artwork Container */}
-          <div className="w-48 h-48 md:w-56 md:h-56 rounded-lg overflow-hidden shadow-2xl border border-line flex-shrink-0 relative group select-none">
-            <img
-              src={song.coverUrl}
-              alt={song.title}
-              className="w-full h-full object-cover"
+        {/* Floating Center Selector (Language - Lyrics only) */}
+        {hasDualLyrics && (
+          <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40">
+            <LanguageSegmented
+              selected={selectedLanguage}
+              onChange={setSelectedLanguage}
+              hasDual={hasDualLyrics}
             />
           </div>
+        )}
 
-          {/* Right: Metadata and Actions */}
-          <div className="flex-1 min-w-0 space-y-4 md:space-y-6">
-            <div className="space-y-2 text-left">
-              <span className="text-[10px] font-bold text-title uppercase tracking-widest bg-title/15 px-2.5 py-1 rounded">
-                Song
-              </span>
-              <h1 className={`text-white text-3xl md:text-5xl font-black tracking-tight leading-tight truncate ${
-                song.teluguTitle ? "font-telugu" : "font-lato"
-              }`}>
-                {song.teluguTitle || song.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                <span className="font-bold text-white/95">{song.artist}</span>
-                <span className="text-dim">•</span>
-                <span>{song.album}</span>
-                {song.releaseYear && (
-                  <>
-                    <span className="text-dim">•</span>
-                    <span>{song.releaseYear}</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Actions Bar */}
-            <div className="flex flex-wrap items-center gap-4">
-              <button
-                onClick={handlePlayClick}
-                className="h-11 px-6 bg-title text-card font-bold rounded-full hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-md"
-              >
-                {isCurrentSong && isPlaying ? (
-                  <>
-                    <Pause className="w-4.5 h-4.5 fill-current text-card" />
-                    <span>Pause</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4.5 h-4.5 fill-current ml-0.5 text-card" />
-                    <span>Play Song</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => toggleFavorite(song.id)}
-                className={`w-11 h-11 rounded-full border border-line flex items-center justify-center transition-all active:scale-95 cursor-pointer hover:bg-card-hover ${
-                  isFavorited
-                    ? "text-red-500 border-red-500/30"
-                    : "text-muted hover:text-white"
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isFavorited ? "fill-current" : ""}`} />
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                  className="h-11 px-5 border border-line hover:border-title bg-transparent hover:bg-card-hover rounded-full flex items-center gap-2 text-sm font-semibold text-muted hover:text-white active:scale-95 transition-all shadow-sm cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add to Playlist</span>
-                </button>
-
-                {showPlaylistDropdown && (
-                  <div className="absolute left-0 bottom-full mb-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-30 w-48 max-h-48 overflow-y-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                      Select Playlist
-                    </div>
-                    {playlists.length > 0 ? (
-                      playlists.map((list) => {
-                        const isInPlaylist = list.songIds.includes(song.id);
-                        return (
-                          <button
-                            key={list.id}
-                            onClick={() => {
-                              if (isInPlaylist) {
-                                removeSongFromPlaylist(list.id, song.id);
-                              } else {
-                                addSongToPlaylist(list.id, song.id);
-                              }
-                              setShowPlaylistDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-xs text-white hover:bg-card-hover text-left flex items-center justify-between"
-                          >
-                            <span className="truncate">{list.name}</span>
-                            {isInPlaylist ? (
-                              <span className="text-[10px] bg-line text-handle px-1.5 py-0.2 rounded font-semibold border border-dim flex-shrink-0">
-                                Added
-                              </span>
-                            ) : (
-                              <Plus className="w-3.5 h-3.5 text-muted" />
-                            )}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="px-3 py-2 text-xs text-muted italic text-center">
-                        No custom playlists
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* Immersive Main Display Area */}
+        <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative">
+          <div className="w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex-1 flex flex-col justify-center overflow-hidden">
+            <SongLyrics
+              song={song}
+              isImmersive={true}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+            />
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Navigation Tabs (Lyrics | Video) */}
-        <div className="flex border-b border-line gap-8 mt-8">
-          {["lyrics", "video"].map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-xs font-bold tracking-widest uppercase transition-all relative cursor-pointer ${
-                  isActive ? "text-title" : "text-muted hover:text-white"
-                }`}
-              >
-                {tab}
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-title" />
-                )}
-              </button>
-            );
-          })}
+  // 2. SONG DETAILS VIEW (DEFAULT)
+  return (
+    <div
+      className="relative flex-1 min-h-0 flex flex-col overflow-y-auto bg-transparent min-w-0 font-lato"
+      style={{
+        background: `radial-gradient(140% 80% at 50% 0%, rgba(${r},${g},${b},0.28) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.08) 50%, transparent 100%)`,
+      }}
+    >
+
+
+      <div className="w-full px-6 md:px-8 pb-16 pt-6 space-y-6 flex-1 flex flex-col">
+        <SongHero
+          song={song}
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+          playSong={playSong}
+          isFavorited={isFavorited}
+          toggleFavorite={() => toggleFavorite(song.id)}
+          playlists={playlists}
+          addSongToPlaylist={addSongToPlaylist}
+          removeSongFromPlaylist={removeSongFromPlaylist}
+        />
+
+        {/* Language Selector for Lyrics */}
+        <div className="flex items-center justify-between pt-2 pb-1">
+          <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
+            Lyrics
+          </h3>
+          {hasDualLyrics && (
+            <LanguageSegmented
+              selected={selectedLanguage}
+              onChange={setSelectedLanguage}
+              hasDual={hasDualLyrics}
+            />
+          )}
         </div>
 
-        {/* Tab Contents */}
-        <div className="pt-2">
-          {activeTab === "lyrics" && (
-            <div className="space-y-6">
-              {/* Lyrics Header & Language Switcher */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Song Lyrics
-                </h3>
-
-                {/* Segmented language control */}
-                {song.lyricsTelugu && song.lyricsEnglish && (
-                  <div className="flex h-12 bg-card-hover border border-line rounded-full p-1 shadow-md w-fit">
-                    {["తెలుగు", "English", "Line by Line"].map((lang) => {
-                      const isSelected = selectedLanguage === lang;
-                      return (
-                        <button
-                          key={lang}
-                          onClick={() => setSelectedLanguage(lang)}
-                          className={`h-full px-5 text-xs font-bold rounded-full transition-all duration-300 cursor-pointer ${
-                            isSelected
-                              ? "bg-title text-card"
-                              : "bg-transparent text-muted hover:text-white"
-                          }`}
-                        >
-                          {lang}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Lyrics Content Container (Always Expanded) */}
-              <div className="relative py-4">
-                {renderLyrics()}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "video" && (
-            <div className="space-y-4">
-              {song.id === "adavi-chetla-naduma" ? (
-                <div className="w-full aspect-video rounded-3xl overflow-hidden border border-line bg-card shadow-xl">
-                  <iframe
-                    className="w-full h-full"
-                    src="https://www.youtube.com/embed/gLgT9dMvF9M"
-                    title="Adavi Chetla Naduma Worship Video"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              ) : (
-                <div className="w-full aspect-video rounded-3xl overflow-hidden border border-line bg-card flex flex-col items-center justify-center p-8 text-center space-y-4 shadow-xl">
-                  <div className="w-16 h-16 rounded-full bg-card-hover border border-line flex items-center justify-center text-muted">
-                    <Play className="w-8 h-8 fill-current ml-1" />
-                  </div>
-                  <h4 className="text-lg font-bold text-white">Cinematic Visualizer Stream</h4>
-                  <p className="text-sm text-muted max-w-md">Video stream is currently loading. Enjoy the premium high-fidelity background visualizer of this track.</p>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Immersive-style Lyrics Display */}
+        <div
+          className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/5"
+          style={{
+            background: `radial-gradient(120% 100% at 50% 0%, rgba(${r},${g},${b},0.20) 0%, rgba(${Math.max(0, r-20)},${Math.max(0, g-20)},${Math.max(0, b-20)},0.04) 60%, transparent 100%)`,
+          }}
+        >
+          <SongLyrics
+            song={song}
+            isImmersive={true}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+          />
         </div>
       </div>
-
-      {/* Share Toast Notification */}
-      {shareNotification && (
-        <div className="fixed bottom-24 right-8 bg-card border border-dim text-handle px-4 py-2.5 rounded-xl text-xs font-bold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
-          <Check className="w-3.5 h-3.5 text-handle" />
-          <span>Link copied to clipboard!</span>
-        </div>
-      )}
     </div>
+  );
+}
+
+export default function SongPage({ params }) {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
+        <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
+        <h2 className="text-xl font-bold text-white">Loading...</h2>
+      </div>
+    }>
+      <SongPageContent params={params} />
+    </Suspense>
   );
 }
