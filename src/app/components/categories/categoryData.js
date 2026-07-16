@@ -13,7 +13,7 @@ export const CATEGORIES_DATA = [
     nameEn: "Prayer Songs",
     nameTe: "ప్రార్థన పాటలు",
     motif: "Person kneeling",
-    bgImage: "https://images.unsplash.com/photo-1515600389776-e78629af5c8f?w=500&auto=format&fit=crop&q=80",
+    bgImage: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=500&auto=format&fit=crop&q=80",
     songIdsEn: ["5"],
     songIdsTe: ["9", "14"]
   },

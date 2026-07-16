@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useAudio } from "../../context/audio-context";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "./Header";
+import MobileNav from "./MobileNav";
 import PlayerBar from "../player-bar";
+import SongArtwork from "../ui/SongArtwork";
 import {
   Compass,
   Plus,
@@ -40,6 +42,7 @@ export default function AppLayout({ children }) {
   const router = useRouter();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -57,75 +60,55 @@ export default function AppLayout({ children }) {
   return (
     <div className="h-screen flex flex-col bg-canvas text-copy font-sans">
       <Header />
-      <div className="flex flex-1 min-h-0 min-w-0 p-2 gap-2">
-        {/* SIDEBAR — collapsible */}
+      <div className="flex flex-1 min-h-0 min-w-0 md:p-2 p-0 md:gap-2 gap-0">
+        {/* SIDEBAR — with clean unified structure */}
         <aside
-          className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden md:flex flex-col shrink-0 transition-all duration-300 ease-in-out gap-2`}
+          className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden md:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
         >
-          {/* Top Navigation */}
-          <div className="bg-card/50 rounded-xl px-3 py-3 space-y-1">
-            <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
-              <SidebarNavItem
-                icon={<Compass className="w-6 h-6" />}
-                label="Browse"
-                collapsed={sidebarCollapsed}
-                active={isDiscover && (activeTab === "discover" || activeTab === "categories")}
-                onClick={() => {
-                  setActiveTab("discover");
-                  setActivePlaylistId(null);
-                  setViewedSongId(null);
-                  router.push("/");
-                }}
-              />
+          {/* ─── Top Nav ─── */}
+          <div className="px-3 pt-3 pb-2 space-y-0.5">
+            <SidebarNavItem
+              icon={<Compass className="w-5 h-5" />}
+              label="Browse"
+              collapsed={sidebarCollapsed}
+              active={isDiscover && (activeTab === "discover" || activeTab === "categories")}
+              onClick={() => {
+                setActiveTab("discover");
+                setActivePlaylistId(null);
+                setViewedSongId(null);
+                router.push("/");
+              }}
+            />
+          </div>
+
+          {/* ─── Divider ─── */}
+          <div className="mx-3 border-t border-line/10" />
+
+          {/* ─── Collection Section ─── */}
+          <div className="flex-1 flex flex-col overflow-hidden px-3 pt-2 pb-1">
+            {/* Collection Header */}
+            <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}>
               {!sidebarCollapsed && (
+                <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
+                  Collection
+                </span>
+              )}
+              {sidebarCollapsed ? (
+                <Library className="w-5 h-5 text-dim" />
+              ) : (
                 <button
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
-                  title="Collapse"
+                  onClick={() => setShowCreateModal(true)}
+                  className="p-1 hover:bg-card-hover rounded-md text-dim hover:text-copy transition-colors cursor-pointer"
+                  title="New Playlist"
                 >
-                  <SquareChevronLeft className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                 </button>
               )}
             </div>
-          </div>
 
-          {/* Collection Section */}
-          <div className="flex-1 flex flex-col bg-card/50 rounded-xl overflow-hidden">
-            {/* Collection Header */}
-            <div className={`px-4 py-3 flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="flex items-center gap-3 text-muted hover:text-copy transition-colors group cursor-pointer"
-                title={sidebarCollapsed ? "Expand Collection" : "Collapse Collection"}
-              >
-                {sidebarCollapsed ? (
-                  <>
-                    <Library className="w-6 h-6 group-hover:hidden transition-all" />
-                    <SquareChevronRight className="w-6 h-6 hidden group-hover:block transition-all" />
-                  </>
-                ) : (
-                  <Library className="w-6 h-6" />
-                )}
-                {!sidebarCollapsed && (
-                  <span className="font-bold text-sm">Collection</span>
-                )}
-              </button>
-              <div className="flex items-center gap-1">
-                {!sidebarCollapsed && (
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
-                    title="New Playlist"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Saved Items */}
+            {/* Favorites */}
             {!sidebarCollapsed && (
-              <div className="px-2">
+              <div className="px-1 mb-1">
                 <div className="group relative">
                   <button
                     onClick={() => {
@@ -138,8 +121,8 @@ export default function AppLayout({ children }) {
                       isDiscover && activeTab === "favorites" ? "bg-card-hover" : "hover:bg-card-hover"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-300 flex items-center justify-center shrink-0 shadow-md">
-                      <Heart className="w-5 h-5 text-white fill-white" />
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-300 flex items-center justify-center shrink-0 shadow-sm">
+                      <Heart className="w-4.5 h-4.5 text-white fill-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-copy block truncate">Favorites</span>
@@ -148,28 +131,30 @@ export default function AppLayout({ children }) {
                   </button>
                   {favorites.length > 0 && (
                     <button
-                      onClick={() => {
-                        favorites.forEach(id => toggleFavorite(id));
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-card-hover opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                      onClick={() => favorites.forEach(id => toggleFavorite(id))}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted hover:text-red-400 hover:bg-card-hover opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       title="Clear all favorites"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Playlists */}
+            {/* Playlists label */}
             {!sidebarCollapsed && (
-              <div className="px-4 pt-3 pb-1">
-                <span className="text-[10px] font-bold text-dim uppercase tracking-wider">Playlists</span>
+              <div className="px-1 pt-2 pb-1">
+                <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
+                  Playlists
+                </span>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
+
+            {/* Playlist items */}
+            <div className={`flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-0.5 px-1 py-0.5`}>
               {playlists.length === 0 && !sidebarCollapsed && (
-                <div className="px-3 py-4 text-center">
+                <div className="px-2 py-6 text-center">
                   <p className="text-xs text-muted">No playlists yet</p>
                 </div>
               )}
@@ -177,8 +162,8 @@ export default function AppLayout({ children }) {
                 <div key={list.id} className="group relative">
                   <LibraryItem
                     icon={
-                      <div className="w-10 h-10 rounded-lg bg-card-hover flex items-center justify-center shrink-0 shadow-sm text-dim">
-                        <ListMusic className="w-5 h-5" />
+                      <div className="w-9 h-9 rounded-lg bg-card-hover flex items-center justify-center shrink-0 shadow-sm text-dim">
+                        <ListMusic className="w-4.5 h-4.5" />
                       </div>
                     }
                     title={list.name}
@@ -195,40 +180,88 @@ export default function AppLayout({ children }) {
                   {!sidebarCollapsed && (
                     <button
                       onClick={() => deletePlaylist(list.id)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-muted hover:text-red-400 hover:bg-card-hover opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted hover:text-red-400 hover:bg-card-hover opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       title={`Delete ${list.name}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   )}
                 </div>
               ))}
             </div>
           </div>
+
+          {/* ─── Bottom Collapse Toggle ─── */}
+          <div className={`px-3 pb-3 pt-1 ${sidebarCollapsed ? "flex justify-center" : "flex justify-end"}`}>
+            <button
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <SquareChevronLeft
+                className={`w-5 h-5 transition-transform duration-300 ${
+                  sidebarCollapsed ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
         </aside>
 
         {/* MAIN PANEL CONTENT */}
-        <main className="flex-1 flex flex-col min-w-0 bg-card rounded-xl border border-line/30 overflow-hidden relative">
+        <main className="flex-1 flex flex-col min-w-0 bg-card md:rounded-xl md:border md:border-line/30 overflow-hidden relative">
           {children}
         </main>
 
-        {/* RIGHT PANEL — appears when a song is selected */}
+        {/* RIGHT PANEL — Now Playing & Up Next (collapsible) */}
         <aside
           className={`${
-            currentSong ? "lg:flex" : "hidden"
-          } flex-col w-80 shrink-0 bg-card rounded-xl border border-line/30 overflow-hidden transition-opacity duration-300`}
+            currentSong ? "hidden lg:flex" : "hidden"
+          } flex-col shrink-0 bg-card rounded-xl border border-line/30 overflow-hidden transition-all duration-300 ease-in-out ${
+            rightPanelCollapsed ? "w-12" : "w-80"
+          }`}
         >
-          {currentSong && (
+          {currentSong && rightPanelCollapsed ? (
+            /* Collapsed: thin strip with expand button */
+            <div className="flex flex-col items-center pt-3 h-full">
+              <button
+                onClick={() => setRightPanelCollapsed(false)}
+                className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
+                title="Expand now playing"
+              >
+                <SquareChevronLeft className="w-5 h-5 rotate-180" />
+              </button>
+              {/* Mini album art indicator */}
+              <div className="mt-4 w-8 h-8 rounded-md overflow-hidden border border-line opacity-60">
+                <SongArtwork
+                  song={currentSong}
+                  className="w-full h-full object-cover"
+                  iconSize="w-3 h-3"
+                />
+              </div>
+            </div>
+          ) : currentSong ? (
+            /* Expanded: full content */
             <div className="flex flex-col h-full p-5 space-y-5">
-              <div className="space-y-3">
+              {/* Header with collapse button */}
+              <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-bold text-dim uppercase tracking-wider">
                   Now Playing
                 </h3>
+                <button
+                  onClick={() => setRightPanelCollapsed(true)}
+                  className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
+                  title="Collapse panel"
+                >
+                  <SquareChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
                 <div className="aspect-square w-full rounded-lg overflow-hidden bg-card-hover border border-line">
-                  <img
-                    src={currentSong.coverUrl}
-                    alt={currentSong.title}
+                  <SongArtwork
+                    song={currentSong}
                     className="w-full h-full object-cover"
+                    iconSize="w-10 h-10"
                   />
                 </div>
                 <div className="min-w-0">
@@ -255,10 +288,10 @@ export default function AppLayout({ children }) {
                         onClick={() => playSong(song)}
                         className="w-full flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-card-hover transition-colors text-left cursor-pointer"
                       >
-                        <img
-                          src={song.coverUrl}
-                          alt={song.title}
+                        <SongArtwork
+                          song={song}
                           className="w-8 h-8 object-cover rounded border border-line"
+                          iconSize="w-3 h-3"
                         />
                         <div className="min-w-0 flex-1">
                           <span className="text-xs font-medium text-copy block truncate">
@@ -273,11 +306,15 @@ export default function AppLayout({ children }) {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </aside>
       </div>
 
+      {/* PERSISTENT AUDIO PLAYER */}
       <PlayerBar />
+
+      {/* MOBILE BOTTOM NAV — visible on < md screens */}
+      <MobileNav />
 
       {/* CREATE PLAYLIST MODAL */}
       {showCreateModal && (
@@ -335,7 +372,7 @@ function SidebarNavItem({ icon, label, collapsed, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 px-3 py-3 rounded-lg text-sm font-semibold transition-all group relative cursor-pointer ${
+      className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-4"} px-3 py-3 rounded-lg text-sm font-semibold transition-all group relative cursor-pointer ${
         active
           ? "text-copy"
           : "text-muted hover:text-copy"
@@ -347,7 +384,7 @@ function SidebarNavItem({ icon, label, collapsed, active, onClick }) {
         <span className="truncate flex-1 text-left">{label}</span>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
           {label}
         </div>
       )}

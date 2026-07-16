@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Grid, List } from "lucide-react";
+import { ChevronLeft, Grid, List, Play, Plus, Share2, Check } from "lucide-react";
 import { useAudio } from "../../context/audio-context";
 import CategoryHeroBanner from "./CategoryHeroBanner";
-import CategorySongCard from "./CategorySongCard";
+import SongCard from "../home/SongCard";
 import CategoryPlaylistTable from "./CategoryPlaylistTable";
 
 export default function CategoryDetails({ category, language, onBack }) {
-  const { songs, playSong } = useAudio();
-  const [viewMode, setViewMode] = useState("cards"); // "cards" | "playlist"
+  const { songs, playSong, currentSong, isPlaying, playlists, addSongToPlaylist } = useAudio();
+  const [viewMode, setViewMode] = useState("playlist"); // "playlist" | "cards"
+  const [isShared, setIsShared] = useState(false);
+  const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
 
   const songIds = language === "telugu" ? category.songIdsTe : category.songIdsEn;
   
@@ -18,21 +20,27 @@ export default function CategoryDetails({ category, language, onBack }) {
   const categorySongs = (songs || [])
     .filter((song) => songIds.includes(song.id));
 
-  // Reset viewMode when category changes
+  // Reset viewMode when category changes and scroll to top
   useEffect(() => {
-    setViewMode("cards");
+    setViewMode("playlist");
+    const scrollable = document.querySelector(".overflow-y-auto");
+    if (scrollable) {
+      scrollable.scrollTop = 0;
+    }
   }, [category.id]);
 
   const handlePlayAll = () => {
     if (categorySongs.length > 0) {
-      setViewMode("playlist");
       playSong(categorySongs[0]);
     }
   };
 
-  const handleSongCardClick = (song) => {
-    setViewMode("playlist");
-    playSong(song);
+  const handleShare = () => {
+    setIsShared(true);
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+    }
+    setTimeout(() => setIsShared(false), 2000);
   };
 
   return (
@@ -40,55 +48,107 @@ export default function CategoryDetails({ category, language, onBack }) {
       {/* Navigation Headers and Breadcrumbs */}
       <div className="flex items-center justify-between gap-4">
         <button
-          onClick={() => {
-            if (viewMode === "playlist") {
-              setViewMode("cards");
-            } else {
-              onBack();
-            }
-          }}
+          onClick={onBack}
           className="flex items-center gap-1.5 text-xs font-semibold text-[#a7a7a7] hover:text-white transition-all duration-150 cursor-pointer self-start select-none"
         >
           <ChevronLeft className="w-4 h-4" />
-          {viewMode === "playlist" ? "Back to Song Cards" : "Back to Categories"}
+          Back to Categories
         </button>
-
-        {/* Toggle between Grid View and Playlist View */}
-        {categorySongs.length > 0 && (
-          <div className="flex bg-[#121826]/40 border border-white/5 rounded-lg p-0.5 shadow-md select-none">
-            <button
-              onClick={() => setViewMode("cards")}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === "cards"
-                  ? "bg-[#D4A32A]/20 text-[#D4A32A]"
-                  : "text-[#a7a7a7] hover:text-white"
-              }`}
-              title="View as Cards Grid"
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("playlist")}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === "playlist"
-                  ? "bg-[#D4A32A]/20 text-[#D4A32A]"
-                  : "text-[#a7a7a7] hover:text-white"
-              }`}
-              title="View as Playlist Table"
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Hero Banner Component */}
+      {/* Hero Banner Component (Spotify-style) */}
       <CategoryHeroBanner
         category={category}
         language={language}
         songCount={categorySongs.length}
-        onPlayAll={handlePlayAll}
       />
+
+      {/* Action Bar (Situated below colored banner per Spotify layout) */}
+      {categorySongs.length > 0 && (
+        <div className="flex items-center justify-between px-2 py-2 select-none">
+          <div className="flex items-center gap-6">
+            {/* Play Button (Spotify Round Play circle - White/Black) */}
+            <button
+              onClick={handlePlayAll}
+              className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform duration-200 cursor-pointer"
+              title="Play All"
+            >
+              <Play className="w-6 h-6 fill-current text-black ml-0.5" />
+            </button>
+
+            {/* Add Category to Playlist Toggler */}
+            <div className="relative">
+              <button
+                onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+                className={`p-2 rounded-full transition-colors cursor-pointer text-[#a7a7a7] hover:text-white`}
+                title="Add Category to Playlist"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+
+              {showPlaylistDropdown && (
+                <div className="absolute left-0 top-[110%] bg-[#181818] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-2 w-48 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
+                  <span className="text-[9px] font-bold text-muted uppercase tracking-wider px-4 py-1.5 block border-b border-white/[0.05] mb-1">
+                    Add to Playlist
+                  </span>
+                  {playlists.length === 0 ? (
+                    <span className="text-xs text-muted px-4 py-2 block">No playlists created</span>
+                  ) : (
+                    playlists.map((list) => (
+                      <button
+                        key={list.id}
+                        onClick={() => {
+                          categorySongs.forEach((song) => {
+                            if (!list.songIds.includes(song.id)) {
+                              addSongToPlaylist(list.id, song.id);
+                            }
+                          });
+                          setShowPlaylistDropdown(false);
+                          alert(`Added ${categorySongs.length} songs to "${list.name}"`);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-white hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        {list.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              className={`p-2 rounded-full transition-colors cursor-pointer ${
+                isShared ? "text-white" : "text-[#a7a7a7] hover:text-white"
+              }`}
+              title="Copy link"
+            >
+              {isShared ? <Check className="w-6 h-6" /> : <Share2 className="w-6 h-6" />}
+            </button>
+          </div>
+
+          {/* Right layout toggler (styled as List mode bullet toggle) */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode(viewMode === "playlist" ? "cards" : "playlist")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/5 text-xs font-bold text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
+            >
+              {viewMode === "playlist" ? (
+                <>
+                  <List className="w-4 h-4" />
+                  <span>List</span>
+                </>
+              ) : (
+                <>
+                  <Grid className="w-4 h-4" />
+                  <span>Grid</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area: Song Cards Grid or Playlist Table */}
       <div className="relative min-h-[300px]">
@@ -99,7 +159,7 @@ export default function CategoryDetails({ category, language, onBack }) {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-[22px] bg-[#121826]/20 select-none"
+              className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-xl bg-white/[0.02] select-none"
             >
               <span className="font-semibold block text-white text-lg">No songs available</span>
               <span className="text-xs block mt-1">Try another language.</span>
@@ -111,14 +171,15 @@ export default function CategoryDetails({ category, language, onBack }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
             >
               {categorySongs.map((song) => (
-                <CategorySongCard
+                <SongCard
                   key={song.id}
                   song={song}
-                  language={language}
-                  onClick={() => handleSongCardClick(song)}
+                  currentSong={currentSong}
+                  isPlaying={isPlaying}
+                  playSong={playSong}
                 />
               ))}
             </motion.div>

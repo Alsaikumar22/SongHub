@@ -25,10 +25,10 @@ export default function VerseOfTheWeek() {
         </div>
         <div className="space-y-2">
           <p className="text-white text-lg md:text-xl font-bold leading-relaxed font-telugu text-left drop-shadow-sm group-hover:text-white transition-colors duration-300">
-            "దేవుడు మనకు శక్తియు ప్రేమయు స్వస్థబుద్ధియుగల ఆత్మనే యిచ్చెను గాని పిరికితనముగల ఆత్మనియ్యలేదు."
+            &ldquo;దేవుడు మనకు శక్తియు ప్రేమయు స్వస్థబుద్ధియుగల ఆత్మనే యిచ్చెను గాని పిరికితనముగల ఆత్మనియ్యలేదు.&rdquo;
           </p>
           <p className="text-muted/80 text-xs md:text-sm italic font-medium leading-normal text-left">
-            "For God has not given us a spirit of fear, but of power and of love and of a sound mind."
+            &ldquo;For God has not given us a spirit of fear, but of power and of love and of a sound mind.&rdquo;
           </p>
         </div>
       </div>

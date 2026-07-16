@@ -44,11 +44,11 @@ export default function CategorySongCard({ song, language, onClick }) {
   return (
     <motion.div
       onClick={onClick}
-      className="relative rounded-2xl p-4 bg-[#121826]/40 backdrop-blur-md border border-white/5 shadow-lg flex flex-col justify-between select-none cursor-pointer group transition-all duration-300"
+      className="relative rounded-2xl p-4 bg-white/[0.02] border border-white/5 shadow-lg flex flex-col justify-between select-none cursor-pointer group transition-all duration-300"
       whileHover={{
         scale: 1.04,
-        borderColor: "rgba(212, 163, 42, 0.5)",
-        boxShadow: "0 0 20px rgba(212, 163, 42, 0.18), 0 8px 32px rgba(0, 0, 0, 0.4)"
+        borderColor: "rgba(255, 255, 255, 0.25)",
+        boxShadow: "0 0 20px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.4)"
       }}
     >
       {/* Cover Image Container */}
@@ -63,14 +63,14 @@ export default function CategorySongCard({ song, language, onClick }) {
 
         {/* Hover overlay with Play button */}
         <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="w-11 h-11 rounded-full bg-[#D4A32A] text-[#070707] flex items-center justify-center shadow-[0_0_15px_rgba(212,163,42,0.4)] scale-90 group-hover:scale-100 transition-all duration-300">
+          <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
             <Play className="w-5 h-5 fill-current ml-0.5" />
           </div>
         </div>
 
         {/* Active Now Playing indicator */}
         {isSongPlaying && (
-          <div className="absolute bottom-2 right-2 bg-[#D4A32A] text-[#070707] px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase animate-pulse">
+          <div className="absolute bottom-2 right-2 bg-white text-black px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase animate-pulse">
             Playing
           </div>
         )}
@@ -78,7 +78,7 @@ export default function CategorySongCard({ song, language, onClick }) {
 
       {/* Info and Titles */}
       <div className="flex-1 min-w-0 mb-3">
-        <h4 className={`text-sm font-black truncate leading-tight transition-colors ${isCurrent ? "text-[#D4A32A]" : "text-white"}`}>
+        <h4 className={`text-sm font-black truncate leading-tight transition-colors ${isCurrent ? "text-white font-extrabold" : "text-white"}`}>
           {displayTitle}
         </h4>
         {subtitle && (
@@ -105,7 +105,7 @@ export default function CategorySongCard({ song, language, onClick }) {
           
           <button
             onClick={handleShareClick}
-            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isShared ? "text-[#D4A32A]" : "text-[#a7a7a7] hover:text-white"}`}
+            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isShared ? "text-white" : "text-[#a7a7a7] hover:text-white"}`}
           >
             {isShared ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
           </button>

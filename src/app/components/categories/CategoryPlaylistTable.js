@@ -1,20 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, Share2, Download, MoreVertical, Check } from "lucide-react";
+import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
 import { useAudio } from "../../context/audio-context";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
   const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [sharedSongId, setSharedSongId] = useState(null);
+  const [activeMenuSongId, setActiveMenuSongId] = useState(null);
 
   const categoryName = language === "telugu" ? category.nameTe : category.nameEn;
 
+  // Auto-close options dropdown on outside clicks
+  useEffect(() => {
+    const handleCloseMenu = () => {
+      setActiveMenuSongId(null);
+    };
+    window.addEventListener("click", handleCloseMenu);
+    return () => window.removeEventListener("click", handleCloseMenu);
+  }, []);
+
   if (songs.length === 0) {
     return (
-      <div className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-[22px] bg-[#121826]/20">
+      <div className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-xl bg-white/[0.02]">
         <span className="font-semibold block text-white text-lg">No songs available</span>
         <span className="text-xs block mt-1">Try another language or search for a different theme.</span>
       </div>
@@ -53,12 +63,14 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   return (
     <div className="w-full flex flex-col select-none">
       {/* Sticky Table Header */}
-      <div className="sticky top-0 z-20 bg-[#070707] py-3 border-b border-white/5 grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-black text-[#a7a7a7] uppercase tracking-wider items-center select-none">
+      <div className="sticky top-0 z-20 bg-[#070707] py-3 border-b border-white/10 grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-[#a7a7a7] uppercase tracking-wider items-center select-none mb-3">
         <div className="text-center">#</div>
         <div>Title</div>
         <div className="hidden md:block">Album</div>
         <div className="hidden lg:block">Date Added</div>
-        <div className="text-right pr-4">Duration</div>
+        <div className="flex justify-end pr-4">
+          <Clock className="w-4 h-4 text-[#a7a7a7]" />
+        </div>
       </div>
 
       {/* Table Body */}
@@ -66,7 +78,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="space-y-1.5 mt-3"
+        className="space-y-1 mt-1"
       >
         {songs.map((song, index) => {
           const isCurrent = currentSong?.id === song.id;
@@ -94,33 +106,28 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                   playSong(song);
                 }
               }}
-              className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-2.5 rounded-xl cursor-pointer border transition-all duration-200 select-none ${
+              className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-3 rounded-lg cursor-pointer transition-colors duration-150 select-none ${
                 isCurrent
-                  ? "bg-[#1E293B]/70 border-[#D4A32A]/30 shadow-[0_0_15px_rgba(212,163,42,0.08)]"
-                  : "bg-transparent border-transparent hover:bg-card-hover/40"
+                  ? "bg-white/[0.06] text-white"
+                  : "bg-transparent hover:bg-white/[0.04]"
               }`}
-              whileHover={{
-                scale: 1.01,
-                borderColor: isCurrent ? "rgba(212, 163, 42, 0.45)" : "rgba(212, 163, 42, 0.25)",
-                boxShadow: "0 0 15px rgba(212, 163, 42, 0.12), 0 4px 12px rgba(0, 0, 0, 0.3)"
-              }}
             >
               {/* Index / Play Button */}
               <div className="w-10 flex items-center justify-center">
                 {isHovered ? (
                   <button className="text-white hover:scale-110 active:scale-95 transition-transform cursor-pointer">
                     {isSongPlaying ? (
-                      <Pause className="w-4 h-4 fill-current" />
+                      <Pause className="w-4 h-4 fill-current text-white" />
                     ) : (
-                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                      <Play className="w-4 h-4 fill-current ml-0.5 text-white" />
                     )}
                   </button>
                 ) : isCurrent ? (
-                  /* Animated Visualizer using app's classes */
-                  <div className="flex items-end gap-[2px] w-4 h-4 text-[#D4A32A]">
+                  /* Animated Visualizer using white styling */
+                  <div className="flex items-end gap-[2px] w-4 h-4 text-white">
                     <div className="w-[3px] bg-current rounded-full animate-music-bar-1" style={{ height: '30%' }}></div>
                     <div className="w-[3px] bg-current rounded-full animate-music-bar-2" style={{ height: '60%' }}></div>
-                    <div className="w-[3px] bg-[#F5D061] rounded-full animate-music-bar-3" style={{ height: '40%' }}></div>
+                    <div className="w-[3px] bg-white rounded-full animate-music-bar-3" style={{ height: '40%' }}></div>
                   </div>
                 ) : (
                   <span className="text-xs font-semibold tabular-nums text-[#a7a7a7]">
@@ -138,7 +145,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 />
                 <div className="min-w-0 flex-1">
                   <span className={`font-bold text-sm block truncate transition-colors ${
-                    isCurrent ? "text-[#D4A32A]" : "text-white"
+                    isCurrent ? "text-white font-extrabold" : "text-white"
                   }`}>
                     {displayTitle}
                   </span>
@@ -174,43 +181,59 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                   {song.duration}
                 </span>
 
-                <div className={`absolute right-4 flex items-center gap-1 transition-all duration-200 ${isHovered ? "opacity-100 visible translate-x-0" : "opacity-0 invisible translate-x-2"}`}>
+                <div className={`absolute right-4 flex items-center gap-3 transition-all duration-200 ${isHovered ? "opacity-100 visible translate-x-0" : "opacity-0 invisible translate-x-2"}`}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleFavorite(song.id);
                     }}
-                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-[#a7a7a7] hover:text-white"}`}
-                    title="Favorite"
+                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-[#a7a7a7] hover:text-white"}`}
+                    title={isFav ? "Remove Favorite" : "Favorite"}
                   >
                     <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
                   </button>
 
-                  <button
-                    onClick={(e) => handleShare(e, song.id)}
-                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${sharedSongId === song.id ? "text-[#D4A32A]" : "text-[#a7a7a7] hover:text-white"}`}
-                    title="Share"
-                  >
-                    {sharedSongId === song.id ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuSongId(activeMenuSongId === song.id ? null : song.id);
+                      }}
+                      className={`p-1.5 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer ${activeMenuSongId === song.id ? "text-white animate-pulse" : ""}`}
+                      title="More options"
+                    >
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </button>
 
-                  <button
-                    onClick={(e) => handleDownload(e, song.title)}
-                    className="p-1.5 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
-                    title="Download"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="p-1.5 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
-                    title="More"
-                  >
-                    <MoreVertical className="w-3.5 h-3.5" />
-                  </button>
+                    {activeMenuSongId === song.id && (
+                      <div className="absolute right-0 top-[110%] bg-[#181818] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShare(e, song.id);
+                            setActiveMenuSongId(null);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 ${
+                            sharedSongId === song.id ? "text-white" : "text-white"
+                          }`}
+                        >
+                          {sharedSongId === song.id ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                          <span>{sharedSongId === song.id ? "Copied" : "Share"}</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(e, song.title);
+                            setActiveMenuSongId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
