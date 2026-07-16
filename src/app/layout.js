@@ -2,8 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "./context/audio-context";
 import { SearchProvider } from "./context/search-context";
-import Header from "./components/layout/Header";
-import PlayerBar from "./components/player-bar";
+import AppLayout from "./components/layout/AppLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,16 +25,10 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="text-gray-100 font-sans select-none">
+      <body className="text-title font-sans select-none">
         <AudioProvider>
           <SearchProvider>
-            <div className="h-screen flex flex-col">
-              <Header />
-              <div className="flex flex-1 min-h-0">
-                {children}
-              </div>
-              <PlayerBar />
-            </div>
+            <AppLayout>{children}</AppLayout>
           </SearchProvider>
         </AudioProvider>
       </body>
