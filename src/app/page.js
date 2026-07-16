@@ -9,6 +9,8 @@ import SongCard from "./components/home/SongCard";
 import HeroCarousel from "./components/home/HeroCarousel";
 import VerseOfTheWeek from "./components/home/VerseOfTheWeek";
 import RecentlyPlayed from "./components/home/RecentlyPlayed";
+import CategoryExplorer from "./components/categories/CategoryExplorer";
+
 import {
   TrendingUp,
   FolderHeart,
@@ -119,8 +121,13 @@ export default function HomePage() {
         </>
       )}
 
+      {/* Category Explorer View */}
+      {activeTab === "categories" && !searchQuery && (
+        <CategoryExplorer />
+      )}
+
       {/* VIEW HEADER */}
-      {(!activeTab || activeTab !== "discover" || searchQuery) && !selectedLetter && (
+      {(!activeTab || activeTab !== "discover" || searchQuery) && !selectedLetter && activeTab !== "categories" && (
         <div>
           {activeTab === "discover" && searchQuery && (
             <div>
@@ -169,14 +176,16 @@ export default function HomePage() {
       )}
 
       {/* Songs Section */}
-      <SongsSection
-        songs={filteredSongs}
-        currentSong={currentSong}
-        isPlaying={isPlaying}
-        playSong={playSong}
-        selectedLetter={selectedLetter}
-        setSelectedLetter={setSelectedLetter}
-      />
+      {(activeTab !== "categories" || searchQuery) && (
+        <SongsSection
+          songs={filteredSongs}
+          currentSong={currentSong}
+          isPlaying={isPlaying}
+          playSong={playSong}
+          selectedLetter={selectedLetter}
+          setSelectedLetter={setSelectedLetter}
+        />
+      )}
     </div>
   );
 }
