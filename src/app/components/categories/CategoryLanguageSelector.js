@@ -26,7 +26,7 @@ export default function CategoryLanguageSelector({ selectedLanguage, onChange })
               {isSelected && (
                 <motion.div
                   layoutId="activeLangIndicator"
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-[#D4A32A] via-[#F5D061] to-[#D4A32A] shadow-[0_2px_10px_rgba(212,163,42,0.35)]"
+                  className="absolute inset-0 rounded-full bg-white shadow-[0_2px_10px_rgba(255,255,255,0.15)]"
                   transition={{ type: "spring", stiffness: 350, damping: 26 }}
                 />
               )}

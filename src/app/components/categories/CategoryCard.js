@@ -11,11 +11,11 @@ export default function CategoryCard({ category, language, onClick }) {
   return (
     <motion.div
       onClick={onClick}
-      className="relative w-full h-[180px] rounded-[22px] overflow-hidden border border-white/5 bg-[#121826]/40 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.37)] cursor-pointer group flex flex-col justify-end p-5 select-none"
+      className="relative w-full h-[180px] rounded-xl overflow-hidden border border-white/5 bg-white/[0.02] backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.37)] cursor-pointer group flex flex-col justify-end p-5 select-none"
       whileHover={{
-        scale: 1.04,
-        borderColor: "rgba(212, 163, 42, 0.55)",
-        boxShadow: "0 0 25px rgba(212, 163, 42, 0.22), 0 8px 32px rgba(0, 0, 0, 0.5)"
+        scale: 1.03,
+        borderColor: "rgba(255, 255, 255, 0.25)",
+        boxShadow: "0 0 25px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.5)"
       }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
@@ -34,10 +34,10 @@ export default function CategoryCard({ category, language, onClick }) {
 
       {/* Info Container */}
       <div className="relative z-10 flex flex-col gap-0.5">
-        <span className="text-[9px] font-bold tracking-widest text-[#a7a7a7]/60 uppercase transition-colors duration-300 group-hover:text-[#D4A32A]/70">
+        <span className="text-[9px] font-bold tracking-widest text-[#a7a7a7]/60 uppercase transition-colors duration-300 group-hover:text-white/60">
           {category.motif}
         </span>
-        <h3 className="text-lg font-black text-white group-hover:text-[#D4A32A] transition-colors duration-300 line-clamp-2 leading-tight">
+        <h3 className={`text-lg font-black text-white group-hover:text-white transition-colors duration-300 line-clamp-2 leading-tight ${language === "telugu" ? "font-telugu" : ""}`}>
           {name}
         </h3>
         <p className="text-xs text-[#a7a7a7] font-medium mt-1">

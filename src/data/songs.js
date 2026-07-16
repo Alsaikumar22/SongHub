@@ -688,5 +688,320 @@ export const MOCK_SONGS = [
       "Has filled my entire heart and soul",
       "I worship You with my first love"
     ]
+  },
+  {
+    id: "209",
+    title: "Aradhana",
+    teluguTitle: "ఆరాధన",
+    teluguFirstLetter: "ఆ",
+    artist: "Redeemed Choir",
+    album: "Praise & Glory",
+    genre: "Gospel",
+    duration: "5:30",
+    durationSec: 330,
+    coverUrl: "https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+    releaseYear: 2024,
+    bpm: 74,
+    plays: 23190,
+    lyricsTelugu: [
+      "ఆరాధన ఆరాధన నీకే నా దేవా",
+      "సృష్టికర్తవైన నీకు నిత్య ఆరాధన",
+      "జీవము గల దేవుడవైన నీకే స్తుతులు",
+      "నీ పరిశుద్ధ నామమును కీర్తింతును"
+    ],
+    lyricsEnglish: [
+      "Worship and praise to You my Lord",
+      "Eternal worship to the Creator",
+      "Praises to the living God",
+      "I glorify Your holy name"
+    ]
+  },
+  {
+    id: "210",
+    title: "Intha Manchivaadava",
+    teluguTitle: "ఇంత మంచివాడవా",
+    teluguFirstLetter: "ఇ",
+    artist: "Grace Singers",
+    album: "Grace Upon Grace",
+    genre: "Worship",
+    duration: "4:45",
+    durationSec: 285,
+    coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+    releaseYear: 2023,
+    bpm: 68,
+    plays: 83291,
+    lyricsTelugu: [
+      "ఇంత మంచివాడవే యేసయ్యా నా పై చూపిన కృపలకు వందనములు",
+      "పాపినైన నన్ను ప్రేమించి చేరదీసావు",
+      "నీ త్యాగమును నేనెన్నడు మరువలేను"
+    ],
+    lyricsEnglish: [
+      "You are so good, O Lord Jesus",
+      "Thank You for Your grace upon me",
+      "You loved a sinner like me",
+      "I will never forget Your sacrifice"
+    ]
+  },
+  {
+    id: "211",
+    title: "Eeshwaruda",
+    teluguTitle: "ఈశ్వరుడా",
+    teluguFirstLetter: "ఈ",
+    artist: "Faith Melody",
+    album: "Almighty",
+    genre: "Classical",
+    duration: "6:10",
+    durationSec: 370,
+    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+    releaseYear: 2024,
+    bpm: 65,
+    plays: 12893,
+    lyricsTelugu: [
+      "ఈశ్వరుడా నీ నామము ఎంత సుందరము",
+      "సర్వసృష్టికి అధిపతివి నీవే నా ప్రభువా",
+      "నీ కార్యములు ఆశ్చర్యకరమైనవి"
+    ],
+    lyricsEnglish: [
+      "O Lord God, how beautiful is Your name",
+      "You are the master of all creation",
+      "Your deeds are wonderful"
+    ]
+  },
+  {
+    id: "212",
+    title: "Unnatha Devudu",
+    teluguTitle: "ఉన్నత దేవుడు",
+    teluguFirstLetter: "ఉ",
+    artist: "Zion Vocalists",
+    album: "High Praise",
+    genre: "Worship",
+    duration: "5:15",
+    durationSec: 315,
+    coverUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+    releaseYear: 2023,
+    bpm: 78,
+    plays: 54930,
+    lyricsTelugu: [
+      "ఉన్నత దేవుడవు నీవు నా యేసయ్య",
+      "అత్యున్నత సింహాసనంపై ఆసీనుడవైనవాడా",
+      "సర్వాధికారివైన నీకే ఆరాధన"
+    ],
+    lyricsEnglish: [
+      "You are the exalted God, O Jesus",
+      "One who is seated on the highest throne",
+      "Worship to You who rules over all"
+    ]
+  },
+  {
+    id: "213",
+    title: "Entho Preminchithivi",
+    teluguTitle: "ఎంతో ప్రేమించితివి",
+    teluguFirstLetter: "ఎ",
+    artist: "Calvary Team",
+    album: "Sacrifice",
+    genre: "Hymn",
+    duration: "4:50",
+    durationSec: 290,
+    coverUrl: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+    releaseYear: 2024,
+    bpm: 72,
+    plays: 38920,
+    lyricsTelugu: [
+      "ఎంతో ప్రేమించితివి నన్ను నా యేసయ్య",
+      "నా కొరకై ప్రాణమును త్యాగము చేసావు",
+      "నీ ప్రేమకు సాటి ఏదియు లేదు"
+    ],
+    lyricsEnglish: [
+      "You loved me so much, O Jesus",
+      "You sacrificed Your life for me",
+      "Nothing can compare to Your love"
+    ]
+  },
+  {
+    id: "214",
+    title: "Karunamayuda",
+    teluguTitle: "కరుణామయుడా",
+    teluguFirstLetter: "క",
+    artist: "Sis. Mercy",
+    album: "Compassion",
+    genre: "Gospel",
+    duration: "6:20",
+    durationSec: 380,
+    coverUrl: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    releaseYear: 2023,
+    bpm: 60,
+    plays: 90230,
+    lyricsTelugu: [
+      "కరుణామయుడా నీ కృప నాకు చాలును",
+      "కష్టాలలో నా తోడుగా నిలిచినవాడా",
+      "నీ జాలి కరుణలకు అంతము లేదు"
+    ],
+    lyricsEnglish: [
+      "O merciful Lord, Your grace is enough for me",
+      "One who stood by me in times of trouble",
+      "There is no end to Your pity and mercy"
+    ]
+  },
+  {
+    id: "215",
+    title: "Gaganamule Cheppu",
+    teluguTitle: "గగనములే చెప్పు",
+    teluguFirstLetter: "గ",
+    artist: "Heavenly Harmonies",
+    album: "Creation Praise",
+    genre: "Worship",
+    duration: "5:40",
+    durationSec: 340,
+    coverUrl: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3",
+    releaseYear: 2024,
+    bpm: 80,
+    plays: 43210,
+    lyricsTelugu: [
+      "గగనములే చెప్పుచున్నవి దేవుని మహిమను",
+      "భూమి ప్రశంసిస్తోంది ఆయన హస్తకృత్యములను",
+      "ప్రకృతి అంతా ఆయనను కీర్తిస్తోంది"
+    ],
+    lyricsEnglish: [
+      "The heavens declare the glory of God",
+      "The earth praises His handiwork",
+      "All nature sings of His praise"
+    ]
+  },
+  {
+    id: "216",
+    title: "Challani Raja",
+    teluguTitle: "చల్లని రాజా",
+    teluguFirstLetter: "చ",
+    artist: "Prince of Peace Group",
+    album: "Rest",
+    genre: "Lullaby",
+    duration: "3:55",
+    durationSec: 235,
+    coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
+    releaseYear: 2023,
+    bpm: 54,
+    plays: 32091,
+    lyricsTelugu: [
+      "చల్లని రాజా యేసు ప్రభూ నా హృదయములో నివసించుము",
+      "నాకు నెమ్మదిని సమాధానమును దయచేయుము",
+      "నీ నీడలో నేను విశ్రమింతును"
+    ],
+    lyricsEnglish: [
+      "O peaceful King Jesus, dwell in my heart",
+      "Grant me comfort and peace",
+      "I rest under Your shadow"
+    ]
+  },
+  {
+    id: "217",
+    title: "Nammina Vaarini",
+    teluguTitle: "నమ్మిన వారిని",
+    teluguFirstLetter: "న",
+    artist: "Faithful Servants",
+    album: "Trust",
+    genre: "Worship",
+    duration: "4:30",
+    durationSec: 270,
+    coverUrl: "https://images.unsplash.com/photo-1507692049790-de58290a4334?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3",
+    releaseYear: 2024,
+    bpm: 70,
+    plays: 50493,
+    lyricsTelugu: [
+      "నమ్మిన వారిని విడువని దేవుడవు నీవు",
+      "నా నమ్మకము నీవే యేసయ్యా",
+      "ఆపత్కాలములో నాకు ఆశ్రయము నీవే"
+    ],
+    lyricsEnglish: [
+      "You are the God who never leaves those who trust You",
+      "You are my trust, O Jesus",
+      "You are my refuge in times of trouble"
+    ]
+  },
+  {
+    id: "218",
+    title: "Rajuve Nive",
+    teluguTitle: "రాజుве నీవే",
+    teluguFirstLetter: "ర",
+    artist: "Royal Priesthood",
+    album: "Coronation",
+    genre: "Majesty",
+    duration: "5:05",
+    durationSec: 305,
+    coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3",
+    releaseYear: 2023,
+    bpm: 75,
+    plays: 67320,
+    lyricsTelugu: [
+      "రాజువే నీవే రాజాధి రాజువు నీవే నా యేసయ్య",
+      "నీ రాజ్యము నిరంతరము నిలుచును",
+      "సకల మోకాళ్ళు నీ యెదుట వంగును"
+    ],
+    lyricsEnglish: [
+      "You are King, King of Kings You are, O Jesus",
+      "Your kingdom will stand forever",
+      "Every knee shall bow before You"
+    ]
+  },
+  {
+    id: "219",
+    title: "Sannuthi Chethunu",
+    teluguTitle: "సన్నుతి చేతును",
+    teluguFirstLetter: "స",
+    artist: "Praise Band",
+    album: "Sannuthi",
+    genre: "Acoustic",
+    duration: "4:20",
+    durationSec: 260,
+    coverUrl: "https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3",
+    releaseYear: 2024,
+    bpm: 72,
+    plays: 40928,
+    lyricsTelugu: [
+      "సన్నుతి చేతును దేవా నీ నామమును",
+      "నా పూర్ణ హృదయముతో నిన్ను స్తుతింతును",
+      "నీ మేలులను నేను మరువలేను"
+    ],
+    lyricsEnglish: [
+      "I will praise Your name, O God",
+      "I will worship You with my whole heart",
+      "I can never forget Your benefits"
+    ]
+  },
+  {
+    id: "220",
+    title: "Beautiful Savior",
+    teluguTitle: "అందాల యేసయ్య",
+    teluguFirstLetter: "అ",
+    artist: "Grace Singers",
+    album: "Refuge",
+    genre: "Worship",
+    duration: "4:15",
+    durationSec: 255,
+    coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&auto=format&fit=crop&q=80",
+    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3",
+    releaseYear: 2024,
+    bpm: 68,
+    plays: 28930,
+    lyricsTelugu: [
+      "అందాల యేసయ్య నీ సన్నిధిలోనే ఆనందము",
+      "నీ ముఖము చూచుటయే నా ధన్యత",
+      "నా జీవన జ్యోతివి నీవే ప్రభువా"
+    ],
+    lyricsEnglish: [
+      "Beautiful Savior, there is joy in Your presence",
+      "Looking at Your face is my privilege",
+      "You are the light of my life, O Lord"
+    ]
   }
 ];

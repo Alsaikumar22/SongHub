@@ -53,7 +53,9 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 flex items-center justify-between gap-6 shrink-0 sticky top-0 z-50">
+    <header className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 md:flex ${
+      activeTab === "discover" ? "flex" : "hidden"
+    }`}>
       <div className="flex items-center gap-2.5 flex-shrink-0">
         <div className="w-8 h-8 rounded-lg bg-card-hover flex items-center justify-center text-white shadow-sm">
           <Music className="w-4 h-4" />
@@ -63,7 +65,7 @@ export default function Header() {
         </span>
       </div>
 
-      <div className="relative flex-1 max-w-sm h-full mx-auto group">
+      <div className="relative flex-1 max-w-sm h-full mx-auto group hidden md:block">
         <Search className="w-4.5 h-4.5 text-muted absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none transition-colors group-focus-within:text-copy" />
         <input
           type="text"
@@ -76,7 +78,7 @@ export default function Header() {
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full h-full pl-11 pr-16 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-accent focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
+          className="w-full h-full pl-11 pr-16 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-white/35 focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
         />
         
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
@@ -112,7 +114,7 @@ export default function Header() {
 
         {/* Quick Search Dropdown */}
         {isFocused && searchQuery && !showFullResults && (
-          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-[#121212] border border-white/[0.07] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-[#121212] border border-white/[0.07] rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
               <span className="text-[10px] font-bold text-muted uppercase tracking-[0.18em]">
@@ -142,14 +144,14 @@ export default function Header() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-white block truncate group-hover:text-accent transition-colors">
+                    <span className="text-xs font-medium text-white block truncate transition-colors">
                       {song.teluguTitle || song.title}
                     </span>
                     <span className="text-[10px] text-muted block truncate mt-0.5">
                       {song.artist}
                     </span>
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-accent/10 group-hover:bg-accent flex items-center justify-center text-accent group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-white/10 group-hover:bg-white flex items-center justify-center text-white group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
                     <Play className="w-3 h-3 fill-current text-current pl-[1px]" />
                   </div>
                 </button>
@@ -171,7 +173,7 @@ export default function Header() {
                   setIsFocused(false);
                   router.push("/");
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.02] hover:bg-white/[0.05] text-[10px] font-semibold text-muted hover:text-white uppercase tracking-widest border-t border-white/[0.05] transition-all cursor-pointer hover:text-accent"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.02] hover:bg-white/[0.05] text-[10px] font-semibold text-muted hover:text-white uppercase tracking-widest border-t border-white/[0.05] transition-all cursor-pointer hover:text-white"
               >
                 <span>See all {totalMatches.length} results</span>
                 <ArrowRight className="w-3 h-3" />

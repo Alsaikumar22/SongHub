@@ -27,16 +27,16 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           iconSize="w-8 h-8"
         />
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent">
           <div
-            className={`rounded-full bg-title text-canvas flex items-center justify-center shadow-md scale-90 group-hover:scale-100 transition-transform ${
-              isSmall ? "w-10 h-10" : "w-12 h-12"
+            className={`absolute bottom-2.5 left-2.5 rounded-full bg-white text-black flex items-center justify-center shadow-xl transition-transform hover:scale-105 active:scale-95 z-20 ${
+              isSmall ? "w-9 h-9" : "w-11 h-11"
             }`}
           >
             {isThisPlaying ? (
-              <Pause className={isSmall ? "w-4.5 h-4.5 fill-current" : "w-5 h-5 fill-current"} />
+              <Pause className={isSmall ? "w-4 h-4 fill-current text-black" : "w-5 h-5 fill-current text-black"} />
             ) : (
-              <Play className={`fill-current ml-0.5 ${isSmall ? "w-4.5 h-4.5" : "w-5 h-5"}`} />
+              <Play className={`fill-current ml-0.5 text-black ${isSmall ? "w-4 h-4" : "w-5 h-5"}`} />
             )}
           </div>
         </div>

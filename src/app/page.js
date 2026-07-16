@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAudio } from "./context/audio-context";
 import { useSearch } from "./context/search-context";
 import SongsSection from "./components/home/SongsSection";
@@ -26,10 +27,15 @@ import {
   ArrowLeft,
   ChevronRight,
   TrendingUp,
-  Library
+  Library,
+  X,
+  Music
 } from "lucide-react";
 
-export default function HomePage() {
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const {
     songs,
     currentSong,
@@ -50,11 +56,88 @@ export default function HomePage() {
     setViewedSongId,
   } = useAudio();
 
-  const { searchQuery, showFullResults, setShowFullResults } = useSearch();
+  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
 
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([
+    "ఉదయ ఆరాధన",
+    "స్తుతి పాటలు",
+    "శ్రీమంతుడు",
+    "Jesus worship"
+  ]);
+
+  // Sync 1: browser URL parameters -> context tab/search state (on load/popstate)
+  useEffect(() => {
+    if (!searchParams) return;
+    
+    const tabParam = searchParams.get("tab");
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    
+    const playlistIdParam = searchParams.get("playlistId");
+    if (playlistIdParam && playlistIdParam !== activePlaylistId) {
+      setActivePlaylistId(playlistIdParam);
+    }
+    
+    const queryParam = searchParams.get("q");
+    if (queryParam && queryParam !== searchQuery) {
+      setSearchQuery(queryParam);
+      setShowFullResults(true);
+    }
+  }, [searchParams]);
+
+  // Sync 2: context state changes -> browser URL parameters
+  useEffect(() => {
+    if (!searchParams) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
+    // Sync tab param
+    const currentTabInUrl = params.get("tab");
+    if (activeTab && activeTab !== currentTabInUrl) {
+      params.set("tab", activeTab);
+      changed = true;
+    }
+
+    // Sync playlistId param
+    const currentPlaylistIdInUrl = params.get("playlistId");
+    if (activeTab === "playlist" && activePlaylistId) {
+      if (activePlaylistId !== currentPlaylistIdInUrl) {
+        params.set("playlistId", activePlaylistId);
+        changed = true;
+      }
+    } else if (currentPlaylistIdInUrl) {
+      params.delete("playlistId");
+      changed = true;
+    }
+
+    // Clean up category param if tab is no longer categories
+    if (activeTab !== "categories" && params.has("category")) {
+      params.delete("category");
+      changed = true;
+    }
+
+    // Sync search query param
+    const currentQueryInUrl = params.get("q");
+    if (searchQuery && showFullResults) {
+      if (searchQuery !== currentQueryInUrl) {
+        params.set("q", searchQuery);
+        changed = true;
+      }
+    } else if (currentQueryInUrl) {
+      params.delete("q");
+      changed = true;
+    }
+
+    if (changed) {
+      router.push(`/?${params.toString()}`);
+    }
+  }, [activeTab, activePlaylistId, searchQuery, showFullResults]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -209,10 +292,12 @@ export default function HomePage() {
         {/* 1. BROWSE TAB */}
         {activeTab === "discover" && (
           <div className="space-y-6">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Good day</span>
-              <h1 className="text-2xl font-black text-white tracking-tight">Explore Music</h1>
-            </div>
+            {!selectedLetter && (
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">Good day</span>
+                <h1 className="text-2xl font-black text-white tracking-tight">Explore Music</h1>
+              </div>
+            )}
             
             {!selectedLetter && (
               <>
@@ -235,9 +320,127 @@ export default function HomePage() {
 
         {/* 2. SEARCH / CATEGORIES TAB */}
         {activeTab === "search" && (
-          <div className="space-y-6">
-            {searchQuery.trim() === "" ? (
-              /* Search Hub default: Dynamic Category Explorer with redundant search bar removed */
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {!searchParams?.get("category") && (
+              <>
+                {!(isSearchFocused || searchQuery.trim() !== "") ? (
+                  /* Standard Spotify header & clean input */
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex flex-col">
+                      <h1 className="text-3xl font-black text-white tracking-tight">Search</h1>
+                    </div>
+                    <div className="relative flex items-center w-full">
+                      <Search className="w-5 h-5 text-[#7f7f7f] absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="What do you want to listen to?"
+                        value={searchQuery}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowFullResults(true);
+                        }}
+                        className="w-full h-11 pl-12 pr-10 text-sm bg-[#242424] rounded-lg focus:outline-none focus:bg-[#282828] transition-all duration-150 text-white placeholder-[#7f7f7f] border-none font-medium shadow-inner"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* Focused / active search sticky layout */
+                  <div className="sticky top-0 bg-card py-2 z-30 flex items-center gap-3 w-full animate-in slide-in-from-top-1.5 duration-200">
+                    <div className="relative flex-1">
+                      <Search className="w-5 h-5 text-[#7f7f7f] absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search songs, artists, genres..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowFullResults(true);
+                        }}
+                        className="w-full h-11 pl-12 pr-10 text-sm bg-[#242424] rounded-lg focus:outline-none transition-all duration-150 text-white placeholder-[#7f7f7f] border-none font-medium"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery("");
+                            setShowFullResults(false);
+                          }}
+                          className="p-1 hover:bg-white/10 rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-white cursor-pointer transition-colors duration-150"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsSearchFocused(false);
+                        setSearchQuery("");
+                        setShowFullResults(false);
+                      }}
+                      className="text-xs font-bold text-white hover:text-dim active:scale-95 transition-all duration-150 pr-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {searchParams?.get("category") ? (
+              /* Category details page always takes precedence */
+              <CategoryExplorer />
+            ) : isSearchFocused && searchQuery.trim() === "" ? (
+              /* focused empty state: Recent Searches */
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-white">Recent searches</h2>
+                  {recentSearches.length > 0 && (
+                    <button
+                      onClick={() => setRecentSearches([])}
+                      className="text-xs font-bold text-dim hover:text-white transition-colors cursor-pointer"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {recentSearches.length === 0 ? (
+                  <div className="text-center py-16 text-muted">
+                    <p className="text-sm font-semibold">Search for songs, artists, or categories</p>
+                    <p className="text-xs text-dim mt-1">Your recent searches will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentSearches.map((query, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSearchQuery(query);
+                          setShowFullResults(true);
+                        }}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <Clock className="w-4 h-4 text-[#a7a7a7]" />
+                          <span className="text-sm font-semibold text-white">{query}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecentSearches(recentSearches.filter((_, i) => i !== index));
+                          }}
+                          className="p-1 hover:bg-white/10 rounded-full text-dim hover:text-white cursor-pointer transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : searchQuery.trim() === "" ? (
+              /* Search Hub default: Dynamic Category Explorer */
               <CategoryExplorer />
             ) : (
               /* Inline Search Results */
@@ -564,5 +767,13 @@ export default function HomePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="flex-1 bg-canvas flex items-center justify-center text-muted">Loading SongHub...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

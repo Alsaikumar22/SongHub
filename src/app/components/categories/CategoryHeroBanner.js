@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { Play, Heart, Share2, Check } from "lucide-react";
 
 const CATEGORY_DESCRIPTIONS = {
   "morning-worship": "Start your day in His presence with inspiring morning worship melodies.",
@@ -27,94 +26,66 @@ const CATEGORY_DESCRIPTIONS = {
   "thanksgiving-songs": "Express gratitude and praise for God's endless blessings, harvest, and love."
 };
 
-export default function CategoryHeroBanner({ category, language, songCount, onPlayAll }) {
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [isShared, setIsShared] = useState(false);
+const CATEGORY_COLORS = {
+  "morning-worship": "from-[#7a2c02] to-[#070707]",
+  "prayer-songs": "from-[#024e75] to-[#070707]",
+  "worship-songs": "from-[#065f46] to-[#070707]",
+  "praise-songs": "from-[#991b1b] to-[#070707]",
+  "salvation-songs": "from-[#581c87] to-[#070707]",
+  "faith-hope-songs": "from-[#065f46] to-[#070707]",
+  "repentance-songs": "from-[#3730a3] to-[#070707]",
+  "holy-spirit-songs": "from-[#075985] to-[#070707]",
+  "healing-miracle-songs": "from-[#155e75] to-[#070707]",
+  "bible-based-songs": "from-[#065f46] to-[#070707]",
+  "festival-special-songs": "from-[#9d174d] to-[#070707]",
+  "children-songs": "from-[#92400e] to-[#070707]",
+  "youth-songs": "from-[#5b21b6] to-[#070707]",
+  "communion-songs": "from-[#881337] to-[#070707]",
+  "christmas-songs": "from-[#991b1b] to-[#070707]",
+  "good-friday-songs": "from-[#292524] to-[#070707]",
+  "easter-songs": "from-[#854d0e] to-[#070707]",
+  "baptism-songs": "from-[#155e75] to-[#070707]",
+  "marriage-songs": "from-[#be185d] to-[#070707]",
+  "thanksgiving-songs": "from-[#7a2c02] to-[#070707]"
+};
 
+export default function CategoryHeroBanner({ category, language, songCount }) {
   const name = language === "telugu" ? category.nameTe : category.nameEn;
   const langName = language === "telugu" ? "Telugu" : "English";
   const desc = CATEGORY_DESCRIPTIONS[category.id] || "Curated Christian worship and devotion collection.";
-
-  const handleShare = () => {
-    setIsShared(true);
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-    }
-    setTimeout(() => setIsShared(false), 2000);
-  };
+  const bannerColor = CATEGORY_COLORS[category.id] || "from-[#1e293b] to-[#070707]";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -25 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className="relative overflow-hidden rounded-[22px] border border-white/5 bg-[#121826]/40 backdrop-blur-md p-6 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end w-full select-none"
-    >
-      {/* Blurred background image */}
-      <div className="absolute inset-0 z-0 opacity-15 blur-2xl scale-110 pointer-events-none">
-        <img src={category.bgImage} alt="" className="w-full h-full object-cover" />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-transparent to-transparent z-0 pointer-events-none" />
-
-      {/* Category artwork */}
+    <div className={`relative w-full pt-16 pb-6 px-6 md:px-8 flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end select-none overflow-hidden bg-gradient-to-b ${bannerColor}`}>
+      {/* Category artwork (sharp corners per Spotify Album design) */}
       <motion.div 
-        className="w-36 h-36 md:w-40 md:h-40 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-10"
-        whileHover={{ scale: 1.02 }}
-        transition={{ duration: 0.3 }}
+        className="w-44 h-44 md:w-48 md:h-48 rounded-md overflow-hidden shrink-0 shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-10"
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4 }}
       >
         <img src={category.bgImage} alt={name} className="w-full h-full object-cover" />
       </motion.div>
 
       {/* Category details */}
       <div className="flex-1 text-center md:text-left z-10 flex flex-col justify-end">
-        <span className="text-[10px] font-black text-[#D4A32A] uppercase tracking-widest block mb-2">
+        <span className="text-[11px] font-bold text-white uppercase tracking-widest block mb-1">
           Playlist
         </span>
-        <h1 className="text-white text-3xl md:text-5xl font-black tracking-tight leading-none mb-3 drop-shadow-md">
+        <h1 className={`text-white text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${language === "telugu" ? "font-telugu" : ""}`}>
           {name}
         </h1>
-        <p className="text-sm text-[#e5e7eb] font-semibold mb-2">
-          {langName} &bull; {songCount} Song{songCount !== 1 && "s"}
-        </p>
-        <p className="text-xs text-[#a7a7a7] max-w-xl mb-5 leading-relaxed">
+        <p className="text-xs md:text-sm text-[#a7a7a7] max-w-xl mb-4 leading-relaxed font-medium">
           {desc}
         </p>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-          <button
-            onClick={onPlayAll}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#D4A32A] to-[#F5D061] text-[#070707] font-bold text-xs uppercase tracking-wider rounded-full shadow-[0_4px_15px_rgba(212,163,42,0.3)] hover:scale-105 active:scale-95 transition-all cursor-pointer duration-200"
-          >
-            <Play className="w-4.5 h-4.5 fill-current" />
-            Play All
-          </button>
-
-          <button
-            onClick={() => setIsFavorited(!isFavorited)}
-            className={`flex items-center justify-center p-3 rounded-full border transition-all duration-200 cursor-pointer ${
-              isFavorited
-                ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
-                : "bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
-            }`}
-            title="Add to Favorites"
-          >
-            <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
-          </button>
-
-          <button
-            onClick={handleShare}
-            className={`flex items-center justify-center p-3 rounded-full border transition-all duration-200 cursor-pointer ${
-              isShared
-                ? "bg-[#D4A32A]/20 border-[#D4A32A]/40 text-[#D4A32A]"
-                : "bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
-            }`}
-            title="Share Category"
-          >
-            {isShared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-          </button>
+        <div className="flex items-center justify-center md:justify-start gap-1.5 text-xs text-white/90 font-bold">
+          <span>SongHub</span>
+          <span className="text-[#a7a7a7]/50">&bull;</span>
+          <span className="text-[#a7a7a7] font-medium">{langName}</span>
+          <span className="text-[#a7a7a7]/50">&bull;</span>
+          <span>{songCount} song{songCount !== 1 && "s"}</span>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
