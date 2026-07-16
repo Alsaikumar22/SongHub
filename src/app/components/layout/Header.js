@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Music, Search, X, Play, ArrowRight } from "lucide-react";
+import { Music, Search, X, Play, ArrowRight, LayoutGrid } from "lucide-react";
 import { useSearch } from "../../context/search-context";
 import { useAudio } from "../../context/audio-context";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 export default function Header() {
   const router = useRouter();
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
-  const { songs, playSong } = useAudio();
+  const { songs, playSong, activeTab, setActiveTab } = useAudio();
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeout = useRef(null);
 
@@ -76,19 +76,39 @@ export default function Header() {
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full h-full pl-10 pr-10 text-sm bg-card border border-white/5 rounded-full focus:outline-none focus:border-white/20 focus:bg-[#181818] transition-all duration-200 text-copy placeholder-muted/50"
+          className="w-full h-full pl-11 pr-16 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-accent focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
         />
-        {searchQuery && (
+        
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setShowFullResults(false);
+              }}
+              className="p-1 hover:bg-line/30 rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-150"
+              title="Clear Search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={() => {
-              setSearchQuery("");
-              setShowFullResults(false);
+              setActiveTab(activeTab === "categories" ? "discover" : "categories");
+              if (activeTab !== "categories") {
+                setSearchQuery("");
+                setShowFullResults(false);
+                router.push("/");
+              }
             }}
-            className="p-1 hover:bg-card-hover rounded-md absolute right-2 top-1/2 -translate-y-1/2 text-dim hover:text-copy cursor-pointer transition-all duration-150"
+            className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
+              activeTab === "categories" ? "text-white bg-white/5" : "text-dim hover:text-copy"
+            }`}
+            title="Browse Categories"
           >
-            <X className="w-3.5 h-3.5" />
+            <LayoutGrid className="w-4 h-4" />
           </button>
-        )}
+        </div>
 
         {/* Quick Search Dropdown */}
         {isFocused && searchQuery && !showFullResults && (
@@ -122,15 +142,15 @@ export default function Header() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-white block truncate group-hover:text-white/80 transition-colors">
+                    <span className="text-xs font-medium text-white block truncate group-hover:text-accent transition-colors">
                       {song.teluguTitle || song.title}
                     </span>
                     <span className="text-[10px] text-muted block truncate mt-0.5">
                       {song.artist}
                     </span>
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-white/5 group-hover:bg-white/10 flex items-center justify-center text-white/40 group-hover:text-white opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                    <Play className="w-3 h-3 fill-current ml-0.5" />
+                  <div className="w-7 h-7 rounded-full bg-accent/10 group-hover:bg-accent flex items-center justify-center text-accent group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                    <Play className="w-3 h-3 fill-current text-current pl-[1px]" />
                   </div>
                 </button>
               ))}
@@ -144,14 +164,14 @@ export default function Header() {
             </div>
 
             {/* See all results */}
-            {matchingSongs.length > 0 && (
+            {totalMatches.length > 0 && (
               <button
                 onMouseDown={() => {
                   setShowFullResults(true);
                   setIsFocused(false);
                   router.push("/");
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.02] hover:bg-white/[0.05] text-[10px] font-semibold text-muted hover:text-white uppercase tracking-widest border-t border-white/[0.05] transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.02] hover:bg-white/[0.05] text-[10px] font-semibold text-muted hover:text-white uppercase tracking-widest border-t border-white/[0.05] transition-all cursor-pointer hover:text-accent"
               >
                 <span>See all {totalMatches.length} results</span>
                 <ArrowRight className="w-3 h-3" />

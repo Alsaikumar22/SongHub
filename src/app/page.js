@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useAudio } from "./context/audio-context";
 import { useSearch } from "./context/search-context";
 import SongsSection from "./components/home/SongsSection";
-import SongCard from "./components/home/SongCard";
 import HeroCarousel from "./components/home/HeroCarousel";
 import VerseOfTheWeek from "./components/home/VerseOfTheWeek";
 import RecentlyPlayed from "./components/home/RecentlyPlayed";
 import SearchResults from "./components/search/SearchResults";
 import SongArtwork from "./components/ui/SongArtwork";
+import CategoryExplorer from "./components/categories/CategoryExplorer";
+
 import {
   FolderHeart,
   ListMusic,
@@ -23,10 +24,9 @@ import {
   Play,
   Pause,
   ArrowLeft,
-  Library,
-  Music,
   ChevronRight,
-  FolderOpen
+  TrendingUp,
+  Library
 } from "lucide-react";
 
 export default function HomePage() {
@@ -36,18 +36,21 @@ export default function HomePage() {
     isPlaying,
     playSong,
     favorites,
+    toggleFavorite,
     playlists,
+    createPlaylist,
+    deletePlaylist,
+    addSongToPlaylist,
+    removeSongFromPlaylist,
     recentlyPlayed,
     activeTab,
     setActiveTab,
     activePlaylistId,
     setActivePlaylistId,
-    createPlaylist,
-    deletePlaylist,
-    removeSongFromPlaylist
+    setViewedSongId,
   } = useAudio();
 
-  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
+  const { searchQuery, showFullResults, setShowFullResults } = useSearch();
 
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
@@ -112,14 +115,6 @@ export default function HomePage() {
     }
   };
 
-  // Genre Categories for mobile search screen
-  const genres = [
-    { name: "Lo-Fi", label: "Lofi Sunset", color: "from-amber-500 to-rose-600" },
-    { name: "Synthwave", label: "Synthwave Nights", color: "from-pink-500 to-purple-800" },
-    { name: "Rock", label: "Rock & Worship", color: "from-teal-500 to-emerald-800" },
-    { name: "Pop", label: "Pop Anthems", color: "from-blue-500 to-indigo-800" }
-  ];
-
   return (
     <div className={`flex-1 flex flex-col min-h-0 overflow-y-auto`}>
       
@@ -128,7 +123,7 @@ export default function HomePage() {
       {/* ──────────────────────────────────────────────────────── */}
       <div className="hidden md:block space-y-8 p-4">
         {/* VIEW HEADER */}
-        {activeTab && activeTab !== "discover" && !selectedLetter && (
+        {activeTab && activeTab !== "discover" && activeTab !== "categories" && !selectedLetter && (
           <div>
             {activeTab === "favorites" && (
               <div>
@@ -176,26 +171,33 @@ export default function HomePage() {
           <RecentlyPlayed />
         )}
 
+        {/* Category Explorer View (Desktop) */}
+        {activeTab === "categories" && !(searchQuery && showFullResults) && (
+          <CategoryExplorer />
+        )}
+
         {/* Songs List Section */}
-        {searchQuery && showFullResults ? (
-          <div className="flex-1 flex flex-col min-h-0">
-            <SearchResults
-              results={filteredSongs}
-              query={searchQuery}
+        {activeTab !== "categories" && (
+          searchQuery && showFullResults ? (
+            <div className="flex-1 flex flex-col min-h-0">
+              <SearchResults
+                results={filteredSongs}
+                query={searchQuery}
+                currentSong={currentSong}
+                isPlaying={isPlaying}
+                playSong={playSong}
+              />
+            </div>
+          ) : (
+            <SongsSection
+              songs={filteredSongs}
               currentSong={currentSong}
               isPlaying={isPlaying}
               playSong={playSong}
+              selectedLetter={selectedLetter}
+              setSelectedLetter={setSelectedLetter}
             />
-          </div>
-        ) : (
-          <SongsSection
-            songs={filteredSongs}
-            currentSong={currentSong}
-            isPlaying={isPlaying}
-            playSong={playSong}
-            selectedLetter={selectedLetter}
-            setSelectedLetter={setSelectedLetter}
-          />
+          )
         )}
       </div>
 
@@ -231,48 +233,12 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 2. SEARCH TAB */}
+        {/* 2. SEARCH / CATEGORIES TAB */}
         {activeTab === "search" && (
           <div className="space-y-6">
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-black text-white tracking-tight">Search</h1>
-            </div>
-
-            {/* Immersive Search Box */}
-            <div className="relative group">
-              <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none transition-colors group-focus-within:text-white" />
-              <input
-                type="text"
-                placeholder="Songs, artists, genres..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowFullResults(true);
-                }}
-                className="w-full h-12 pl-12 pr-10 text-sm bg-card border border-white/5 rounded-xl focus:outline-none focus:border-white/20 focus:bg-[#181818] transition-all duration-200 text-white placeholder-muted/50"
-              />
-            </div>
-
             {searchQuery.trim() === "" ? (
-              /* Search Hub default: Browse Categories */
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Browse Categories</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {genres.map((genre) => (
-                    <button
-                      key={genre.name}
-                      onClick={() => {
-                        setSearchQuery(genre.name);
-                        setShowFullResults(true);
-                      }}
-                      className={`relative aspect-[3/2] rounded-xl overflow-hidden bg-gradient-to-br ${genre.color} p-4 text-left font-bold text-white shadow-md active:scale-95 transition-transform cursor-pointer`}
-                    >
-                      <span className="text-sm block">{genre.label}</span>
-                      <Music className="absolute bottom-2 right-2 w-8 h-8 opacity-20 transform rotate-12" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              /* Search Hub default: Dynamic Category Explorer with redundant search bar removed */
+              <CategoryExplorer />
             ) : (
               /* Inline Search Results */
               <div className="space-y-4">
@@ -347,7 +313,6 @@ export default function HomePage() {
                 {filteredSongs.length > 0 && (
                   <button
                     onClick={() => {
-                      // Shuffle play favorites
                       const randomIndex = Math.floor(Math.random() * filteredSongs.length);
                       playSong(filteredSongs[randomIndex]);
                     }}
@@ -597,9 +562,7 @@ export default function HomePage() {
             )}
           </div>
         )}
-
       </div>
-
     </div>
   );
 }

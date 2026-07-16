@@ -71,7 +71,7 @@ export default function AppLayout({ children }) {
               icon={<Compass className="w-5 h-5" />}
               label="Browse"
               collapsed={sidebarCollapsed}
-              active={isDiscover && activeTab === "discover"}
+              active={isDiscover && (activeTab === "discover" || activeTab === "categories")}
               onClick={() => {
                 setActiveTab("discover");
                 setActivePlaylistId(null);
