@@ -24,7 +24,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
   if (songs.length === 0) {
     return (
-      <div className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-xl bg-white/[0.02]">
+      <div className="p-12 text-center text-muted border border-white/5 rounded-xl bg-white/[0.02]">
         <span className="font-semibold block text-white text-lg">No songs available</span>
         <span className="text-xs block mt-1">Try another language or search for a different theme.</span>
       </div>
@@ -63,13 +63,13 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   return (
     <div className="w-full flex flex-col select-none">
       {/* Sticky Table Header */}
-      <div className="sticky top-0 z-20 bg-[#070707] py-3 border-b border-white/10 grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-[#a7a7a7] uppercase tracking-wider items-center select-none mb-3">
+      <div className="sticky top-0 z-20 bg-canvas py-3 border-b border-white/10 grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
         <div className="text-center">#</div>
         <div>Title</div>
         <div className="hidden md:block">Album</div>
         <div className="hidden lg:block">Date Added</div>
         <div className="flex justify-end pr-4">
-          <Clock className="w-4 h-4 text-[#a7a7a7]" />
+          <Clock className="w-4 h-4 text-muted" />
         </div>
       </div>
 
@@ -130,7 +130,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                     <div className="w-[3px] bg-white rounded-full animate-music-bar-3" style={{ height: '40%' }}></div>
                   </div>
                 ) : (
-                  <span className="text-xs font-semibold tabular-nums text-[#a7a7a7]">
+                  <span className="text-xs font-semibold tabular-nums text-muted">
                     {index + 1}
                   </span>
                 )}
@@ -150,13 +150,13 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                     {displayTitle}
                   </span>
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-xs text-[#a7a7a7] truncate">
+                    <span className="text-xs text-muted truncate">
                       {song.artist}
                     </span>
                     {subtitle && (
                       <>
-                        <span className="text-[10px] text-[#a7a7a7]/40">&bull;</span>
-                        <span className="text-[11px] text-[#a7a7a7]/60 truncate italic font-medium">
+                        <span className="text-[10px] text-muted/40">&bull;</span>
+                        <span className="text-[11px] text-muted/60 truncate italic font-medium">
                           {subtitle}
                         </span>
                       </>
@@ -166,17 +166,17 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
               </div>
 
               {/* Album (Category name) */}
-              <div className="hidden md:block text-xs text-[#a7a7a7] truncate">
+              <div className="hidden md:block text-xs text-muted truncate">
                 {categoryName}
               </div>
 
               {/* Date Added */}
-              <div className="hidden lg:block text-xs text-[#a7a7a7]/80">
+              <div className="hidden lg:block text-xs text-muted/80">
                 {dateAdded}
               </div>
 
               {/* Duration & Hover actions */}
-              <div className="text-right pr-4 text-xs font-semibold text-[#a7a7a7] tabular-nums flex items-center justify-end relative h-10">
+              <div className="text-right pr-4 text-xs font-semibold text-muted tabular-nums flex items-center justify-end relative h-10">
                 <span className={`transition-opacity duration-200 ${isHovered ? "opacity-0 invisible" : "opacity-100"}`}>
                   {song.duration}
                 </span>
@@ -187,7 +187,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                       e.stopPropagation();
                       toggleFavorite(song.id);
                     }}
-                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-[#a7a7a7] hover:text-white"}`}
+                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-muted hover:text-white"}`}
                     title={isFav ? "Remove Favorite" : "Favorite"}
                   >
                     <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
@@ -199,14 +199,14 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                         e.stopPropagation();
                         setActiveMenuSongId(activeMenuSongId === song.id ? null : song.id);
                       }}
-                      className={`p-1.5 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer ${activeMenuSongId === song.id ? "text-white animate-pulse" : ""}`}
+                      className={`p-1.5 rounded-full hover:bg-white/5 text-muted hover:text-white transition-colors cursor-pointer ${activeMenuSongId === song.id ? "text-white animate-pulse" : ""}`}
                       title="More options"
                     >
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </button>
 
                     {activeMenuSongId === song.id && (
-                      <div className="absolute right-0 top-[110%] bg-[#181818] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute right-0 top-[110%] bg-dropdown border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

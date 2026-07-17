@@ -61,7 +61,7 @@ export default function CategoryExplorer() {
                 <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
                   Browse Song Categories
                 </h1>
-                <p className="text-xs md:text-sm text-[#a7a7a7] font-semibold">
+                <p className="text-xs md:text-sm text-muted font-semibold">
                   Discover Christian worship songs by category.
                 </p>
               </div>

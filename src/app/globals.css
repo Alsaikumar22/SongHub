@@ -9,6 +9,9 @@
   font-family: 'Lato', sans-serif;
 }
 
+/* ─────────────────────────────────────────────── */
+/* Dark theme (default)                          */
+/* ─────────────────────────────────────────────── */
 :root {
   --card: #121212;
   --card-hover: #1e1e1e;
@@ -22,6 +25,38 @@
   --dim: #727272;
   --handle: #b3b3b3;
   --accent: #1db954;
+  --white: #ffffff;
+  --black: #000000;
+  --chip-bg: rgba(255, 255, 255, 0.08);
+  --chip-text: var(--title);
+  --overlay: rgba(0, 0, 0, 0.3);
+  --dropdown-bg: #181818;
+  --scrollbar-thumb: var(--line);
+}
+
+/* ─────────────────────────────────────────────── */
+/* Light theme                                    */
+/* ─────────────────────────────────────────────── */
+[data-theme="light"] {
+  --card: #ffffff;
+  --card-hover: #f3f4f6;
+  --input: rgba(255, 255, 255, 0.9);
+  --canvas: #f9fafb;
+  --line: #e5e7eb;
+  --line-muted: #f0f0f0;
+  --title: #111111;
+  --copy: #4b5563;
+  --muted: #6b7280;
+  --dim: #9ca3af;
+  --handle: #6b7280;
+  --accent: #1db954;
+  --white: #111111;
+  --black: #ffffff;
+  --chip-bg: rgba(0, 0, 0, 0.06);
+  --chip-text: var(--title);
+  --overlay: rgba(0, 0, 0, 0.08);
+  --dropdown-bg: #ffffff;
+  --scrollbar-thumb: #d1d5db;
 }
 
 @theme inline {
@@ -37,6 +72,10 @@
   --color-dim: var(--dim);
   --color-handle: var(--handle);
   --color-accent: var(--accent);
+  --color-dropdown: var(--dropdown-bg);
+  --color-chip-bg: var(--chip-bg);
+  --color-chip-text: var(--chip-text);
+  --color-overlay: var(--overlay);
   --font-sans: 'Lato', var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
@@ -45,6 +84,16 @@ body {
   background: var(--canvas);
   color: var(--title);
   font-family: 'Lato', Arial, Helvetica, sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+html {
+  transition: color-scheme 0.3s ease;
+}
+
+/* Smooth transitions for theme-sensitive properties only on themed containers */
+body, .bg-card, .bg-canvas, .bg-card-hover, .bg-line, .border-line, .text-title, .text-copy, .text-muted, .text-dim, .text-handle {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
 @keyframes bounce-bar {
@@ -100,13 +149,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--handle);
 }
 
 ::-webkit-scrollbar-corner {
@@ -115,5 +164,5 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }

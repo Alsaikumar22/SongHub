@@ -49,7 +49,7 @@ export default function CategoryDetails({ category, language, onBack }) {
       <div className="flex items-center justify-between gap-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-semibold text-[#a7a7a7] hover:text-white transition-all duration-150 cursor-pointer self-start select-none"
+          className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-white transition-all duration-150 cursor-pointer self-start select-none"
         >
           <ChevronLeft className="w-4 h-4" />
           Back to Categories
@@ -80,14 +80,14 @@ export default function CategoryDetails({ category, language, onBack }) {
             <div className="relative">
               <button
                 onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                className={`p-2 rounded-full transition-colors cursor-pointer text-[#a7a7a7] hover:text-white`}
+                className={`p-2 rounded-full transition-colors cursor-pointer text-muted hover:text-white`}
                 title="Add Category to Playlist"
               >
                 <Plus className="w-6 h-6" />
               </button>
 
               {showPlaylistDropdown && (
-                <div className="absolute left-0 top-[110%] bg-[#181818] border border-white/[0.08] rounded-xl shadow-2xl z-50 py-2 w-48 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute left-0 top-[110%] bg-dropdown border border-white/[0.08] rounded-xl shadow-2xl z-50 py-2 w-48 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
                   <span className="text-[9px] font-bold text-muted uppercase tracking-wider px-4 py-1.5 block border-b border-white/[0.05] mb-1">
                     Add to Playlist
                   </span>
@@ -120,7 +120,7 @@ export default function CategoryDetails({ category, language, onBack }) {
             <button
               onClick={handleShare}
               className={`p-2 rounded-full transition-colors cursor-pointer ${
-                isShared ? "text-white" : "text-[#a7a7a7] hover:text-white"
+                isShared ? "text-white" : "text-muted hover:text-white"
               }`}
               title="Copy link"
             >
@@ -132,7 +132,7 @@ export default function CategoryDetails({ category, language, onBack }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode(viewMode === "playlist" ? "cards" : "playlist")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/5 text-xs font-bold text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/5 text-xs font-bold text-muted hover:text-white transition-colors cursor-pointer"
             >
               {viewMode === "playlist" ? (
                 <>
@@ -159,7 +159,7 @@ export default function CategoryDetails({ category, language, onBack }) {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="p-12 text-center text-[#a7a7a7] border border-white/5 rounded-xl bg-white/[0.02] select-none"
+              className="p-12 text-center text-muted border border-white/5 rounded-xl bg-white/[0.02] select-none"
             >
               <span className="font-semibold block text-white text-lg">No songs available</span>
               <span className="text-xs block mt-1">Try another language.</span>

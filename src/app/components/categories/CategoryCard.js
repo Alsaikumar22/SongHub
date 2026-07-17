@@ -34,13 +34,13 @@ export default function CategoryCard({ category, language, onClick }) {
 
       {/* Info Container */}
       <div className="relative z-10 flex flex-col gap-0.5">
-        <span className="text-[9px] font-bold tracking-widest text-[#a7a7a7]/60 uppercase transition-colors duration-300 group-hover:text-white/60">
+        <span className="text-[9px] font-bold tracking-widest text-muted/60 uppercase transition-colors duration-300 group-hover:text-white/60">
           {category.motif}
         </span>
         <h3 className={`text-lg font-black text-white group-hover:text-white transition-colors duration-300 line-clamp-2 leading-tight ${language === "telugu" ? "font-telugu" : ""}`}>
           {name}
         </h3>
-        <p className="text-xs text-[#a7a7a7] font-medium mt-1">
+        <p className="text-xs text-muted font-medium mt-1">
           {songCount} {langLabel} Song{songCount !== 1 && "s"}
         </p>
       </div>
