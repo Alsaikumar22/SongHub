@@ -2,6 +2,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "./context/audio-context";
 import { SearchProvider } from "./context/search-context";
+import { ThemeProvider } from "./context/theme-context";
+import { AuthProvider } from "./context/auth-context";
 import AppLayout from "./components/layout/AppLayout";
 
 const geistSans = Geist({
@@ -24,13 +26,18 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="text-title font-sans select-none">
-        <AudioProvider>
-          <SearchProvider>
-            <AppLayout>{children}</AppLayout>
-          </SearchProvider>
-        </AudioProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AudioProvider>
+              <SearchProvider>
+                <AppLayout>{children}</AppLayout>
+              </SearchProvider>
+            </AudioProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

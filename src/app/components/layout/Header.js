@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Music, Search, X, Play, ArrowRight, LayoutGrid } from "lucide-react";
+import { Music, Search, X, Play, ArrowRight, LayoutGrid, Sun, Moon, LogIn, LogOut, User } from "lucide-react";
 import { useSearch } from "../../context/search-context";
 import { useAudio } from "../../context/audio-context";
+import { useTheme } from "../../context/theme-context";
+import { useAuth } from "../../context/auth-context";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
   const router = useRouter();
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
   const { songs, playSong, activeTab, setActiveTab } = useAudio();
+  const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, signInWithGoogle, signOut } = useAuth();
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeout = useRef(null);
 
@@ -114,7 +118,7 @@ export default function Header() {
 
         {/* Quick Search Dropdown */}
         {isFocused && searchQuery && !showFullResults && (
-          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-[#121212] border border-white/[0.07] rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-card border border-white/[0.07] rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
               <span className="text-[10px] font-bold text-muted uppercase tracking-[0.18em]">
@@ -183,13 +187,60 @@ export default function Header() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <span className="text-xs font-medium text-dim hidden sm:inline">
-          Collaborator Mode
-        </span>
-        <div className="w-8 h-8 rounded-full bg-card-hover border border-line flex items-center justify-center text-xs font-semibold text-handle">
-          CM
-        </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={toggleTheme}
+          className={`p-2 rounded-full transition-all duration-300 cursor-pointer hover:bg-card-hover active:scale-90 ${
+            theme === "light" ? "text-amber-500" : "text-dim hover:text-handle"
+          }`}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? (
+            <Sun className="w-4 h-4 transition-transform duration-300 hover:rotate-45" />
+          ) : (
+            <Moon className="w-4 h-4 transition-transform duration-300 hover:-rotate-12" />
+          )}
+        </button>
+
+        {isAuthenticated && user ? (
+          /* ─── Logged In: Avatar + Sign Out ─── */
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-card-hover border border-line">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || "User"}
+                  className="w-6 h-6 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-line flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-muted" />
+                </div>
+              )}
+              <span className="text-xs font-medium text-copy truncate max-w-[100px]">
+                {user.displayName || "User"}
+              </span>
+            </div>
+            <button
+              onClick={signOut}
+              className="p-2 rounded-full text-dim hover:text-red-400 hover:bg-card-hover transition-all cursor-pointer active:scale-90"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          /* ─── Logged Out: Sign In Button ─── */
+          <button
+            onClick={signInWithGoogle}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card-hover border border-line hover:bg-line text-xs font-semibold text-copy hover:text-title transition-all cursor-pointer active:scale-95"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sign in</span>
+          </button>
+        )}
       </div>
     </header>
   );

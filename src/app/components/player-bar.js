@@ -142,7 +142,7 @@ export default function PlayerBar() {
       {/* ──────────────────────────────────────────────────────── */}
       <div className={`shrink-0 transition-all duration-300 relative border-t border-line-muted ${
         currentSong 
-          ? "h-14 md:h-22 bg-[#121212] md:bg-canvas/95 md:backdrop-blur-md" 
+          ? "h-14 md:h-22 bg-card md:bg-canvas/95 md:backdrop-blur-md" 
           : "h-0 md:h-0 bg-transparent overflow-hidden border-none"
       }`}>
         
@@ -433,7 +433,7 @@ export default function PlayerBar() {
       {/* ──────────────────────────────────────────────────────── */}
       {currentSong && isExpanded && (
         <div
-          className="fixed inset-0 z-50 bg-[#070707] flex flex-col justify-between p-6 select-none animate-in slide-in-from-bottom duration-300"
+          className="fixed inset-0 z-50 bg-canvas flex flex-col justify-between p-6 select-none animate-in slide-in-from-bottom duration-300"
           style={{
             backgroundColor: "#070707",
             backgroundImage: `radial-gradient(130% 100% at 50% 0%, rgba(${r},${g},${b},0.3) 0%, rgba(${Math.max(0, r-35)},${Math.max(0, g-35)},${Math.max(0, b-35)},0.08) 50%, #070707 100%)`,

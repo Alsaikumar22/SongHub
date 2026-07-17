@@ -65,7 +65,7 @@ export default function RecentlyPlayed() {
             setActiveTab("recently-played");
             setActivePlaylistId(null);
           }}
-          className="text-xs font-bold text-[#b3b3b3] hover:text-white transition-colors cursor-pointer"
+          className="text-xs font-bold text-handle hover:text-white transition-colors cursor-pointer"
         >
           Show all
         </button>

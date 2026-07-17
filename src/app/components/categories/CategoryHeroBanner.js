@@ -75,14 +75,14 @@ export default function CategoryHeroBanner({ category, language, songCount }) {
         <h1 className={`text-white text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${language === "telugu" ? "font-telugu" : ""}`}>
           {name}
         </h1>
-        <p className="text-xs md:text-sm text-[#a7a7a7] max-w-xl mb-4 leading-relaxed font-medium">
+        <p className="text-xs md:text-sm text-muted max-w-xl mb-4 leading-relaxed font-medium">
           {desc}
         </p>
         <div className="flex items-center justify-center md:justify-start gap-1.5 text-xs text-white/90 font-bold">
           <span>SongHub</span>
-          <span className="text-[#a7a7a7]/50">&bull;</span>
-          <span className="text-[#a7a7a7] font-medium">{langName}</span>
-          <span className="text-[#a7a7a7]/50">&bull;</span>
+          <span className="text-muted/50">&bull;</span>
+          <span className="text-muted font-medium">{langName}</span>
+          <span className="text-muted/50">&bull;</span>
           <span>{songCount} song{songCount !== 1 && "s"}</span>
         </div>
       </div>

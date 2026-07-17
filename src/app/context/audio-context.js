@@ -1,14 +1,21 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { MOCK_SONGS } from "@/data/songs";
-import { defaultPlaylists } from "@/data/playlists";
+import { useAuth } from "./auth-context";
+import { MOCK_SONGS } from "../../data/songs";
+import {
+  updateFavorites,
+  updatePlaylists,
+  updateRecentlyPlayed,
+} from "../../../lib/firestore-service";
 
 const AudioContext = createContext(null);
 
-// Songs are now imported from @/data/songs
-
 export const AudioProvider = ({ children }) => {
+  const { user, firestoreData, setFirestoreData } = useAuth();
+  const userRef = useRef(user);
+  const [songs, setSongs] = useState([]);
+  const [songsLoading, setSongsLoading] = useState(true);
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -17,7 +24,7 @@ export const AudioProvider = ({ children }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
-  const [queue, setQueue] = useState(MOCK_SONGS);
+  const [queue, setQueue] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
@@ -65,13 +72,45 @@ export const AudioProvider = ({ children }) => {
 
   const audioRef = useRef(null);
 
+  // Keep user ref in sync
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // When Firebase user data loads, merge it (Firestore wins over localStorage)
+  useEffect(() => {
+    if (!firestoreData) return;
+
+    const { favorites: favs, playlists: pls, recentlyPlayed: recent } = firestoreData;
+
+    if (Array.isArray(favs) && favs.length > 0) {
+      setFavorites(favs);
+    }
+    if (Array.isArray(pls) && pls.length > 0) {
+      setPlaylists(pls);
+    }
+    if (Array.isArray(recent) && recent.length > 0) {
+      setRecentlyPlayed(recent);
+    }
+  }, [firestoreData]);
+
+  // Load songs from mock data
+  useEffect(() => {
+    setSongsLoading(true);
+    setTimeout(() => {
+      setSongs(MOCK_SONGS);
+      setQueue(MOCK_SONGS);
+      setSongsLoading(false);
+    }, 0);
+  }, []);
+
   // Initialize browser-dependent values
   useEffect(() => {
     // 1. Initialize HTML Audio Element
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
 
-    // 2. Load lists from localStorage
+    // 2. Load lists from localStorage (fallback for non-auth users)
     const savedFavorites = localStorage.getItem("songhub_favorites");
     if (savedFavorites) {
       try {
@@ -94,11 +133,6 @@ export const AudioProvider = ({ children }) => {
       } catch (e) {
         console.error(e);
       }
-    } else {
-      setTimeout(() => {
-        setPlaylists(defaultPlaylists);
-      }, 0);
-      localStorage.setItem("songhub_playlists", JSON.stringify(defaultPlaylists));
     }
 
     const savedRecently = localStorage.getItem("songhub_recently");
@@ -164,12 +198,17 @@ export const AudioProvider = ({ children }) => {
         });
       }
 
-      // Add to recently played
+      // Add to recently played + sync to Firestore if logged in
       setTimeout(() => {
         setRecentlyPlayed(prev => {
           const filtered = prev.filter(id => id !== currentSong.id);
           const updated = [currentSong.id, ...filtered].slice(0, 10);
           localStorage.setItem("songhub_recently", JSON.stringify(updated));
+          // Sync to Firestore if authenticated
+          const uid = userRef.current?.uid;
+          if (uid) {
+            updateRecentlyPlayed(uid, updated);
+          }
           return updated;
         });
       }, 0);
@@ -213,8 +252,8 @@ export const AudioProvider = ({ children }) => {
   };
 
   const togglePlay = () => {
-    if (!currentSong && MOCK_SONGS.length > 0) {
-      setCurrentSong(MOCK_SONGS[0]);
+    if (!currentSong && songs.length > 0) {
+      setCurrentSong(songs[0]);
       setIsPlaying(true);
     } else {
       setIsPlaying(prev => !prev);
@@ -246,17 +285,11 @@ export const AudioProvider = ({ children }) => {
         : [...prev, songId];
       localStorage.setItem("songhub_favorites", JSON.stringify(updated));
 
-      // Sync with "My Favorites" playlist
-      setPlaylists(prevLists => {
-        const synced = prevLists.map(list => {
-          if (list.id === "fav-list") {
-            return { ...list, songIds: updated };
-          }
-          return list;
-        });
-        localStorage.setItem("songhub_playlists", JSON.stringify(synced));
-        return synced;
-      });
+      // Sync to Firestore if authenticated
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updateFavorites(uid, updated);
+      }
 
       return updated;
     });
@@ -272,6 +305,11 @@ export const AudioProvider = ({ children }) => {
     setPlaylists(prev => {
       const updated = [...prev, newPlaylist];
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      // Sync to Firestore if authenticated
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updatePlaylists(uid, updated);
+      }
       return updated;
     });
   };
@@ -280,6 +318,11 @@ export const AudioProvider = ({ children }) => {
     setPlaylists(prev => {
       const updated = prev.filter(list => list.id !== playlistId);
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      // Sync to Firestore if authenticated
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updatePlaylists(uid, updated);
+      }
       return updated;
     });
   };
@@ -293,6 +336,11 @@ export const AudioProvider = ({ children }) => {
         return list;
       });
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      // Sync to Firestore if authenticated
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updatePlaylists(uid, updated);
+      }
       return updated;
     });
   };
@@ -306,6 +354,11 @@ export const AudioProvider = ({ children }) => {
         return list;
       });
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      // Sync to Firestore if authenticated
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updatePlaylists(uid, updated);
+      }
       return updated;
     });
   };
@@ -313,7 +366,8 @@ export const AudioProvider = ({ children }) => {
   return (
     <AudioContext.Provider
       value={{
-        songs: MOCK_SONGS,
+        songs: songs,
+        songsLoading,
         currentSong,
         isPlaying,
         progress,

@@ -23,9 +23,7 @@ import {
   Trash2,
   ChevronLeft,
   Play,
-  Pause,
   ArrowLeft,
-  ChevronRight,
   TrendingUp,
   Library,
   X,
@@ -330,7 +328,7 @@ function HomeContent() {
                       <h1 className="text-3xl font-black text-white tracking-tight">Search</h1>
                     </div>
                     <div className="relative flex items-center w-full">
-                      <Search className="w-5 h-5 text-[#7f7f7f] absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                      <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                       <input
                         type="text"
                         placeholder="What do you want to listen to?"
@@ -340,7 +338,7 @@ function HomeContent() {
                           setSearchQuery(e.target.value);
                           setShowFullResults(true);
                         }}
-                        className="w-full h-11 pl-12 pr-10 text-sm bg-[#242424] rounded-lg focus:outline-none focus:bg-[#282828] transition-all duration-150 text-white placeholder-[#7f7f7f] border-none font-medium shadow-inner"
+                        className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
                       />
                     </div>
                   </div>
@@ -348,7 +346,7 @@ function HomeContent() {
                   /* Focused / active search sticky layout */
                   <div className="sticky top-0 bg-card py-2 z-30 flex items-center gap-3 w-full animate-in slide-in-from-top-1.5 duration-200">
                     <div className="relative flex-1">
-                      <Search className="w-5 h-5 text-[#7f7f7f] absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                      <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                       <input
                         type="text"
                         autoFocus
@@ -358,7 +356,7 @@ function HomeContent() {
                           setSearchQuery(e.target.value);
                           setShowFullResults(true);
                         }}
-                        className="w-full h-11 pl-12 pr-10 text-sm bg-[#242424] rounded-lg focus:outline-none transition-all duration-150 text-white placeholder-[#7f7f7f] border-none font-medium"
+                        className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
                       />
                       {searchQuery && (
                         <button
@@ -422,7 +420,7 @@ function HomeContent() {
                         }}
                       >
                         <div className="flex items-center gap-3.5">
-                          <Clock className="w-4 h-4 text-[#a7a7a7]" />
+                          <Clock className="w-4 h-4 text-muted" />
                           <span className="text-sm font-semibold text-white">{query}</span>
                         </div>
                         <button
@@ -716,49 +714,34 @@ function HomeContent() {
                       <p className="text-xs text-dim mt-1 max-w-xs mx-auto px-4">Create your first playlist and start organizing your favorite songs.</p>
                     </div>
                   ) : (
-                    playlists.map((list) => {
-                      const isDefaultFav = list.id === "fav-list";
-                      return (
+                    playlists.map((list) => (
+                      <div
+                        key={list.id}
+                        className="group relative flex items-center justify-between p-3.5 bg-card border border-line/65 rounded-xl hover:border-white/20 active:bg-card-hover transition-colors"
+                      >
                         <div
-                          key={list.id}
-                          className="group relative flex items-center justify-between p-3.5 bg-card border border-line/65 rounded-xl hover:border-white/20 active:bg-card-hover transition-colors"
+                          onClick={() => setActivePlaylistId(list.id)}
+                          className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer"
                         >
-                          <div
-                            onClick={() => setActivePlaylistId(list.id)}
-                            className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer"
-                          >
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
-                              isDefaultFav 
-                                ? "bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-300 text-white" 
-                                : "bg-card-hover border border-line text-dim"
-                            }`}>
-                              {isDefaultFav ? (
-                                <Heart className="w-5.5 h-5.5 fill-white text-white" />
-                              ) : (
-                                <ListMusic className="w-5.5 h-5.5" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block truncate">{list.name}</span>
-                              <span className="text-xs text-muted block mt-0.5">{list.songIds.length} song{list.songIds.length !== 1 && "s"}</span>
-                            </div>
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-card-hover border border-line text-dim">
+                            <ListMusic className="w-5.5 h-5.5" />
                           </div>
-                          <div className="shrink-0 pl-2">
-                            {!isDefaultFav ? (
-                              <button
-                                onClick={() => deletePlaylist(list.id)}
-                                className="p-2 text-dim hover:text-red-400 rounded-full cursor-pointer"
-                                title="Delete playlist"
-                              >
-                                <Trash2 className="w-4.5 h-4.5" />
-                              </button>
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-dim" />
-                            )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white block truncate">{list.name}</span>
+                            <span className="text-xs text-muted block mt-0.5">{list.songIds.length} song{list.songIds.length !== 1 && "s"}</span>
                           </div>
                         </div>
-                      );
-                    })
+                        <div className="shrink-0 pl-2">
+                          <button
+                            onClick={() => deletePlaylist(list.id)}
+                            className="p-2 text-dim hover:text-red-400 rounded-full cursor-pointer"
+                            title="Delete playlist"
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

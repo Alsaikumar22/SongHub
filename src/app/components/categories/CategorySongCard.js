@@ -82,44 +82,44 @@ export default function CategorySongCard({ song, language, onClick }) {
           {displayTitle}
         </h4>
         {subtitle && (
-          <p className="text-[11px] text-[#a7a7a7]/80 truncate mt-0.5 italic">
+          <p className="text-[11px] text-muted/80 truncate mt-0.5 italic">
             {subtitle}
           </p>
         )}
-        <p className="text-xs text-[#a7a7a7] truncate mt-1">
+        <p className="text-xs text-muted truncate mt-1">
           {song.artist}
         </p>
       </div>
 
       {/* Footer / Actions */}
       <div className="flex items-center justify-between pt-2.5 border-t border-white/5">
-        <span className="text-[10px] font-bold text-[#a7a7a7]">{song.duration}</span>
+        <span className="text-[10px] font-bold text-muted">{song.duration}</span>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={handleFavoriteClick}
-            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-[#a7a7a7] hover:text-white"}`}
+            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-muted hover:text-white"}`}
           >
             <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
           </button>
           
           <button
             onClick={handleShareClick}
-            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isShared ? "text-white" : "text-[#a7a7a7] hover:text-white"}`}
+            className={`p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isShared ? "text-white" : "text-muted hover:text-white"}`}
           >
             {isShared ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
           </button>
           
           <button
             onClick={handleDownloadClick}
-            className="p-1 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
+            className="p-1 rounded-full hover:bg-white/5 text-muted hover:text-white transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
           
           <button
             onClick={handleMoreClick}
-            className="p-1 rounded-full hover:bg-white/5 text-[#a7a7a7] hover:text-white transition-colors cursor-pointer"
+            className="p-1 rounded-full hover:bg-white/5 text-muted hover:text-white transition-colors cursor-pointer"
           >
             <MoreVertical className="w-3.5 h-3.5" />
           </button>

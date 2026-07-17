@@ -4,9 +4,10 @@ import React, { use, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAudio } from "../../context/audio-context";
-import { ArrowLeft, Music } from "lucide-react";
+import { ArrowLeft, Music, Video } from "lucide-react";
 import SongHero from "../../components/song/SongHero";
 import SongLyrics, { LanguageSegmented } from "../../components/song/SongLyrics";
+import SongTabs from "../../components/song/SongTabs";
 import { extractDominantColor } from "../../utils/extract-color";
 
 function SongPageContent({ params }) {
@@ -31,12 +32,14 @@ function SongPageContent({ params }) {
   const [song, setSong] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("telugu");
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
+  const [activeTab, setActiveTab] = useState("lyrics");
 
   useEffect(() => {
     const foundSong = songs.find(s => s.id === id);
     if (foundSong) {
       setTimeout(() => {
         setSong(foundSong);
+        setActiveTab("lyrics");
       }, 0);
     }
   }, [id, songs]);
@@ -90,27 +93,59 @@ function SongPageContent({ params }) {
           <span>Back</span>
         </button>
 
-        {/* Floating Center Selector (Language - Lyrics only) */}
-        {hasDualLyrics && (
-          <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40">
+        {/* Top Bar: Tabs + Language Selector */}
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 flex-wrap justify-center">
+          <SongTabs
+            tabs={[
+              { id: "lyrics", label: "Lyrics" },
+              { id: "video", label: "Video" },
+            ]}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+          {activeTab === "lyrics" && hasDualLyrics && (
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
               hasDual={hasDualLyrics}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Immersive Main Display Area */}
         <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative">
-          <div className="w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex-1 flex flex-col justify-center overflow-hidden">
-            <SongLyrics
-              song={song}
-              isImmersive={true}
-              selectedLanguage={selectedLanguage}
-              setSelectedLanguage={setSelectedLanguage}
-            />
-          </div>
+          {activeTab === "lyrics" ? (
+            <div className="w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex-1 flex flex-col justify-center overflow-hidden">
+              <SongLyrics
+                song={song}
+                isImmersive={true}
+                selectedLanguage={selectedLanguage}
+                setSelectedLanguage={setSelectedLanguage}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center p-6 md:p-12">
+              {song.youtubeUrl ? (
+                <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl">
+                  <iframe
+                    src={song.youtubeUrl}
+                    title={`${song.title} - YouTube`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center px-8 py-16">
+                  <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-5">
+                    <Video className="w-9 h-9 text-muted" />
+                  </div>
+                  <h4 className="text-lg font-bold text-white/70 mb-2">No Video Available</h4>
+                  <p className="text-sm text-muted max-w-sm">A video for this track hasn&apos;t been added yet.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
