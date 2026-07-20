@@ -3,15 +3,15 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAudio } from "./context/audio-context";
-import { useSearch } from "./context/search-context";
-import SongsSection from "./components/home/SongsSection";
-import HeroCarousel from "./components/home/HeroCarousel";
-import VerseOfTheWeek from "./components/home/VerseOfTheWeek";
-import RecentlyPlayed from "./components/home/RecentlyPlayed";
-import SearchResults from "./components/search/SearchResults";
-import SongArtwork from "./components/ui/SongArtwork";
-import CategoryExplorer from "./components/categories/CategoryExplorer";
+import { useAudio } from "@/context/audio-context";
+import { useSearch } from "@/context/search-context";
+import SongsSection from "@/components/home/SongsSection";
+import HeroCarousel from "@/components/home/HeroCarousel";
+import VerseOfTheWeek from "@/components/home/VerseOfTheWeek";
+import RecentlyPlayed from "@/components/home/RecentlyPlayed";
+import SearchResults from "@/components/search/SearchResults";
+import SongArtwork from "@/components/ui/SongArtwork";
+import CategoryExplorer from "@/components/categories/CategoryExplorer";
 
 import {
   FolderHeart,
@@ -36,6 +36,7 @@ function HomeContent() {
 
   const {
     songs,
+    songsLoading,
     currentSong,
     isPlaying,
     playSong,
@@ -272,6 +273,7 @@ function HomeContent() {
           ) : (
             <SongsSection
               songs={filteredSongs}
+              songsLoading={songsLoading}
               currentSong={currentSong}
               isPlaying={isPlaying}
               playSong={playSong}
@@ -307,6 +309,7 @@ function HomeContent() {
 
             <SongsSection
               songs={filteredSongs}
+              songsLoading={songsLoading}
               currentSong={currentSong}
               isPlaying={isPlaying}
               playSong={playSong}

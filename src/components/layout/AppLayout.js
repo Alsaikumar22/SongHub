@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
-import PlayerBar from "../player-bar";
-import SongArtwork from "../ui/SongArtwork";
+import PlayerBar from "@/components/player-bar";
+import SongArtwork from "@/components/ui/SongArtwork";
 import {
   Compass,
   Plus,

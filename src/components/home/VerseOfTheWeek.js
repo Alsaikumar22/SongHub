@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Share2, Check } from "lucide-react";
-import useDailyVerse from "../../hooks/useDailyVerse";
+import useDailyVerse from "@/hooks/useDailyVerse";
 
 export default function VerseOfTheWeek() {
   const { verse, reference, referenceTelugu } = useDailyVerse();

@@ -78,7 +78,27 @@ function formatDuration(seconds) {
 
 function transformSong(docId, data) {
   const title = data.title || "";
-  const audioUrl = data.audioUrl || "";
+  const language = data.language || "Telugu";
+  const isEnglish = language === "English";
+
+  // Route lyrics based on language + available fields
+  const rawLyrics = data.lyrics || "";
+  const rawEnglishLyrics = data.englishLyrics || data.lyricsEnglish || "";
+
+  let lyricsTelugu = [];
+  let lyricsEnglish = [];
+
+  if (isEnglish) {
+    lyricsEnglish = data.lyricsEnglish || parseLyrics(rawLyrics);
+    lyricsTelugu = data.lyricsTelugu || [];
+    // If englishLyrics exists separately, use that instead
+    if (data.englishLyrics) {
+      lyricsEnglish = parseLyrics(data.englishLyrics);
+    }
+  } else {
+    lyricsTelugu = data.lyricsTelugu || parseLyrics(rawLyrics);
+    lyricsEnglish = data.lyricsEnglish || parseLyrics(rawEnglishLyrics);
+  }
 
   return {
     id: docId,
@@ -90,17 +110,17 @@ function transformSong(docId, data) {
     lyricist: data.lyricist || data.artist || "",
     album: data.album || "Unknown Album",
     genre: data.genre || data.category || data.theme || "Worship",
-    language: data.language || "Telugu",
+    language: language,
     category: data.category || "",
     theme: data.theme || "",
 
-    // Duration (app needs this for the player)
+    // Duration
     duration: data.duration || formatDuration(data.durationSec || 0),
     durationSec: data.durationSec || 0,
 
     // Media
     coverUrl: data.coverUrl || data.imageUrl || "",
-    audioUrl: audioUrl,
+    audioUrl: data.audioUrl || "",
     youtubeUrl: data.youtubeUrl || "",
     spotifyUrl: data.spotifyUrl || "",
 
@@ -109,9 +129,9 @@ function transformSong(docId, data) {
     bpm: data.bpm || 0,
     plays: data.plays || 0,
 
-    // Lyrics (transformed from single string → array)
-    lyricsTelugu: data.lyricsTelugu || parseLyrics(data.lyrics || ""),
-    lyricsEnglish: data.lyricsEnglish || [],
+    // Lyrics (properly routed by language)
+    lyricsTelugu,
+    lyricsEnglish,
 
     // Extra info
     summary: data.summary || "",

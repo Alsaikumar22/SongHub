@@ -3,12 +3,12 @@
 import React, { use, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAudio } from "../../context/audio-context";
 import { ArrowLeft, Music, Video } from "lucide-react";
-import SongHero from "../../components/song/SongHero";
-import SongLyrics, { LanguageSegmented } from "../../components/song/SongLyrics";
-import SongTabs from "../../components/song/SongTabs";
-import { extractDominantColor } from "../../utils/extract-color";
+import { useAudio } from "@/context/audio-context";
+import SongHero from "@/components/song/SongHero";
+import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
+import SongTabs from "@/components/song/SongTabs";
+import { extractDominantColor } from "@/utils/extract-color";
 
 function SongPageContent({ params }) {
   const unwrappedParams = use(params);
@@ -33,15 +33,23 @@ function SongPageContent({ params }) {
   const [selectedLanguage, setSelectedLanguage] = useState("telugu");
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const [activeTab, setActiveTab] = useState("lyrics");
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     const foundSong = songs.find(s => s.id === id);
     if (foundSong) {
-      setTimeout(() => {
-        setSong(foundSong);
-        setActiveTab("lyrics");
-      }, 0);
+      setSong(foundSong);
+      setActiveTab("lyrics");
+      return;
     }
+    if (fetching) return;
+    setFetching(true);
+    fetch(`/api/songs/${encodeURIComponent(id)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.song) setSong(data.song);
+      })
+      .catch(err => console.error("Failed to fetch song:", err));
   }, [id, songs]);
 
   useEffect(() => {

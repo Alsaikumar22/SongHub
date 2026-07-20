@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Music, Search, X, Play, ArrowRight, LayoutGrid, Sun, Moon, LogIn, LogOut, User } from "lucide-react";
-import { useSearch } from "../../context/search-context";
-import { useAudio } from "../../context/audio-context";
-import { useTheme } from "../../context/theme-context";
-import { useAuth } from "../../context/auth-context";
+import { useSearch } from "@/context/search-context";
+import { useAudio } from "@/context/audio-context";
+import { useTheme } from "@/context/theme-context";
+import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 
 export default function Header() {

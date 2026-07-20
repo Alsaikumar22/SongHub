@@ -2,12 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "./auth-context";
-import { MOCK_SONGS } from "../../data/songs";
 import {
   updateFavorites,
   updatePlaylists,
   updateRecentlyPlayed,
-} from "../../../lib/firestore-service";
+} from "@/lib/firestore-service";
 
 const AudioContext = createContext(null);
 
@@ -94,14 +93,20 @@ export const AudioProvider = ({ children }) => {
     }
   }, [firestoreData]);
 
-  // Load songs from mock data
+  // Load songs from Firebase via API
   useEffect(() => {
     setSongsLoading(true);
-    setTimeout(() => {
-      setSongs(MOCK_SONGS);
-      setQueue(MOCK_SONGS);
-      setSongsLoading(false);
-    }, 0);
+    fetch("/api/songs")
+      .then((res) => res.json())
+      .then((data) => {
+        setSongs(data.songs);
+        setQueue(data.songs);
+        setSongsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch songs:", err);
+        setSongsLoading(false);
+      });
   }, []);
 
   // Initialize browser-dependent values

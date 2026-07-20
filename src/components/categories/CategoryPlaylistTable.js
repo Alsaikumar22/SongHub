@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
   const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
