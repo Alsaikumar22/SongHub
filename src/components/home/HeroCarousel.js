@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 import { Play } from "lucide-react";
 import { CAROUSEL_SLIDES } from "@/data/carousel";
 

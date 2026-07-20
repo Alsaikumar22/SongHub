@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 import SongCard from "./SongCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 

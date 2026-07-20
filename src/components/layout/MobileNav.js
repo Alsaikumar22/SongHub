@@ -3,8 +3,8 @@
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Compass, Search, Heart, ListMusic } from "lucide-react";
-import { useAudio } from "../../context/audio-context";
-import { useSearch } from "../../context/search-context";
+import { useAudio } from "@/context/audio-context";
+import { useSearch } from "@/context/search-context";
 
 export default function MobileNav() {
   const {

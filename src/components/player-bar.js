@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useAudio } from "../context/audio-context";
-import SongArtwork from "./ui/SongArtwork";
-import { extractDominantColor } from "../utils/extract-color";
+import { useAudio } from "@/context/audio-context";
+import SongArtwork from "@/components/ui/SongArtwork";
+import { extractDominantColor } from "@/utils/extract-color";
 import {
   Play,
   Pause,

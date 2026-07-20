@@ -1,10 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AudioProvider } from "./context/audio-context";
-import { SearchProvider } from "./context/search-context";
-import { ThemeProvider } from "./context/theme-context";
-import { AuthProvider } from "./context/auth-context";
-import AppLayout from "./components/layout/AppLayout";
+import { AudioProvider } from "@/context/audio-context";
+import { SearchProvider } from "@/context/search-context";
+import { ThemeProvider } from "@/context/theme-context";
+import { AuthProvider } from "@/context/auth-context";
+import AppLayout from "@/components/layout/AppLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

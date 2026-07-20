@@ -4,13 +4,13 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   auth,
   googleProvider,
-} from "../../../lib/firebase";
+} from "@/lib/firebase";
 import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { fetchUserData } from "../../../lib/firestore-service";
+import { fetchUserData } from "@/lib/firestore-service";
 
 const AuthContext = createContext(null);
 

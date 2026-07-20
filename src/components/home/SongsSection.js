@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Play, Pause, ChevronLeft, ChevronRight, Grid, List, Plus, Share2, Check } from "lucide-react";
 import SongCard from "./SongCard";
 import SongArtwork from "../ui/SongArtwork";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 import CategoryPlaylistTable from "../categories/CategoryPlaylistTable";
+import { SongsSectionSkeleton } from "../ui/SongSkeleton";
 import { AnimatePresence, motion } from "framer-motion";
 
 const TELUGU_ALPHABET_ORDER = [
@@ -31,6 +32,7 @@ function teluguSort(a, b) {
 
 export default function SongsSection({
   songs,
+  songsLoading,
   currentSong,
   isPlaying,
   playSong,
@@ -161,6 +163,10 @@ export default function SongsSection({
       playSong(letterSongs[0]);
     }
   };
+
+  if (songsLoading) {
+    return <SongsSectionSkeleton />;
+  }
 
   if (availableLetters.length === 0) {
     return (

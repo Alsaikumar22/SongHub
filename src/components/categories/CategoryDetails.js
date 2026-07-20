@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Grid, List, Play, Plus, Share2, Check } from "lucide-react";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 import CategoryHeroBanner from "./CategoryHeroBanner";
 import SongCard from "../home/SongCard";
 import CategoryPlaylistTable from "./CategoryPlaylistTable";

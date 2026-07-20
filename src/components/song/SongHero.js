@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Play, Pause, Heart, Plus, Share2, Check } from "lucide-react";
-import { extractDominantColor } from "../../utils/extract-color";
+import { extractDominantColor } from "@/utils/extract-color";
 import SongArtwork from "../ui/SongArtwork";
 
 export default function SongHero({

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Heart, Share2, Download, MoreVertical, Check } from "lucide-react";
-import { useAudio } from "../../context/audio-context";
+import { useAudio } from "@/context/audio-context";
 
 export default function CategorySongCard({ song, language, onClick }) {
   const { toggleFavorite, favorites, currentSong, isPlaying } = useAudio();

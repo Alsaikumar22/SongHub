@@ -13,9 +13,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
   return (
     <div
       onClick={() => playSong(song)}
-      className={`flex-shrink-0 ${
-        isSmall ? "w-36" : "w-48"
-      } transition-all duration-300 group cursor-pointer`}
+      className={`flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
     >
       <div
         className={`relative aspect-square w-full rounded-xl overflow-hidden border border-line/50 shadow-md bg-card ${
@@ -27,23 +25,30 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           iconSize="w-8 h-8"
         />
+
+        {/* Overlay: centered play/pause visible on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent">
-          <div
-            className={`absolute bottom-2.5 left-2.5 rounded-full bg-white text-black flex items-center justify-center shadow-xl transition-transform hover:scale-105 active:scale-95 z-20 ${
-              isSmall ? "w-9 h-9" : "w-11 h-11"
-            }`}
-          >
-            {isThisPlaying ? (
-              <Pause className={isSmall ? "w-4 h-4 fill-current text-black" : "w-5 h-5 fill-current text-black"} />
-            ) : (
-              <Play className={`fill-current ml-0.5 text-black ${isSmall ? "w-4 h-4" : "w-5 h-5"}`} />
-            )}
+          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+            <div
+              className={`opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 pointer-events-auto rounded-full bg-white text-black flex items-center justify-center shadow-xl ${
+                isSmall ? "w-9 h-9" : "w-11 h-11"
+              }`}
+            >
+              {isThisPlaying ? (
+                <Pause className={isSmall ? "w-4 h-4 fill-current text-black" : "w-5 h-5 fill-current text-black"} />
+              ) : (
+                <Play className={`fill-current ml-0.5 text-black ${isSmall ? "w-4 h-4" : "w-5 h-5"}`} />
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Duration badge */}
         <div className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/60 rounded-md text-xs text-handle font-medium">
           {song.duration}
         </div>
       </div>
+
       <span
         className={`font-semibold text-white block truncate group-hover:text-handle transition-colors ${
           isSmall ? "text-sm" : "text-base"
@@ -51,11 +56,8 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
       >
         {song.teluguTitle || song.title}
       </span>
-      <span
-        className={`text-muted block truncate mt-0.5 ${
-          isSmall ? "text-xs" : "text-sm"
-        }`}
-      >
+
+      <span className={`text-muted block truncate mt-0.5 ${isSmall ? "text-xs" : "text-sm"}`}>
         {song.artist}
       </span>
     </div>

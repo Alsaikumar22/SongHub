@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import VERSES from "../../data/verses";
+import VERSES from "@/data/verses";
 
 /**
  * Returns the current date's day-of-year (1-365/366) in Indian Standard Time (UTC+5:30).
