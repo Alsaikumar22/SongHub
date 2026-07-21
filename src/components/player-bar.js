@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
@@ -609,6 +609,43 @@ export default function PlayerBar() {
           </div>
         </div>
       )}
+
+      {/* Hidden YouTube Audio Stream Player (resumes from pause timestamp) */}
+      <YouTubeBackgroundPlayer
+        youtubeId={currentSong?.youtubeId}
+        isPlaying={isPlaying}
+      />
     </>
+  );
+}
+
+function YouTubeBackgroundPlayer({ youtubeId, isPlaying }) {
+  const iframeRef = useRef(null);
+
+  useEffect(() => {
+    if (!iframeRef.current) return;
+    if (isPlaying) {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
+        "*"
+      );
+    } else {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
+        "*"
+      );
+    }
+  }, [isPlaying]);
+
+  if (!youtubeId) return null;
+
+  return (
+    <iframe
+      ref={iframeRef}
+      className="hidden pointer-events-none w-0 h-0 absolute opacity-0"
+      src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1`}
+      allow="autoplay"
+      title="YouTube Audio Stream"
+    />
   );
 }

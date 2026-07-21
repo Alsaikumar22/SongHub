@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Play, Pause, Heart, Plus, Share2, Check } from "lucide-react";
+import Link from "next/link";
+import { Play, Pause, Heart, Plus, Share2, Check, Video } from "lucide-react";
 import { extractDominantColor } from "@/utils/extract-color";
 import SongArtwork from "../ui/SongArtwork";
 
@@ -169,6 +170,16 @@ export default function SongHero({
             </>
           )}
         </div>
+
+        {(song?.media?.video || song?.videoUrl || song?.youtubeUrl) && (
+          <Link
+            href={`/song/${encodeURIComponent(song.id)}?view=lyrics`}
+            className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-white/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            title="Watch Video"
+          >
+            <Video className="w-4 h-4 md:w-4.5 md:h-4.5 text-red-400" />
+          </Link>
+        )}
 
         <button
           onClick={handleShareClick}

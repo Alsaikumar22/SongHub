@@ -10,6 +10,24 @@ import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
 import SongTabs from "@/components/song/SongTabs";
 import { extractDominantColor } from "@/utils/extract-color";
 
+function formatVideoEmbedUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (trimmed.includes("youtube.com/embed/")) return trimmed;
+  if (trimmed.includes("youtube.com/watch")) {
+    const match = trimmed.match(/[?&]v=([^&]+)/);
+    if (match && match[1]) return `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+  }
+  if (trimmed.includes("youtu.be/")) {
+    const parts = trimmed.split("youtu.be/");
+    if (parts[1]) {
+      const id = parts[1].split("?")[0];
+      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    }
+  }
+  return trimmed;
+}
+
 function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
@@ -36,21 +54,41 @@ function SongPageContent({ params }) {
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
-    const foundSong = songs.find(s => s.id === id);
+    let decodedId = id;
+    try {
+      decodedId = decodeURIComponent(id || "");
+    } catch (e) {
+      decodedId = id;
+    }
+
+    const foundSong =
+      songs.find(
+        (s) =>
+          s.id === decodedId ||
+          s.id === id ||
+          encodeURIComponent(s.id) === id ||
+          decodeURIComponent(s.id || "") === decodedId
+      ) ||
+      (currentSong && (currentSong.id === decodedId || currentSong.id === id)
+        ? currentSong
+        : null);
+
     if (foundSong) {
       setSong(foundSong);
       setActiveTab("lyrics");
       return;
     }
+
     if (fetching) return;
     setFetching(true);
-    fetch(`/api/songs/${encodeURIComponent(id)}`)
-      .then(res => res.json())
-      .then(data => {
+
+    fetch(`/api/songs/${encodeURIComponent(decodedId)}`)
+      .then((res) => res.json())
+      .then((data) => {
         if (data.song) setSong(data.song);
       })
-      .catch(err => console.error("Failed to fetch song:", err));
-  }, [id, songs]);
+      .catch((err) => console.error("Failed to fetch song:", err));
+  }, [id, songs, currentSong]);
 
   useEffect(() => {
     if (song?.coverUrl) {
@@ -133,31 +171,99 @@ function SongPageContent({ params }) {
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center p-6 md:p-12">
-              {song.youtubeUrl ? (
-                <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl">
-                  <iframe
-                    src={song.youtubeUrl}
-                    title={`${song.title} - YouTube`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-full"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center px-8 py-16">
-                  <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-5">
-                    <Video className="w-9 h-9 text-muted" />
-                  </div>
-                  <h4 className="text-lg font-bold text-white/70 mb-2">No Video Available</h4>
-                  <p className="text-sm text-muted max-w-sm">A video for this track hasn&apos;t been added yet.</p>
-                </div>
-              )}
+              {(() => {
+                const rawVideoUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
+                const embedUrl = formatVideoEmbedUrl(rawVideoUrl);
+                if (!rawVideoUrl) {
+                  return (
+                    <div className="flex flex-col items-center justify-center text-center px-8 py-16">
+                      <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-5">
+                        <Video className="w-9 h-9 text-muted" />
+                      </div>
+                      <h4 className="text-lg font-bold text-white/70 mb-2">No Video Available</h4>
+                      <p className="text-sm text-muted max-w-sm">A video for this track hasn&apos;t been added yet.</p>
+                    </div>
+                  );
+                }
+
+                if (embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be")) {
+                  return (
+                    <YouTubeVideoTab
+                      embedUrl={embedUrl}
+                      title={song.title}
+                      isPlaying={isPlaying}
+                    />
+                  );
+                }
+
+                return (
+                  <DirectVideoTab src={rawVideoUrl} isPlaying={isPlaying} />
+                );
+              })()}
             </div>
           )}
         </div>
       </div>
     );
   }
+
+function YouTubeVideoTab({ embedUrl, title, isPlaying }) {
+  const iframeRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!iframeRef.current) return;
+    if (isPlaying) {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
+        "*"
+      );
+    } else {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
+        "*"
+      );
+    }
+  }, [isPlaying]);
+
+  const srcWithJsApi = `${embedUrl}${embedUrl.includes("?") ? "&" : "?"}enablejsapi=1`;
+
+  return (
+    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+      <iframe
+        ref={iframeRef}
+        src={srcWithJsApi}
+        title={`${title} - Video`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full border-0"
+      />
+    </div>
+  );
+}
+
+function DirectVideoTab({ src, isPlaying }) {
+  const videoRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.play().catch((e) => console.error(e));
+    } else {
+      videoRef.current.pause();
+    }
+  }, [isPlaying]);
+
+  return (
+    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        className="w-full h-full object-contain"
+      />
+    </div>
+  );
+}
 
   // 2. SONG DETAILS VIEW (DEFAULT)
   return (

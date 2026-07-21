@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useAudio } from "@/context/audio-context";
 import { usePathname, useRouter } from "next/navigation";
 import Header from "./Header";
@@ -311,7 +311,9 @@ export default function AppLayout({ children }) {
       </div>
 
       {/* PERSISTENT AUDIO PLAYER */}
-      <PlayerBar />
+      <Suspense fallback={null}>
+        <PlayerBar />
+      </Suspense>
 
       {/* MOBILE BOTTOM NAV — visible on < md screens */}
       <MobileNav />

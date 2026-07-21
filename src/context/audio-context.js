@@ -93,20 +93,25 @@ export const AudioProvider = ({ children }) => {
     }
   }, [firestoreData]);
 
-  // Load songs from Firebase via API
+  // Load songs from Firebase Youworship_songs collection via songService
   useEffect(() => {
+    let isMounted = true;
     setSongsLoading(true);
-    fetch("/api/songs")
-      .then((res) => res.json())
-      .then((data) => {
-        setSongs(data.songs);
-        setQueue(data.songs);
-        setSongsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch songs:", err);
-        setSongsLoading(false);
-      });
+    import("@/services/songService").then(({ songService }) => {
+      songService.getAllSongs()
+        .then((fetchedSongs) => {
+          if (!isMounted) return;
+          setSongs(fetchedSongs);
+          setQueue(fetchedSongs);
+          setSongsLoading(false);
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          console.error("Failed to fetch songs from Youworship_songs:", err);
+          setSongsLoading(false);
+        });
+    });
+    return () => { isMounted = false; };
   }, []);
 
   // Initialize browser-dependent values
@@ -190,17 +195,38 @@ export const AudioProvider = ({ children }) => {
     if (!audioRef.current) return;
 
     if (currentSong) {
-      const isSameSrc = audioRef.current.src === currentSong.audioUrl;
-      if (!isSameSrc) {
-        audioRef.current.src = currentSong.audioUrl;
-        audioRef.current.load();
-      }
+      const srcToPlay = currentSong.audioUrl || currentSong.media?.audio || "";
+      
+      if (srcToPlay) {
+        const isSameSrc = audioRef.current.src === srcToPlay;
+        if (!isSameSrc) {
+          audioRef.current.src = srcToPlay;
+          audioRef.current.load();
+        }
 
-      if (isPlaying) {
-        audioRef.current.play().catch(err => {
-          console.log("Playback failed to start:", err);
-          setIsPlaying(false);
-        });
+        if (isPlaying) {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => {
+              console.warn("Audio playback attempted for src:", srcToPlay, err);
+              // If play() was interrupted by load() or buffering, auto-play once audio is ready
+              if (err.name === "AbortError" || err.name === "NotAllowedError" || err.name === "NotSupportedError") {
+                const onCanPlay = () => {
+                  audioRef.current?.play().catch(() => setIsPlaying(false));
+                  audioRef.current?.removeEventListener("canplay", onCanPlay);
+                };
+                audioRef.current?.addEventListener("canplay", onCanPlay);
+              } else {
+                setIsPlaying(false);
+              }
+            });
+          }
+        }
+      } else {
+        // No direct MP3 URL (e.g. YouTube video only) — pause HTML5 audio so only video plays
+        audioRef.current.pause();
+        audioRef.current.removeAttribute("src");
+        audioRef.current.load();
       }
 
       // Add to recently played + sync to Firestore if logged in
@@ -226,11 +252,25 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     if (!audioRef.current || !currentSong) return;
 
+    const srcToPlay = currentSong.audioUrl || currentSong.media?.audio || "";
+    if (!srcToPlay) return;
+
     if (isPlaying) {
-      audioRef.current.play().catch(err => {
-        console.log("Play failed: ", err);
-        setIsPlaying(false);
-      });
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log("Play failed: ", err);
+          if (err.name === "AbortError") {
+            const onCanPlay = () => {
+              audioRef.current?.play().catch(() => setIsPlaying(false));
+              audioRef.current?.removeEventListener("canplay", onCanPlay);
+            };
+            audioRef.current?.addEventListener("canplay", onCanPlay);
+          } else {
+            setIsPlaying(false);
+          }
+        });
+      }
     } else {
       audioRef.current.pause();
     }
@@ -246,22 +286,53 @@ export const AudioProvider = ({ children }) => {
 
 
   const playSong = (song) => {
-    // If it's already the current song, just toggle play
+    if (!song) return;
+
     if (currentSong && currentSong.id === song.id) {
-      setIsPlaying(prev => !prev);
+      if (isPlaying) {
+        setIsPlaying(false);
+        if (audioRef.current) audioRef.current.pause();
+      } else {
+        setIsPlaying(true);
+        if (audioRef.current && audioRef.current.src) {
+          audioRef.current.play().catch(e => console.warn("Play error:", e));
+        }
+      }
     } else {
+      const srcToPlay = song.audioUrl || song.media?.audio || "";
       setCurrentSong(song);
       setIsPlaying(true);
       setProgress(0);
+
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        if (srcToPlay) {
+          audioRef.current.src = srcToPlay;
+          audioRef.current.load();
+          audioRef.current.play().catch(err => {
+            console.warn("Direct click play error:", err);
+          });
+        } else {
+          audioRef.current.pause();
+          audioRef.current.removeAttribute("src");
+        }
+      }
     }
   };
 
   const togglePlay = () => {
     if (!currentSong && songs.length > 0) {
-      setCurrentSong(songs[0]);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(prev => !prev);
+      playSong(songs[0]);
+    } else if (currentSong) {
+      if (isPlaying) {
+        setIsPlaying(false);
+        if (audioRef.current) audioRef.current.pause();
+      } else {
+        setIsPlaying(true);
+        if (audioRef.current && audioRef.current.src) {
+          audioRef.current.play().catch(e => console.warn("Toggle play error:", e));
+        }
+      }
     }
   };
 
