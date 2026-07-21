@@ -9,7 +9,7 @@ import SongsSection from "@/components/home/SongsSection";
 import HeroCarousel from "@/components/home/HeroCarousel";
 import VerseOfTheWeek from "@/components/home/VerseOfTheWeek";
 import RecentlyPlayed from "@/components/home/RecentlyPlayed";
-import SearchResults from "@/components/search/SearchResults";
+import SearchResults from "@/components/layout/SearchResults";
 import SongArtwork from "@/components/ui/SongArtwork";
 import CategoryExplorer from "@/components/categories/CategoryExplorer";
 
