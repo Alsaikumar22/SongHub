@@ -1,50 +1,6 @@
-export const CAROUSEL_SLIDES = [
-  {
-    id: "adavi-chetla-naduma",
-    title: "అడవి చెట్ల నడుమ",
-    subtitle: "ADAVI CHETLA NADUMA",
-    artist: "O Yaathrikudaa",
-    label: "✨ SONGS OF THE WEEK",
-    bgUrl: "/worship_forest.png",
-  },
-  {
-    id: "1",
-    title: "Ambient Gold",
-    subtitle: "AMBIENT GOLD",
-    artist: "Lofi Dreamer",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "2",
-    title: "Synthwave Breeze",
-    subtitle: "SYNTHWAVE BREEZE",
-    artist: "Retro Horizon",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "3",
-    title: "Pop Neon",
-    subtitle: "POP NEON",
-    artist: "Starlight",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "4",
-    title: "Melancholy Rock",
-    subtitle: "MELANCHOLY ROCK",
-    artist: "Dark Antlers",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1000&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "5",
-    title: "Chilled Beats",
-    subtitle: "CHILLED BEATS",
-    artist: "Summer Chill",
-    label: "✨ SONG OF THE WEEK",
-    bgUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&auto=format&fit=crop&q=80",
-  },
-];
+/**
+ * Carousel Slides
+ * Carousel slides are dynamically generated from live songs fetched from Firestore.
+ */
+
+export const CAROUSEL_SLIDES = [];

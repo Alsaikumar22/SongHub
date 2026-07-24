@@ -58,7 +58,7 @@ export default function CategoryExplorer() {
             {/* Header section with inline Language Selector */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/5 pb-5">
               <div className="space-y-1">
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black text-title tracking-tight">
                   Browse Song Categories
                 </h1>
                 <p className="text-xs md:text-sm text-muted font-semibold">

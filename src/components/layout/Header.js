@@ -1,12 +1,35 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Music, Search, X, Play, ArrowRight, LayoutGrid, Sun, Moon, LogIn, LogOut, User } from "lucide-react";
+import { Search, X, Play, ArrowRight, LayoutGrid, Sun, Moon, LogIn, LogOut, User, Music } from "lucide-react";
 import { useSearch } from "@/context/search-context";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+
+function SearchResultImage({ song }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError || !song.coverUrl) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-neutral-700 to-neutral-900 flex items-center justify-center">
+        <Music className="w-3.5 h-3.5 text-white/30" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={song.coverUrl}
+      alt={song.title}
+      className="w-full h-full object-cover"
+      onError={() => setHasError(true)}
+    />
+  );
+}
 
 export default function Header() {
   const router = useRouter();
@@ -41,7 +64,9 @@ export default function Header() {
     const titleMatch = (song.title || "").toLowerCase().includes(trimmedQuery);
     const telTitleMatch = (song.teluguTitle || "").toLowerCase().includes(trimmedQuery);
     const artistMatch = (song.artist || "").toLowerCase().includes(trimmedQuery);
-    const lyricsMatch = (song.lyrics || "").toLowerCase().includes(trimmedQuery);
+    const lyricsRaw = song.lyrics;
+    const lyricsStr = Array.isArray(lyricsRaw) ? lyricsRaw.join(" ") : (lyricsRaw || "");
+    const lyricsMatch = lyricsStr.toLowerCase().includes(trimmedQuery);
     return titleMatch || telTitleMatch || artistMatch || lyricsMatch;
   });
 
@@ -57,19 +82,26 @@ export default function Header() {
   };
 
   return (
-    <header className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 md:flex ${
+    <header className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex ${
       activeTab === "discover" ? "flex" : "hidden"
     }`}>
-      <div className="flex items-center gap-2.5 flex-shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-card-hover flex items-center justify-center text-white shadow-sm">
-          <Music className="w-4 h-4" />
+      <Link href="/" className="flex items-center gap-3 flex-shrink-0 group" aria-label="youworship home">
+        <img
+          src="/youlogo.png"
+          alt="youworship"
+          className="w-10 h-10 object-contain"
+        />
+        <div className="flex min-w-0 flex-col leading-none">
+          <span className="text-[17px] font-black tracking-[0.01em] text-title whitespace-nowrap">
+            youworship
+          </span>
+          <span className="mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-muted sm:block">
+            Worship Music
+          </span>
         </div>
-        <span className="font-semibold text-lg tracking-tight text-title hidden sm:inline">
-          SongHub
-        </span>
-      </div>
+      </Link>
 
-      <div className="relative flex-1 max-w-sm h-full mx-auto group hidden md:block">
+      <div className="relative flex-1 max-w-sm h-full mx-auto group hidden lg:block">
         <Search className="w-4.5 h-4.5 text-muted absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none transition-colors group-focus-within:text-copy" />
         <input
           type="text"
@@ -108,7 +140,7 @@ export default function Header() {
               }
             }}
             className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
-              activeTab === "categories" ? "text-white bg-white/5" : "text-dim hover:text-copy"
+              activeTab === "categories" ? "text-title bg-card-hover" : "text-dim hover:text-copy"
             }`}
             title="Browse Categories"
           >
@@ -118,9 +150,9 @@ export default function Header() {
 
         {/* Quick Search Dropdown */}
         {isFocused && searchQuery && !showFullResults && (
-          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-card border border-white/[0.07] rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-card border border-line rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-line">
               <span className="text-[10px] font-bold text-muted uppercase tracking-[0.18em]">
                 Songs
               </span>
@@ -138,24 +170,20 @@ export default function Header() {
                     playSong(song);
                     setIsFocused(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.04] text-left transition-colors cursor-pointer group"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover/40 text-left transition-colors cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/[0.06] shrink-0 bg-card-hover">
-                    <img
-                      src={song.coverUrl}
-                      alt={song.title}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-line shrink-0 bg-card-hover">
+                    <SearchResultImage song={song} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-white block truncate transition-colors">
+                    <span className="text-xs font-medium text-title block truncate transition-colors">
                       {song.teluguTitle || song.title}
                     </span>
                     <span className="text-[10px] text-muted block truncate mt-0.5">
                       {song.artist}
                     </span>
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-white/10 group-hover:bg-white flex items-center justify-center text-white group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-card-hover group-hover:bg-white flex items-center justify-center text-title group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
                     <Play className="w-3 h-3 fill-current text-current pl-[1px]" />
                   </div>
                 </button>
@@ -177,7 +205,7 @@ export default function Header() {
                   setIsFocused(false);
                   router.push("/");
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.02] hover:bg-white/[0.05] text-[10px] font-semibold text-muted hover:text-white uppercase tracking-widest border-t border-white/[0.05] transition-all cursor-pointer hover:text-white"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-card-hover/20 hover:bg-card-hover/50 text-[10px] font-semibold text-muted hover:text-title uppercase tracking-widest border-t border-line transition-all cursor-pointer hover:text-title"
               >
                 <span>See all {totalMatches.length} results</span>
                 <ArrowRight className="w-3 h-3" />

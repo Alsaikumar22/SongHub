@@ -19,10 +19,10 @@ export default function CategoryLanguageSelector({ selectedLanguage, onChange })
               key={opt.id}
               onClick={() => onChange(opt.id)}
               className={`relative h-full px-6 text-xs font-bold rounded-full transition-colors duration-300 cursor-pointer flex items-center justify-center z-10 select-none outline-none ${
-                isSelected ? "text-title" : "text-muted hover:text-title"
+                isSelected ? "text-black" : "text-muted hover:text-title"
               }`}
             >
-              <span className="relative z-10">{opt.label}</span>
+              <span className="relative z-10" style={{ color: isSelected ? '#000' : undefined }}>{opt.label}</span>
               {isSelected && (
                 <motion.div
                   layoutId="activeLangIndicator"

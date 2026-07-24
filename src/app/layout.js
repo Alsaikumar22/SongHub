@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Lato, NTR } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "@/context/audio-context";
 import { SearchProvider } from "@/context/search-context";
@@ -16,16 +16,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const lato = Lato({
+  variable: "--font-lato",
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "700", "900"],
+  style: ["normal", "italic"],
+});
+
+const ntr = NTR({
+  variable: "--font-ntr",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata = {
-  title: "SongHub - Minimalist Music Player",
+  title: "youworship",
   description: "A sleek and clean minimalist music player built with Next.js and TailwindCSS",
+  icons: {
+    icon: "/youlogo.png",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${ntr.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="text-title font-sans select-none">

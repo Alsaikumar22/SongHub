@@ -14,7 +14,7 @@ export default function SongCard({ song, onPlay }) {
   return (
     <div
       onClick={() => onPlay && onPlay(song)}
-      className="group relative bg-card border border-line/40 hover:border-white/20 rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+      className="group relative bg-card border border-line/40 hover:border-line rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
     >
       {/* Cover Artwork Container */}
       <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-card-hover mb-3 border border-line/30">
@@ -31,7 +31,7 @@ export default function SongCard({ song, onPlay }) {
               e.preventDefault();
               onPlay(song);
             }}
-            className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer z-10"
             title={`Play ${song.title}`}
           >
             <Play className="w-4 h-4 fill-current ml-0.5" />
@@ -43,7 +43,7 @@ export default function SongCard({ song, onPlay }) {
       <div className="space-y-1 min-w-0">
         <Link
           href={`/song/${encodeURIComponent(song.id)}`}
-          className="font-bold text-sm text-title hover:text-white block truncate tracking-tight"
+          className="font-bold text-sm text-title hover:text-title block truncate tracking-tight"
         >
           {song.title}
         </Link>
@@ -59,7 +59,7 @@ export default function SongCard({ song, onPlay }) {
 
       {/* Card Footer Metadata */}
       <div className="mt-3 pt-2 border-t border-line/20 flex items-center justify-between text-[10px] text-muted font-medium">
-        <span className="truncate max-w-[60%] px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
+        <span className="truncate max-w-[60%] px-1.5 py-0.5 rounded bg-card-hover border border-line">
           {Array.isArray(song?.category) ? song.category[0] : (song?.category || "General")}
         </span>
         {song.duration && (

@@ -3,10 +3,15 @@
 import React, { useState, useCallback } from "react";
 import { Share2, Check } from "lucide-react";
 import useDailyVerse from "@/hooks/useDailyVerse";
+import { VerseSkeleton } from "@/components/ui/SongSkeleton";
 
 export default function VerseOfTheWeek() {
-  const { verse, reference, referenceTelugu } = useDailyVerse();
+  const { verse, reference, referenceTelugu, loading } = useDailyVerse();
   const [copied, setCopied] = useState(false);
+
+  if (loading || !verse) {
+    return <VerseSkeleton />;
+  }
 
   const handleShare = useCallback(async () => {
     const shareText = `${verse.textEnglish}
@@ -16,13 +21,13 @@ export default function VerseOfTheWeek() {
 ${verse.textTelugu}
 — ${referenceTelugu}
 
-SongHub — Daily Bible Verse`;
+youworship — Daily Bible Verse`;
 
     // Try native Web Share API first (mobile & modern desktop)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `SongHub - ${reference}`,
+          title: `youworship - ${reference}`,
           text: shareText,
         });
         return;
@@ -45,7 +50,7 @@ SongHub — Daily Bible Verse`;
   }, [verse, reference, referenceTelugu]);
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">
       {/* Ambient Background Glows */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-title/5 rounded-full blur-[60px] pointer-events-none group-hover:bg-title/8 transition-all duration-700" />
       <div className="absolute bottom-0 left-0 w-36 h-36 bg-white/2 rounded-full blur-[40px] pointer-events-none" />
@@ -66,7 +71,7 @@ SongHub — Daily Bible Verse`;
         </div>
         <div className="space-y-3">
           {/* Telugu verse */}
-          <p className="text-white text-xl md:text-2xl font-bold leading-[1.6] font-telugu text-left drop-shadow-sm group-hover:text-white transition-colors duration-300">
+          <p className="text-title text-xl md:text-2xl font-bold leading-[1.6] font-telugu text-left drop-shadow-sm group-hover:text-title transition-colors duration-300">
             &ldquo;{verse.textTelugu}&rdquo;
           </p>
           {/* English verse */}
@@ -76,38 +81,29 @@ SongHub — Daily Bible Verse`;
         </div>
       </div>
 
-      {/* Right Citation block & Large Quotes Graphic */}
+      {/* Right Citation block */}
       <div className="relative z-10 flex flex-col items-end justify-between shrink-0 self-stretch text-right md:border-l md:border-line/20 md:pl-6 pt-2 md:pt-0">
-        {/* Share button - top of right column */}
+        {/* Share icon-only button */}
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-300 text-dim hover:text-title group/btn"
-          title="Share this verse"
+          className="relative w-8 h-8 rounded-lg bg-card-hover hover:bg-card border border-line transition-all duration-200 text-dim hover:text-title flex items-center justify-center group/btn"
+          title={copied ? "Copied!" : "Share this verse"}
+          aria-label="Share verse"
         >
           {copied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-green-400" />
-              <span className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">
-                Copied!
-              </span>
-            </>
+            <Check className="w-3.5 h-3.5 text-green-400" />
           ) : (
-            <>
-              <Share2 className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform duration-200" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider">
-                Share
-              </span>
-            </>
+            <Share2 className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform duration-200" />
+          )}
+          {copied && (
+            <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-green-400 bg-card border border-line rounded px-1.5 py-0.5 whitespace-nowrap shadow-sm">
+              Copied!
+            </span>
           )}
         </button>
 
-        {/* Giant clean quotes icon */}
-        <span className="text-title/10 text-7xl font-serif select-none leading-none -mt-4 hidden md:block">
-          &ldquo;
-        </span>
-
         <div className="mt-auto space-y-1">
-          <span className="text-xs font-bold text-white block">
+          <span className="text-xs font-bold text-title block">
             {referenceTelugu}
           </span>
           <span className="text-[10px] text-dim block tracking-wider uppercase font-semibold">

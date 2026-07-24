@@ -12,6 +12,42 @@ import {
 
 const AudioContext = createContext(null);
 
+function getDisplayArtist(song) {
+  if (typeof song?.artist === "string" && song.artist.trim()) {
+    return song.artist.trim();
+  }
+
+  if (typeof song?.artistName === "string" && song.artistName.trim()) {
+    return song.artistName.trim();
+  }
+
+  if (typeof song?.artistObj?.name === "string" && song.artistObj.name.trim()) {
+    return song.artistObj.name.trim();
+  }
+
+  if (typeof song?.artist === "object" && typeof song.artist?.name === "string" && song.artist.name.trim()) {
+    return song.artist.name.trim();
+  }
+
+  return "Unknown Artist";
+}
+
+function normalizeSongForUi(song) {
+  const artist = getDisplayArtist(song);
+
+  return {
+    ...song,
+    id: String(song?.id || song?.slug || song?.title || crypto.randomUUID()),
+    title: String(song?.title || song?.teluguTitle || "Untitled Song"),
+    teluguTitle: song?.teluguTitle ? String(song.teluguTitle) : "",
+    artist,
+    artistName: artist,
+    artistObj: song?.artistObj || { id: null, name: artist },
+    album: song?.album ? String(song.album) : "",
+    duration: song?.duration ? String(song.duration) : "0:00",
+  };
+}
+
 export const AudioProvider = ({ children }) => {
   const { user, firestoreData, setFirestoreData } = useAuth();
   const userRef = useRef(user);
@@ -72,6 +108,7 @@ export const AudioProvider = ({ children }) => {
   };
 
   const audioRef = useRef(null);
+  const isPlayingRef = useRef(isPlaying);
 
   // Keep user ref in sync
   useEffect(() => {
@@ -95,24 +132,32 @@ export const AudioProvider = ({ children }) => {
     }
   }, [firestoreData]);
 
-  // Load songs from Firebase Youworship_songs collection via songService
+  // Load songs from the API endpoint (server-side rendered to avoid Firestore client issues)
   useEffect(() => {
     let isMounted = true;
     setSongsLoading(true);
-    import("@/services/songService").then(({ songService }) => {
-      songService.getAllSongs()
-        .then((fetchedSongs) => {
-          if (!isMounted) return;
-          setSongs(fetchedSongs);
-          setQueue(fetchedSongs);
-          setSongsLoading(false);
-        })
-        .catch((err) => {
-          if (!isMounted) return;
-          console.error("Failed to fetch songs from Youworship_songs:", err);
-          setSongsLoading(false);
-        });
-    });
+    
+    fetch("/api/songs")
+      .then((res) => {
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!isMounted) return;
+        const fetchedSongs = Array.isArray(data?.songs)
+          ? data.songs.filter(Boolean).map(normalizeSongForUi)
+          : [];
+        setSongs(fetchedSongs);
+        setQueue(fetchedSongs);
+        setSongsLoading(false);
+        console.log(`✓ Loaded ${fetchedSongs.length} songs from API`);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("❌ Failed to fetch songs from API:", err);
+        setSongsLoading(false);
+      });
+    
     return () => { isMounted = false; };
   }, []);
 
@@ -278,6 +323,9 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isPlaying]);
 
+  // Keep refs in sync
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
   // Handle volume and mute
   useEffect(() => {
     if (!audioRef.current) return;
@@ -285,15 +333,14 @@ export const AudioProvider = ({ children }) => {
     audioRef.current.muted = isMuted;
   }, [volume, isMuted]);
 
-  // ─── YouTube Duration Detection ──────────────────────────────────
-  // When a song with a YouTube ID plays (but no direct audio URL),
-  // detect the video duration from the YouTube IFrame API.
+  // ─── YouTube Player Management ─────────────────────────────────
+  // Manages a hidden YT.Player for YouTube-only songs (no audio URL).
+  // Handles: playback, duration detection, progress tracking, auto-next.
   const youtubeApiLoadedRef = useRef(false);
   const youtubePlayerRef = useRef(null);
-  const youtubeReadyCallbackRef = useRef(null);
+  const youtubeProgressRef = useRef(null);
 
   useEffect(() => {
-    // Only for songs with YouTube ID and no direct audio URL
     const hasYoutube = currentSong?.youtubeId;
     const hasAudio = currentSong?.audioUrl || currentSong?.media?.audio;
     if (!hasYoutube || hasAudio) return;
@@ -302,22 +349,21 @@ export const AudioProvider = ({ children }) => {
     let pollTimer = null;
     const youtubeId = currentSong.youtubeId;
 
-    // Clean up previous player
     if (youtubePlayerRef.current) {
-      try {
-        youtubePlayerRef.current.destroy();
-      } catch (e) {}
+      try { youtubePlayerRef.current.destroy(); } catch (e) {}
       youtubePlayerRef.current = null;
     }
+    if (youtubeProgressRef.current) {
+      clearInterval(youtubeProgressRef.current);
+      youtubeProgressRef.current = null;
+    }
 
-    // Create a hidden div for the YouTube player
-    const playerDivId = `yt-dur-${youtubeId}-${Date.now()}`;
+    const playerDivId = `yt-audio-${youtubeId}-${Date.now()}`;
     const playerDiv = document.createElement("div");
     playerDiv.id = playerDivId;
     playerDiv.style.display = "none";
     document.body.appendChild(playerDiv);
 
-    // Function to create the player and get duration
     const createPlayer = () => {
       if (!isMounted || !window.YT?.Player) return;
       try {
@@ -325,15 +371,15 @@ export const AudioProvider = ({ children }) => {
           height: "1",
           width: "1",
           videoId: youtubeId,
-          playerVars: { autoplay: 0, controls: 0, modestbranding: 1 },
+          playerVars: { autoplay: 0, controls: 0, modestbranding: 1, enablejsapi: 1 },
           events: {
-            onReady: (event) => {
+            onReady: () => {
               if (!isMounted) return;
-              const detectedSec = event.target.getDuration();
+              youtubePlayerRef.current = player;
+
+              const detectedSec = player.getDuration();
               if (detectedSec && detectedSec > 0) {
                 setDuration(detectedSec);
-                // Sync the duration back to currentSong and songs array
-                // so card components show the correct duration
                 const mins = Math.floor(detectedSec / 60);
                 const secs = Math.floor(detectedSec % 60);
                 const formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -341,14 +387,35 @@ export const AudioProvider = ({ children }) => {
                 setSongs(prev => prev.map(s =>
                   s.id === currentSong?.id ? { ...s, duration: formatted, durationSec: detectedSec } : s
                 ));
-                // Save to Firebase so it persists after page refresh
-                const songId = currentSong?.id;
-                if (songId) {
-                  const songRef = doc(db, "Youworship_songs", songId);
-                  updateDoc(songRef, {
-                    duration: detectedSec,
-                    updatedAt: new Date().toISOString(),
-                  }).catch(err => console.warn("Failed to save duration to Firebase:", err));
+                const songRef = doc(db, "Youworship_songs", currentSong.id);
+                updateDoc(songRef, {
+                  duration: detectedSec,
+                  updatedAt: new Date().toISOString(),
+                }).catch(() => {});
+              }
+
+              if (isPlayingRef.current && typeof player?.playVideo === "function") {
+                try { player.playVideo(); } catch (e) {}
+              }
+
+              youtubeProgressRef.current = setInterval(() => {
+                if (!youtubePlayerRef.current || !isMounted) return;
+                try {
+                  if (typeof youtubePlayerRef.current.getCurrentTime === "function") {
+                    const time = youtubePlayerRef.current.getCurrentTime();
+                    if (time !== undefined) setProgress(time);
+                  }
+                } catch (e) {}
+              }, 1000);
+            },
+            onStateChange: (event) => {
+              if (!isMounted) return;
+              if (event.data === 0) {
+                if (isLooping) {
+                  if (typeof player?.seekTo === "function") try { player.seekTo(0); } catch (e) {}
+                  if (typeof player?.playVideo === "function") try { player.playVideo(); } catch (e) {}
+                } else {
+                  handleNextSong();
                 }
               }
             },
@@ -361,41 +428,19 @@ export const AudioProvider = ({ children }) => {
     };
 
     if (!window.YT?.Player) {
-      // Load YouTube IFrame API script once
       if (!youtubeApiLoadedRef.current) {
         youtubeApiLoadedRef.current = true;
         const tag = document.createElement("script");
         tag.src = "https://www.youtube.com/iframe_api";
         const firstScript = document.getElementsByTagName("script")[0];
         firstScript.parentNode.insertBefore(tag, firstScript);
-
-        // Set a global callback that fires for any pending ready callback
-        window.onYouTubeIframeAPIReady = () => {
-          // Call the stored callback if any
-          if (youtubeReadyCallbackRef.current) {
-            youtubeReadyCallbackRef.current();
-            youtubeReadyCallbackRef.current = null;
-          }
-        };
+        window.onYouTubeIframeAPIReady = () => {};
       }
-
-      // Store this effect's callback and poll until API loads (max 15s)
-      youtubeReadyCallbackRef.current = createPlayer;
-      let pollCount = 0;
       pollTimer = setInterval(() => {
-        pollCount++;
-        if (window.YT?.Player) {
-          // Clear our callback and create the player
-          if (youtubeReadyCallbackRef.current === createPlayer) {
-            youtubeReadyCallbackRef.current = null;
-          }
+        if (window.YT?.Player && isMounted) {
           clearInterval(pollTimer);
           pollTimer = null;
           createPlayer();
-        } else if (pollCount > 50) {
-          // Timeout after ~15 seconds (50 * 300ms)
-          clearInterval(pollTimer);
-          pollTimer = null;
         }
       }, 300);
     } else {
@@ -404,27 +449,42 @@ export const AudioProvider = ({ children }) => {
 
     return () => {
       isMounted = false;
-      // Clear polling timer
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (youtubeProgressRef.current) {
+        clearInterval(youtubeProgressRef.current);
+        youtubeProgressRef.current = null;
       }
-      // Clear our callback reference if it was set
-      if (youtubeReadyCallbackRef.current === createPlayer) {
-        youtubeReadyCallbackRef.current = null;
-      }
-      // Clean up player div
       const existingDiv = document.getElementById(playerDivId);
       if (existingDiv) existingDiv.remove();
-      // Destroy YouTube player
       if (youtubePlayerRef.current) {
         try {
-          youtubePlayerRef.current.destroy();
+          if (typeof youtubePlayerRef.current.destroy === "function") {
+            youtubePlayerRef.current.destroy();
+          }
         } catch (e) {}
         youtubePlayerRef.current = null;
       }
     };
   }, [currentSong?.id]);
+
+  // Control YouTube playback when isPlaying toggles
+  useEffect(() => {
+    const player = youtubePlayerRef.current;
+    if (!player) return;
+    try {
+      if (isPlaying) {
+        if (typeof player.playVideo === "function") {
+          player.playVideo();
+        }
+      } else {
+        if (typeof player.pauseVideo === "function") {
+          player.pauseVideo();
+        }
+      }
+    } catch (e) {
+      console.warn("YouTube play/pause error:", e);
+    }
+  }, [isPlaying]);
 
 
 
@@ -480,8 +540,14 @@ export const AudioProvider = ({ children }) => {
   };
 
   const seekTo = (time) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = time;
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+    if (youtubePlayerRef.current && typeof youtubePlayerRef.current.seekTo === "function") {
+      try {
+        youtubePlayerRef.current.seekTo(time, true);
+      } catch (e) {}
+    }
     setProgress(time);
   };
 

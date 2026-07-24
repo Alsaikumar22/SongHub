@@ -1,7 +1,11 @@
 export function extractDominantColor(imageUrl) {
   return new Promise((resolve) => {
+    if (!imageUrl) {
+      resolve({ r: 18, g: 18, b: 18 });
+      return;
+    }
+
     const img = new Image();
-    img.crossOrigin = "Anonymous";
     img.src = imageUrl;
 
     img.onload = () => {
@@ -37,6 +41,7 @@ export function extractDominantColor(imageUrl) {
 
         resolve({ r, g, b });
       } catch {
+        // Tainted canvas (cross-origin without CORS) — return default dark color
         resolve({ r: 18, g: 18, b: 18 });
       }
     };

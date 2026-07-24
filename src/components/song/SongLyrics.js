@@ -1,83 +1,32 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
-export function LanguageSegmented({ selected, onChange, hasDual }) {
-  if (!hasDual) return null;
-
+export function LanguageSegmented({ selected, onChange, hasDual = true }) {
   const langs = [
     { id: "telugu", label: "తెలుగు" },
     { id: "english", label: "English" },
-    { id: "side-by-side", label: "Line by Line" },
   ];
 
   return (
     <div className="flex h-9 md:h-11 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm w-fit">
       {langs.map((lang) => {
         const isSelected = selected === lang.id;
-        const isMobile = lang.id === "side-by-side";
         return (
           <button
             key={lang.id}
             onClick={() => onChange(lang.id)}
-            className={`h-full px-2.5 md:px-4 text-[10px] md:text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
+            className={`h-full px-3.5 md:px-5 text-[10px] md:text-xs font-extrabold rounded-full transition-all duration-200 cursor-pointer ${
               isSelected
                 ? "bg-title text-card shadow-sm"
-                : "bg-transparent text-muted hover:text-white"
+                : "bg-transparent text-muted hover:text-title"
             }`}
           >
-            <span className="md:hidden">{isMobile ? "Line" : lang.label}</span>
-            <span className="hidden md:inline">{lang.label}</span>
+            <span>{lang.label}</span>
           </button>
         );
       })}
     </div>
-  );
-}
-
-function LyricLine({ line, englishLine, isActive, mode, index }) {
-  if (mode === "side-by-side" && englishLine !== undefined) {
-    return (
-      <div
-        data-line-index={index}
-        className={`grid grid-cols-[1fr_auto_1fr] gap-4 md:gap-8 py-3.5 px-5 rounded-xl transition-all duration-300 ease-out border ${
-          isActive
-            ? "bg-white/5 border-l-4 border-l-white/80 border-y-white/5 border-r-white/5 shadow-md scale-[1.01]"
-            : "border-transparent hover:bg-white/[0.02]"
-        }`}
-      >
-        <p
-          className={`text-right text-base md:text-lg font-medium leading-relaxed transition-colors duration-300 font-telugu ${
-            isActive ? "text-white" : "text-white/70"
-          }`}
-        >
-          {line}
-        </p>
-        <div className="w-px bg-line/40 self-stretch" />
-        <p
-          className={`text-left text-base md:text-lg leading-relaxed transition-colors duration-300 ${
-            isActive ? "text-white/90" : "text-muted/60"
-          }`}
-        >
-          {englishLine}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <p
-      data-line-index={index}
-      className={`text-base md:text-lg leading-relaxed px-5 py-3 rounded-xl transition-all duration-300 ease-out cursor-default border ${
-        isActive
-          ? "text-white font-bold bg-white/5 border-l-4 border-l-white/80 border-y-white/5 border-r-white/5 shadow-md scale-[1.01]"
-          : mode === "telugu"
-            ? "text-white/60 font-medium font-telugu border-transparent hover:text-white hover:bg-white/[0.02]"
-            : "text-muted/60 border-transparent hover:text-white hover:bg-white/[0.02]"
-      } ${mode === "telugu" ? "font-telugu" : ""}`}
-    >
-      {line}
-    </p>
   );
 }
 
@@ -86,10 +35,10 @@ export default function SongLyrics({
   isUnified = false,
   isImmersive = false,
   selectedLanguage: propLanguage,
-  setSelectedLanguage: propSetLanguage
+  setSelectedLanguage: propSetLanguage,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
-  
+
   const selectedLanguage = propLanguage !== undefined ? propLanguage : internalLanguage;
   const setSelectedLanguage = propSetLanguage !== undefined ? propSetLanguage : setInternalLanguage;
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
@@ -97,22 +46,45 @@ export default function SongLyrics({
   const lineRefs = useRef({});
 
   const hasDual = !!(
-    Array.isArray(song.lyricsTelugu) &&
-    Array.isArray(song.lyricsEnglish) &&
-    song.lyricsTelugu.length > 0 &&
-    song.lyricsEnglish.length > 0
+    song &&
+    (song.lyricsTelugu || song.lyricsEnglish || song.lyrics)
   );
 
-  const getLines = useCallback(() => {
-    if (hasDual) {
-      if (selectedLanguage === "telugu") return song.lyricsTelugu;
-      if (selectedLanguage === "english") return song.lyricsEnglish;
-      return song.lyricsTelugu;
+  // Extract stanzas & lines from song data
+  const stanzas = useMemo(() => {
+    let rawContent = "";
+
+    if (selectedLanguage === "english" && song?.lyricsEnglish) {
+      rawContent = Array.isArray(song.lyricsEnglish) ? song.lyricsEnglish.join("\n") : song.lyricsEnglish;
+    } else if (song?.lyricsTelugu) {
+      rawContent = Array.isArray(song.lyricsTelugu) ? song.lyricsTelugu.join("\n") : song.lyricsTelugu;
+    } else if (typeof song?.lyrics === "string") {
+      rawContent = song.lyrics;
+    } else if (Array.isArray(song?.lyrics) && song.lyrics.length > 0) {
+      const matched =
+        song.lyrics.find((l) => l.language === (selectedLanguage === "english" ? "en" : "te")) ||
+        song.lyrics[0];
+      rawContent = matched?.content || matched?.text || "";
     }
 
-    const raw = song.lyrics || "Lyrics not available for this track.";
-    return raw.split("\n").map((l) => l.replace(/\[\d{2}:\d{2}\]/g, "").trim()).filter(Boolean);
-  }, [song, selectedLanguage, hasDual]);
+    if (!rawContent || typeof rawContent !== "string") {
+      return [];
+    }
+
+    // Split into stanzas by double newlines (\n\n)
+    const blocks = rawContent.split(/\n\s*\n+/);
+
+    return blocks
+      .map((block) =>
+        block
+          .split("\n")
+          .map((l) => l.replace(/\[\d{2}:\d{2}\]/g, "").trim())
+          .filter(Boolean)
+      )
+      .filter((lines) => lines.length > 0);
+  }, [song, selectedLanguage]);
+
+  const flatLines = useMemo(() => stanzas.flat(), [stanzas]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -135,7 +107,7 @@ export default function SongLyrics({
           }
         }
       },
-      { root: container, rootMargin: "-40% 0px -40% 0px", threshold: 0 }
+      { root: container, rootMargin: "-35% 0px -35% 0px", threshold: 0 }
     );
 
     const elements = Object.values(lineRefs.current).filter(Boolean);
@@ -144,146 +116,101 @@ export default function SongLyrics({
     return () => {
       elements.forEach((el) => observer.unobserve(el));
     };
-  }, [selectedLanguage]);
+  }, [selectedLanguage, stanzas]);
 
-  const lines = getLines();
-  const isSideBySide = selectedLanguage === "side-by-side";
+  let currentFlatIndex = 0;
 
   if (isImmersive) {
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-y-auto px-6 md:px-8 py-12 space-y-6 scroll-smooth no-scrollbar"
+        className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-20 py-12 space-y-10 scroll-smooth no-scrollbar select-text"
         style={{ scrollbarWidth: "none" }}
       >
-        {isSideBySide && hasDual ? (
-          <div className="space-y-8 pb-32">
-            {song.lyricsTelugu.map((line, idx) => {
-              const isActive = activeLineIndex === idx;
-              return (
-                <div
-                  key={idx}
-                  ref={(el) => {
-                    lineRefs.current[idx] = el;
-                  }}
-                  data-line-index={idx}
-                  className="py-2.5 space-y-2.5 transition-all duration-300 pl-4 border-l border-transparent"
-                >
-                  <p
-                    className={`text-left text-3xl md:text-5xl lg:text-6xl font-black font-telugu tracking-tight leading-normal pl-2 transition-all duration-300 ${
-                      isActive
-                        ? "text-white scale-[1.01] drop-shadow-[0_2px_12px_rgba(255,255,255,0.25)]"
-                        : "text-white/30 hover:text-white/60"
-                    }`}
-                  >
-                    {line}
-                  </p>
-                  {song.lyricsEnglish[idx] && (
-                    <p
-                      className={`text-left text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-normal pl-2 transition-all duration-300 ${
-                        isActive
-                          ? "text-white/70"
-                          : "text-white/20 hover:text-white/40"
-                      }`}
-                    >
-                      {song.lyricsEnglish[idx]}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="space-y-6 pb-32">
-            {lines.map((line, idx) => {
-              const isActive = activeLineIndex === idx;
-              return (
-                <div
-                  key={idx}
-                  ref={(el) => {
-                    lineRefs.current[idx] = el;
-                  }}
-                  data-line-index={idx}
-                  className="pl-4 border-l border-transparent"
-                >
-                  <p
-                    className={`text-left text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-normal pl-2 transition-all duration-300 ${
-                      isActive
-                        ? "text-white scale-[1.01] drop-shadow-[0_2px_12px_rgba(255,255,255,0.25)]"
-                        : "text-white/30 hover:text-white/60"
-                    } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
-                  >
-                    {line}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className="max-w-2xl mx-auto text-center space-y-10 pb-32">
+          {stanzas.map((stanzaLines, sIdx) => (
+            <div key={`stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
+              {stanzaLines.map((line) => {
+                const lineIdx = currentFlatIndex++;
+                const isActive = activeLineIndex === lineIdx;
 
-        {lines.length === 0 && (
-          <div className="py-24 text-center">
-            <p className="text-xl text-white/40">No lyrics available for this track.</p>
-          </div>
-        )}
+                return (
+                  <div
+                    key={`line-${lineIdx}`}
+                    ref={(el) => {
+                      lineRefs.current[lineIdx] = el;
+                    }}
+                    data-line-index={lineIdx}
+                    className="py-1 transition-all duration-300"
+                  >
+                    <p
+                      className={`text-center text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight leading-relaxed transition-all duration-300 ${
+                        isActive
+                          ? "text-title scale-[1.02] font-black"
+                          : "text-copy font-bold hover:text-title cursor-pointer"
+                      } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
+                    >
+                      {line}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {flatLines.length === 0 && (
+            <div className="py-24 text-center">
+              <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   const lyricsContent = (
     <div className="relative">
-      {/* Scrolling Fade Overlays */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#121212]/60 to-transparent z-10 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#121212]/60 to-transparent z-10 pointer-events-none" />
-
       <div
         ref={containerRef}
-        className="relative max-h-[50vh] overflow-y-auto px-1 py-4 space-y-1.5 scroll-smooth no-scrollbar"
+        className="relative max-h-[60vh] overflow-y-auto px-4 sm:px-8 py-6 space-y-8 scroll-smooth no-scrollbar"
       >
-        {isSideBySide && hasDual ? (
-          <div className="space-y-2">
-            {song.lyricsTelugu.map((line, idx) => (
-              <div
-                key={idx}
-                ref={(el) => {
-                  lineRefs.current[idx] = el;
-                }}
-              >
-                <LyricLine
-                  line={line}
-                  englishLine={song.lyricsEnglish[idx]}
-                  isActive={activeLineIndex === idx}
-                  mode="side-by-side"
-                  index={idx}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {lines.map((line, idx) => (
-              <div
-                key={idx}
-                ref={(el) => {
-                  lineRefs.current[idx] = el;
-                }}
-              >
-                <LyricLine
-                  line={line}
-                  isActive={activeLineIndex === idx}
-                  mode={selectedLanguage}
-                  index={idx}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="max-w-2xl mx-auto text-center space-y-8">
+          {stanzas.map((stanzaLines, sIdx) => (
+            <div key={`stanza-${sIdx}`} className="space-y-2.5 sm:space-y-3">
+              {stanzaLines.map((line) => {
+                const lineIdx = currentFlatIndex++;
+                const isActive = activeLineIndex === lineIdx;
 
-        {lines.length === 0 && (
-          <div className="py-16 text-center">
-            <p className="text-sm text-muted">No lyrics available for this track.</p>
-          </div>
-        )}
+                return (
+                  <div
+                    key={`line-${lineIdx}`}
+                    ref={(el) => {
+                      lineRefs.current[lineIdx] = el;
+                    }}
+                    data-line-index={lineIdx}
+                    className="py-0.5 transition-all duration-300"
+                  >
+                    <p
+                      className={`text-center text-base sm:text-lg md:text-xl font-bold leading-relaxed transition-all duration-300 ${
+                        isActive
+                          ? "text-title scale-[1.01] font-black"
+                          : "text-copy font-bold hover:text-title cursor-pointer"
+                      } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
+                    >
+                      {line}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {flatLines.length === 0 && (
+            <div className="py-16 text-center">
+              <p className="text-sm text-muted">Lyrics not available for this track.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -293,10 +220,10 @@ export default function SongLyrics({
   }
 
   return (
-    <div className="bg-white/[0.02] border border-white/5 backdrop-blur-md rounded-2xl p-5 md:p-6 shadow-xl space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+    <div className="bg-card border border-line rounded-2xl p-5 md:p-6 shadow-sm space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-4">
         <h3 className="text-xs font-bold text-muted uppercase tracking-widest flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-title/70 animate-pulse" />
           Lyrics
         </h3>
         <LanguageSegmented

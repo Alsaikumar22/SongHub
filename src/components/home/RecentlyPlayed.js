@@ -57,7 +57,7 @@ export default function RecentlyPlayed() {
   return (
     <div className="space-y-3.5">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-bold text-white/90 uppercase tracking-wider">
+        <h2 className="text-sm font-bold text-title/90 uppercase tracking-wider">
           Recently Played
         </h2>
         <button
@@ -65,7 +65,7 @@ export default function RecentlyPlayed() {
             setActiveTab("recently-played");
             setActivePlaylistId(null);
           }}
-          className="text-xs font-bold text-handle hover:text-white transition-colors cursor-pointer"
+          className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
         >
           Show all
         </button>
@@ -74,7 +74,7 @@ export default function RecentlyPlayed() {
         {/* Left overlay arrow — centered vertically on sm cover art (top-[72px]) */}
         <button
           onClick={() => scrollRecent("left")}
-          className={`absolute left-2 top-[72px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black/90 hover:scale-105 items-center justify-center text-white cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-white/5 shadow-xl hidden ${
+          className={`absolute left-2 top-[72px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
             showLeftArrow ? "md:flex" : "md:hidden"
           } animate-in fade-in zoom-in`}
           title="Scroll Left"
@@ -102,7 +102,7 @@ export default function RecentlyPlayed() {
         {/* Right overlay arrow — centered vertically on sm cover art (top-[72px]) */}
         <button
           onClick={() => scrollRecent("right")}
-          className={`absolute right-2 top-[72px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black/90 hover:scale-105 items-center justify-center text-white cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-white/5 shadow-xl hidden ${
+          className={`absolute right-2 top-[72px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
             showRightArrow ? "md:flex" : "md:hidden"
           } animate-in fade-in zoom-in`}
           title="Scroll Right"

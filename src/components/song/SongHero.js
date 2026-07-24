@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Play, Pause, Heart, Plus, Share2, Check, Video } from "lucide-react";
 import { extractDominantColor } from "@/utils/extract-color";
 import SongArtwork from "../ui/SongArtwork";
+import { useAudio } from "@/context/audio-context";
+import { useTheme } from "@/context/theme-context";
 
 export default function SongHero({
   song,
@@ -17,6 +19,7 @@ export default function SongHero({
   addSongToPlaylist,
   removeSongFromPlaylist,
 }) {
+  const { theme } = useTheme();
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [shareNotification, setShareNotification] = useState(false);
@@ -40,19 +43,23 @@ export default function SongHero({
   };
 
   const { r, g, b } = gradientColor;
+  const isLight = theme === "light";
+  const heroBackground = isLight
+    ? `linear-gradient(180deg, rgba(${r},${g},${b},0.08) 0%, rgba(${r},${g},${b},0.02) 60%, var(--canvas) 100%)`
+    : `linear-gradient(180deg, rgba(${r},${g},${b},0.35) 0%, rgba(${r},${g},${b},0.12) 65%, var(--canvas) 100%)`;
 
   return (
     <div className="w-full space-y-6">
       {/* 1. Immersive Gradient Hero Banner */}
       <div
-        className="relative -mx-6 md:-mx-8 -mt-[60px] px-6 md:px-8 pt-24 pb-8 md:pb-10 rounded-b-2xl overflow-hidden border-b border-line/10 transition-all duration-300"
+        className="relative -mx-6 md:-mx-8 -mt-[60px] px-6 md:px-8 pt-24 pb-8 md:pb-10 rounded-b-2xl overflow-hidden border-b border-line transition-all duration-300"
         style={{
-          background: `linear-gradient(180deg, rgba(${r},${g},${b},0.6) 0%, rgba(${r},${g},${b},0.2) 65%, rgba(7,7,7,0.4) 90%, transparent 100%)`,
+          background: heroBackground,
         }}
       >
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end">
           {/* Cover Art */}
-          <div className="w-40 h-40 md:w-56 md:h-56 rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.5)] border border-white/10 shrink-0 relative group hover:scale-[1.03] transition-transform duration-300 ease-out cursor-pointer">
+          <div className="w-40 h-40 md:w-56 md:h-56 rounded-2xl overflow-hidden shadow-2xl border border-line shrink-0 relative group hover:scale-[1.03] transition-transform duration-300 ease-out cursor-pointer">
             <SongArtwork
               song={song}
               className="w-full h-full object-cover"
@@ -62,12 +69,12 @@ export default function SongHero({
 
           {/* Info Details */}
           <div className="flex-1 min-w-0 text-center md:text-left space-y-3">
-            <span className="text-[10px] font-bold text-white/70 uppercase tracking-[0.25em]">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
               Song
             </span>
 
             <h1
-              className={`text-white text-2xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight select-all drop-shadow-sm ${
+              className={`text-title text-2xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight select-all drop-shadow-sm ${
                 song.teluguTitle ? "font-telugu" : ""
               }`}
             >
@@ -75,13 +82,13 @@ export default function SongHero({
             </h1>
 
             {song.teluguTitle && song.title !== song.teluguTitle && (
-              <p className="text-lg md:text-xl text-white/70 font-semibold tracking-wide">
+              <p className="text-lg md:text-xl text-muted font-semibold tracking-wide">
                 {song.title}
               </p>
             )}
 
-             <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2 gap-y-1 text-sm text-white/60 pt-1 font-medium">
-              <span className="font-bold text-white hover:text-white/80 hover:underline cursor-pointer transition-colors">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2 gap-y-1 text-sm text-muted pt-1 font-medium">
+              <span className="font-bold text-title hover:text-copy hover:underline cursor-pointer transition-colors">
                 {song.artist}
               </span>
             </div>
@@ -90,10 +97,10 @@ export default function SongHero({
       </div>
 
       {/* 2. Separated Action Row (Spotify-Style Placement) */}
-      <div className="flex items-center justify-start gap-3 md:gap-4 py-2 border-b border-line/10 pb-6">
+      <div className="flex items-center justify-start gap-3 md:gap-4 py-2 border-b border-line pb-6">
         <button
           onClick={handlePlayClick}
-          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white text-black flex items-center justify-center hover:scale-106 active:scale-95 transition-all shadow-lg hover:shadow-white/15 cursor-pointer"
+          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer"
           title={isCurrentSong && isPlaying ? "Pause" : "Play"}
         >
           {isCurrentSong && isPlaying ? (
@@ -105,10 +112,10 @@ export default function SongHero({
 
         <button
           onClick={toggleFavorite}
-          className={`w-9 h-9 md:w-11 md:h-11 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer ${
+          className={`w-9 h-9 md:w-11 md:h-11 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm ${
             isFavorited
-              ? "border-red-500/30 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-[pulse_1.5s_infinite]"
-              : "border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-white/30"
+              ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-[pulse_1.5s_infinite]"
+              : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
           }`}
           title={isFavorited ? "Remove from favorites" : "Add to favorites"}
         >
@@ -118,7 +125,7 @@ export default function SongHero({
         <div className="relative">
           <button
             onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-            className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-white/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
             title="Add to playlist"
           >
             <Plus className="w-4 h-4 md:w-5 md:h-5" />
@@ -148,11 +155,11 @@ export default function SongHero({
                           }
                           setShowPlaylistDropdown(false);
                         }}
-                        className="w-full px-3 py-2 text-xs text-white hover:bg-card-hover text-left flex items-center justify-between"
+                        className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
                       >
                         <span className="truncate">{list.name}</span>
                         {isInPlaylist ? (
-                          <span className="text-[10px] bg-line text-handle px-1.5 py-0.5 rounded font-semibold border border-dim flex-shrink-0">
+                          <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
                             Added
                           </span>
                         ) : (
@@ -171,10 +178,13 @@ export default function SongHero({
           )}
         </div>
 
-        {(song?.media?.video || song?.videoUrl || song?.youtubeUrl) && (
+        {(song?.media?.video || song?.videoUrl || song?.youtubeUrl || song?.youtubeId) && (
           <Link
-            href={`/song/${encodeURIComponent(song.id)}?view=lyrics`}
-            className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-white/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            href={`/song/${encodeURIComponent(song.id)}?view=video`}
+            onClick={() => {
+              if (currentSong?.id !== song.id) playSong(song);
+            }}
+            className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
             title="Watch Video"
           >
             <Video className="w-4 h-4 md:w-4.5 md:h-4.5 text-red-400" />
@@ -183,7 +193,7 @@ export default function SongHero({
 
         <button
           onClick={handleShareClick}
-          className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-white/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
           title="Share"
         >
           <Share2 className="w-4 h-4 md:w-4.5 md:h-4.5" />
