@@ -149,18 +149,43 @@ export default function PlayerBar() {
         {/* ─── MOBILE ATTACHED MINI PLAYER (< md) ─── */}
         {currentSong && !isExpanded && (
           <div 
-            onClick={handleContainerClick}
-            className="w-full h-full flex items-center justify-between px-4 cursor-pointer md:hidden select-none relative"
+            className="w-full h-full flex flex-col md:hidden select-none relative"
           >
-            {/* Top Micro Progress Bar */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/10 overflow-hidden">
-              <div
-                className="h-full bg-white transition-all duration-75"
-                style={{
-                  width: `${(sliderVal / (duration || 100)) * 100}%`
-                }}
-              />
+            {/* Interactive Seek Bar (always at top) */}
+            <div 
+              className="shrink-0 h-1.5 group cursor-pointer touch-pan-y"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const pct = x / rect.width;
+                const targetTime = pct * (duration || 100);
+                setSliderVal(targetTime);
+                seekTo(targetTime);
+              }}
+            >
+              <div className="relative w-full h-full bg-white/10">
+                <div
+                  className="absolute inset-y-0 left-0 bg-white/70 group-active:bg-white transition-all duration-75"
+                  style={{ width: `${(sliderVal / (duration || 100)) * 100}%` }}
+                />
+                {/* Moving cursor/thumb — follows the playhead position */}
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md transition-opacity duration-75 ${
+                    sliderVal > 0 && duration > 0
+                      ? "opacity-50 group-active:opacity-100 group-hover:opacity-80"
+                      : "opacity-0"
+                  }`}
+                  style={{ left: `calc(${(sliderVal / (duration || 100)) * 100}% - 6px)` }}
+                />
+              </div>
             </div>
+
+            {/* Content row */}
+            <div 
+              onClick={handleContainerClick}
+              className="flex-1 flex items-center justify-between px-4 min-h-0 cursor-pointer"
+            >
 
             {/* Left: Artwork + Titles */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -205,6 +230,7 @@ export default function PlayerBar() {
                 )}
               </button>
             </div>
+          </div>
           </div>
         )}
 
@@ -355,7 +381,11 @@ export default function PlayerBar() {
                   />
                 </div>
                 <div
-                  className="absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  className={`absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 transition-opacity duration-75 z-20 ${
+                    sliderVal > 0 && duration > 0
+                      ? "opacity-60 group-hover:opacity-100"
+                      : "opacity-0"
+                  }`}
                   style={{
                     left: `calc(${(sliderVal / (duration || 100)) * 100}% - 5px)`
                   }}

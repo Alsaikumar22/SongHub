@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "./auth-context";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/firebase/config";
 import {
   updateFavorites,
   updatePlaylists,
@@ -282,6 +284,147 @@ export const AudioProvider = ({ children }) => {
     audioRef.current.volume = volume;
     audioRef.current.muted = isMuted;
   }, [volume, isMuted]);
+
+  // ─── YouTube Duration Detection ──────────────────────────────────
+  // When a song with a YouTube ID plays (but no direct audio URL),
+  // detect the video duration from the YouTube IFrame API.
+  const youtubeApiLoadedRef = useRef(false);
+  const youtubePlayerRef = useRef(null);
+  const youtubeReadyCallbackRef = useRef(null);
+
+  useEffect(() => {
+    // Only for songs with YouTube ID and no direct audio URL
+    const hasYoutube = currentSong?.youtubeId;
+    const hasAudio = currentSong?.audioUrl || currentSong?.media?.audio;
+    if (!hasYoutube || hasAudio) return;
+
+    let isMounted = true;
+    let pollTimer = null;
+    const youtubeId = currentSong.youtubeId;
+
+    // Clean up previous player
+    if (youtubePlayerRef.current) {
+      try {
+        youtubePlayerRef.current.destroy();
+      } catch (e) {}
+      youtubePlayerRef.current = null;
+    }
+
+    // Create a hidden div for the YouTube player
+    const playerDivId = `yt-dur-${youtubeId}-${Date.now()}`;
+    const playerDiv = document.createElement("div");
+    playerDiv.id = playerDivId;
+    playerDiv.style.display = "none";
+    document.body.appendChild(playerDiv);
+
+    // Function to create the player and get duration
+    const createPlayer = () => {
+      if (!isMounted || !window.YT?.Player) return;
+      try {
+        const player = new window.YT.Player(playerDivId, {
+          height: "1",
+          width: "1",
+          videoId: youtubeId,
+          playerVars: { autoplay: 0, controls: 0, modestbranding: 1 },
+          events: {
+            onReady: (event) => {
+              if (!isMounted) return;
+              const detectedSec = event.target.getDuration();
+              if (detectedSec && detectedSec > 0) {
+                setDuration(detectedSec);
+                // Sync the duration back to currentSong and songs array
+                // so card components show the correct duration
+                const mins = Math.floor(detectedSec / 60);
+                const secs = Math.floor(detectedSec % 60);
+                const formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
+                setCurrentSong(prev => prev ? { ...prev, duration: formatted, durationSec: detectedSec } : prev);
+                setSongs(prev => prev.map(s =>
+                  s.id === currentSong?.id ? { ...s, duration: formatted, durationSec: detectedSec } : s
+                ));
+                // Save to Firebase so it persists after page refresh
+                const songId = currentSong?.id;
+                if (songId) {
+                  const songRef = doc(db, "Youworship_songs", songId);
+                  updateDoc(songRef, {
+                    duration: detectedSec,
+                    updatedAt: new Date().toISOString(),
+                  }).catch(err => console.warn("Failed to save duration to Firebase:", err));
+                }
+              }
+            },
+          },
+        });
+        youtubePlayerRef.current = player;
+      } catch (err) {
+        console.warn("YouTube player creation failed:", err);
+      }
+    };
+
+    if (!window.YT?.Player) {
+      // Load YouTube IFrame API script once
+      if (!youtubeApiLoadedRef.current) {
+        youtubeApiLoadedRef.current = true;
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScript = document.getElementsByTagName("script")[0];
+        firstScript.parentNode.insertBefore(tag, firstScript);
+
+        // Set a global callback that fires for any pending ready callback
+        window.onYouTubeIframeAPIReady = () => {
+          // Call the stored callback if any
+          if (youtubeReadyCallbackRef.current) {
+            youtubeReadyCallbackRef.current();
+            youtubeReadyCallbackRef.current = null;
+          }
+        };
+      }
+
+      // Store this effect's callback and poll until API loads (max 15s)
+      youtubeReadyCallbackRef.current = createPlayer;
+      let pollCount = 0;
+      pollTimer = setInterval(() => {
+        pollCount++;
+        if (window.YT?.Player) {
+          // Clear our callback and create the player
+          if (youtubeReadyCallbackRef.current === createPlayer) {
+            youtubeReadyCallbackRef.current = null;
+          }
+          clearInterval(pollTimer);
+          pollTimer = null;
+          createPlayer();
+        } else if (pollCount > 50) {
+          // Timeout after ~15 seconds (50 * 300ms)
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }, 300);
+    } else {
+      createPlayer();
+    }
+
+    return () => {
+      isMounted = false;
+      // Clear polling timer
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      // Clear our callback reference if it was set
+      if (youtubeReadyCallbackRef.current === createPlayer) {
+        youtubeReadyCallbackRef.current = null;
+      }
+      // Clean up player div
+      const existingDiv = document.getElementById(playerDivId);
+      if (existingDiv) existingDiv.remove();
+      // Destroy YouTube player
+      if (youtubePlayerRef.current) {
+        try {
+          youtubePlayerRef.current.destroy();
+        } catch (e) {}
+        youtubePlayerRef.current = null;
+      }
+    };
+  }, [currentSong?.id]);
 
 
 

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/config";
+import { COLLECTIONS } from "@/firebase/firestore";
 import VERSES from "@/data/verses";
 
 /**
@@ -37,11 +40,29 @@ function getMsUntilNextISTMidnight() {
 }
 
 /**
+ * Builds a verse object from either Firebase data or local data.
+ */
+function buildVerse(data, totalVerses) {
+  return {
+    id: data.id,
+    book: data.book || "",
+    bookTelugu: data.bookTelugu || "",
+    chapter: data.chapter || 0,
+    verse: data.verse || 0,
+    textEnglish: data.textEnglish || "",
+    textTelugu: data.textTelugu || "",
+    reference: `${data.book || ""} ${data.chapter || 0}:${data.verse || 0}`,
+    referenceTelugu: `${data.bookTelugu || ""} ${data.chapter || 0}:${data.verse || 0}`,
+    totalVerses,
+  };
+}
+
+/**
  * useDailyVerse
  *
- * Returns a verse from the local verses.js collection that changes daily
- * based on Indian Standard Time (IST). The verse rotates automatically
- * every day at midnight IST (5:30 UTC).
+ * Fetches the daily verse from Firebase Firestore `bible_chapters` collection.
+ * The verse changes every 24 hours at midnight IST (UTC+5:30).
+ * Falls back to local verses.js data if Firebase is unavailable.
  *
  * @param {Object} [options]
  * @param {number} [options.verseIndex] - Override the index for testing.
@@ -51,6 +72,8 @@ function getMsUntilNextISTMidnight() {
  *   referenceTelugu: string,
  *   dayOfYear: number,
  *   totalVerses: number,
+ *   loading: boolean,
+ *   source: string,
  * }}
  */
 export default function useDailyVerse(options = {}) {
@@ -58,7 +81,11 @@ export default function useDailyVerse(options = {}) {
 
   // Force re-render when date changes at IST midnight
   const [tick, setTick] = useState(0);
+  const [firebaseVerse, setFirebaseVerse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState("local");
 
+  // Timer to refresh at IST midnight
   useEffect(() => {
     const msUntilMidnight = getMsUntilNextISTMidnight();
     const timer = setTimeout(() => {
@@ -68,23 +95,92 @@ export default function useDailyVerse(options = {}) {
     return () => clearTimeout(timer);
   }, [tick]);
 
-  const dayOfYear = verseIndex !== undefined ? verseIndex : getISTDayOfYear();
+  // Compute the daily verse index
+  const dayOfYear = useMemo(() => {
+    return verseIndex !== undefined ? verseIndex : getISTDayOfYear();
+  }, [verseIndex, tick]);
 
-  const verse = useMemo(() => {
-    const index = (dayOfYear - 1) % VERSES.length;
+  // Total verses available locally
+  const totalLocalVerses = VERSES.length;
+
+  // Index for fetching from Firebase (1-based: verse_1, verse_2, ...)
+  const verseDocId = useMemo(() => {
+    const index = (dayOfYear - 1) % totalLocalVerses;
+    return `verse_${index + 1}`;
+  }, [dayOfYear, totalLocalVerses]);
+
+  // Fetch verse from Firebase
+  const fetchVerse = useCallback(async () => {
+    setLoading(true);
+    try {
+      const verseRef = doc(db, COLLECTIONS.BIBLE_CHAPTERS, verseDocId);
+      const docSnap = await getDoc(verseRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const verseData = buildVerse(data, totalLocalVerses);
+        setFirebaseVerse(verseData);
+        setSource("firebase");
+        setLoading(false);
+        return;
+      }
+
+      // Document not found — try getting _meta to check if collection exists
+      const metaRef = doc(db, COLLECTIONS.BIBLE_CHAPTERS, "_meta");
+      const metaSnap = await getDoc(metaRef);
+
+      if (!metaSnap.exists()) {
+        // Collection doesn't exist or hasn't been seeded yet
+        console.warn("⚠️ bible_chapters collection not found. Falling back to local verses.");
+      }
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch verse from Firebase, falling back to local:", error.message);
+    }
+
+    // Fallback to local verses.js
+    setSource("local");
+    setLoading(false);
+  }, [verseDocId, totalLocalVerses]);
+
+  // Re-fetch when day changes
+  useEffect(() => {
+    fetchVerse();
+  }, [fetchVerse, tick]);
+
+  // Build the verse from local data as fallback
+  const localVerse = useMemo(() => {
+    const index = (dayOfYear - 1) % totalLocalVerses;
     const v = VERSES[index];
-    return {
-      ...v,
-      reference: `${v.book} ${v.chapter}:${v.verse}`,
-      referenceTelugu: `${v.bookTelugu} ${v.chapter}:${v.verse}`,
-    };
-  }, [dayOfYear]);
+    if (!v) return null;
+    return buildVerse(v, totalLocalVerses);
+  }, [dayOfYear, totalLocalVerses]);
+
+  // Use Firebase verse if available, otherwise local
+  const verse = useMemo(() => {
+    return firebaseVerse || localVerse || buildVerse(
+      { id: 1, book: "Psalm", bookTelugu: "కీర్తనలు", chapter: 23, verse: 4, textEnglish: "Even though I walk through the valley...", textTelugu: "మరణ ఛాయ లోయలో..." },
+      totalLocalVerses
+    );
+  }, [firebaseVerse, localVerse, totalLocalVerses]);
+
+  // Periodically retry Firebase if it failed (every 5 minutes)
+  useEffect(() => {
+    if (source === "firebase") return;
+
+    const retryTimer = setInterval(() => {
+      fetchVerse();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(retryTimer);
+  }, [source, fetchVerse]);
 
   return {
     verse,
     reference: verse.reference,
     referenceTelugu: verse.referenceTelugu,
     dayOfYear,
-    totalVerses: VERSES.length,
+    totalVerses: totalLocalVerses,
+    loading,
+    source,
   };
 }

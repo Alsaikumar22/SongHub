@@ -70,7 +70,7 @@ SongHub — Daily Bible Verse`;
             &ldquo;{verse.textTelugu}&rdquo;
           </p>
           {/* English verse */}
-          <p className="text-muted/80 text-xs md:text-sm italic font-medium leading-relaxed text-left">
+          <p className="text-muted/80 text-sm md:text-base italic font-medium leading-relaxed text-left">
             &ldquo;{verse.textEnglish}&rdquo;
           </p>
         </div>

@@ -3,32 +3,55 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAudio } from "@/context/audio-context";
-import { Play } from "lucide-react";
-import { CAROUSEL_SLIDES } from "@/data/carousel";
+import { Play, Sparkles } from "lucide-react";
+import useWeeklySongs from "@/hooks/useWeeklySongs";
 
 export default function HeroCarousel() {
   const { songs, playSong } = useAudio();
+  const { weeklySongs, weekNumber } = useWeeklySongs({ songs, count: 5 });
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Transform weekly songs into carousel slide format
+  const carouselSlides = weeklySongs.map((song) => ({
+    id: song.id,
+    title: song.teluguTitle || song.title,
+    subtitle: (song.title || song.teluguTitle || "").toUpperCase(),
+    artist: typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist || "",
+    label: "✨ Songs of the Week",
+    bgUrl: song.coverUrl || song.imageUrl || "/worship_forest.png",
+    isTelugu: !!song.teluguTitle,
+    duration: song.duration || "0:00",
+  }));
+
+  // Reset carousel if weekly songs change
   useEffect(() => {
+    setCurrentSlide(0);
+  }, [carouselSlides.length]);
+
+  useEffect(() => {
+    if (carouselSlides.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [carouselSlides.length]);
+
+  if (carouselSlides.length === 0) {
+    return null;
+  }
 
   return (
     <div className="relative w-full min-h-[380px] md:h-[400px] rounded-2xl md:rounded-[32px] overflow-hidden bg-card border border-line/20 shadow-2xl flex items-center group">
       {/* Ambient Blurred Background using current slide cover */}
       <div
         className="absolute inset-0 bg-cover bg-center blur-[80px] opacity-25 scale-110 pointer-events-none transition-all duration-1000 ease-in-out"
-        style={{ backgroundImage: `url(${CAROUSEL_SLIDES[currentSlide].bgUrl})` }}
+        style={{ backgroundImage: `url(${carouselSlides[currentSlide].bgUrl})` }}
       />
       {/* Dark gradient mask */}
       <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/90 to-transparent pointer-events-none" />
 
       {/* Slide Content wrapper */}
-      {CAROUSEL_SLIDES.map((slide, idx) => {
+      {carouselSlides.map((slide, idx) => {
         const isActive = idx === currentSlide;
         if (!isActive) return null;
 
@@ -45,16 +68,21 @@ export default function HeroCarousel() {
                 className="w-full h-full object-cover transition-transform duration-700 group-hover/art:scale-105"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/art:opacity-100 transition-opacity" />
+              {/* Duration badge on artwork */}
+              <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-md text-[11px] font-bold text-white/90 border border-white/10 shadow-sm">
+                {slide.duration}
+              </div>
             </div>
 
             {/* Right: Metadata & Action buttons */}
             <div className="flex-1 text-center md:text-left min-w-0 space-y-4">
               <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-title/15 text-title text-[10px] font-bold tracking-widest uppercase">
-                  {slide.label}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-title/20 to-purple-500/20 border border-title/20 text-[10px] font-bold tracking-widest uppercase">
+                  <Sparkles className="w-3 h-3" />
+                  {slide.label} · Week {weekNumber}
                 </span>
                 <h2 className={`text-white text-2xl md:text-5xl font-black tracking-tight leading-tight truncate drop-shadow-md ${
-                  slide.id === "adavi-chetla-naduma" ? "font-telugu" : "font-lato"
+                  slide.isTelugu ? "font-telugu" : "font-lato"
                 }`}>
                   {slide.title}
                 </h2>
@@ -66,9 +94,7 @@ export default function HeroCarousel() {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
                 <button
                   onClick={() => {
-                    const song =
-                      songs.find((s) => s.id === slide.id) ||
-                      songs.find((s) => s.id === "adavi-chetla-naduma");
+                    const song = songs.find((s) => s.id === slide.id);
                     if (song) playSong(song);
                   }}
                   className="px-6 h-11 bg-title text-card font-bold rounded-full hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-md"
@@ -89,9 +115,16 @@ export default function HeroCarousel() {
         );
       })}
 
+      {/* Week indicator dot */}
+      <div className="absolute bottom-4 left-4 z-20">
+        <span className="text-[9px] font-bold text-white/50 uppercase tracking-wider bg-black/30 px-2.5 py-1 rounded-full border border-white/5">
+          Week {weekNumber} · {carouselSlides.length} songs
+        </span>
+      </div>
+
       {/* Pagination dots */}
       <div className="absolute bottom-4 md:bottom-6 left-1/2 md:left-auto md:right-8 -translate-x-1/2 md:translate-x-0 z-20 flex gap-2">
-        {CAROUSEL_SLIDES.map((_, idx) => (
+        {carouselSlides.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentSlide(idx)}
