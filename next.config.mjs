@@ -2,7 +2,7 @@
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
-allowedDevOrigins: ['10.31.75.62'],
+  allowedDevOrigins: ["song-hub-mu.vercel.app"],
 };
 
 export default nextConfig;
