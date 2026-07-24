@@ -7,6 +7,7 @@ import { collection, doc } from "firebase/firestore";
 export const COLLECTIONS = {
   YOUWORSHIP_SONGS: "Youworship_songs",
   YOUWORSHIP_USERS: "Youworship_users",
+  BIBLE_CHAPTERS: "bible_chapters",
 };
 
 /**
@@ -18,5 +19,15 @@ export const getSongsCollectionRef = () => collection(db, COLLECTIONS.YOUWORSHIP
  * Helper to get reference to a specific song document
  */
 export const getSongDocRef = (songId) => doc(db, COLLECTIONS.YOUWORSHIP_SONGS, songId);
+
+/**
+ * Helper to get reference to bible_chapters collection
+ */
+export const getBibleChaptersRef = () => collection(db, COLLECTIONS.BIBLE_CHAPTERS);
+
+/**
+ * Helper to get reference to a specific bible chapter document by verse ID
+ */
+export const getBibleChapterDocRef = (verseId) => doc(db, COLLECTIONS.BIBLE_CHAPTERS, verseId);
 
 export { db };

@@ -190,9 +190,7 @@ export default function Header() {
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={toggleTheme}
-          className={`p-2 rounded-full transition-all duration-300 cursor-pointer hover:bg-card-hover active:scale-90 ${
-            theme === "light" ? "text-amber-500" : "text-dim hover:text-handle"
-          }`}
+          className={`p-2 rounded-full transition-all duration-300 cursor-pointer hover:bg-card-hover active:scale-90 text-title`}
           title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           aria-label="Toggle theme"
         >

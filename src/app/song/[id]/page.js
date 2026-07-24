@@ -273,9 +273,19 @@ function DirectVideoTab({ src, isPlaying }) {
         background: `radial-gradient(140% 80% at 50% 0%, rgba(${r},${g},${b},0.28) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.08) 50%, transparent 100%)`,
       }}
     >
+      {/* Back button at top of song page */}
+      <div className="sticky top-0 z-30 flex items-center px-6 md:px-8 pt-4 pb-2 bg-gradient-to-b from-[#070707]/80 to-transparent pointer-events-none">
+        <button
+          onClick={() => router.back()}
+          className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-black/60 hover:border-white/20 text-white/70 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer"
+          title="Go back"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back</span>
+        </button>
+      </div>
 
-
-      <div className="w-full px-6 md:px-8 pb-16 pt-6 space-y-6 flex-1 flex flex-col">
+      <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-6 flex-1 flex flex-col">
         <SongHero
           song={song}
           currentSong={currentSong}
