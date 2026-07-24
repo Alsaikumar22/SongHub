@@ -21,50 +21,69 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [firestoreData, setFirestoreData] = useState(null);
 
-  // Handle redirect login results (mostly on mobile)
+  // Initialize auth: process redirect result AND listen for auth state changes
   useEffect(() => {
+    let cancelled = false;
+
+    // 1. Handle redirect login results (mobile flow via signInWithRedirect)
     getRedirectResult(auth)
       .then((result) => {
+        if (cancelled) return;
         if (result?.user) {
-          console.log(result.user);
+          // Explicitly set the user so the account shows immediately
+          setUser(result.user);
         }
       })
-      .catch(console.error);
-  }, []);
+      .catch((error) => {
+        console.error("Redirect sign-in error:", error);
+      });
 
-  // Listen for auth state changes
-  useEffect(() => {
+    // 2. Listen for all auth state changes (popup, redirect, refresh, etc.)
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (cancelled) return;
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        // Fetch user data from Firestore — also save auth profile info
-        const data = await fetchUserData(firebaseUser.uid, {
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        });
-        setFirestoreData(data);
+        try {
+          const data = await fetchUserData(firebaseUser.uid, {
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+          });
+          if (!cancelled) setFirestoreData(data);
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+        }
       } else {
         setFirestoreData(null);
       }
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
     try {
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
-      }
+      // Try popup first — works everywhere except some restrictive mobile browsers
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error("Google sign-in error:", error);
+      // If popup was blocked, fall back to redirect (real mobile devices)
+      if (
+        error.code === "auth/popup-blocked"
+      ) {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectError) {
+          console.error("Redirect sign-in error:", redirectError);
+        }
+      } else {
+        console.error("Google sign-in error:", error);
+      }
     }
   };
 
