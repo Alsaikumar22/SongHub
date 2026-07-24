@@ -2,10 +2,13 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useAudio } from "@/context/audio-context";
 
 export default function CategoryCard({ category, language, onClick }) {
+  const { songs } = useAudio();
   const name = language === "telugu" ? category.nameTe : category.nameEn;
-  const songCount = language === "telugu" ? category.songIdsTe.length : category.songIdsEn.length;
+  const songIds = language === "telugu" ? category.songIdsTe : category.songIdsEn;
+  const songCount = (songs || []).filter((song) => songIds.includes(song.id)).length;
   const langLabel = language === "telugu" ? "Telugu" : "English";
 
   return (
