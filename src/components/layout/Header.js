@@ -232,7 +232,7 @@ export default function Header() {
         {isAuthenticated && user ? (
           /* ─── Logged In: Avatar + Sign Out ─── */
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-card-hover border border-line">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card-hover border border-line">
               {user.photoURL ? (
                 <img
                   src={user.photoURL}
