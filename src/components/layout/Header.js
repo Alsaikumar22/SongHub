@@ -264,7 +264,7 @@ export default function Header() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card-hover border border-line hover:bg-line text-xs font-semibold text-copy hover:text-title transition-all cursor-pointer active:scale-95"
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sign in</span>
+            <span className="inline">Sign in</span>
           </button>
         )}
       </div>
