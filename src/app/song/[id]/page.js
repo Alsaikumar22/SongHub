@@ -3,12 +3,13 @@
 import React, { use, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Music, Video } from "lucide-react";
+import { ArrowLeft, Music, Video, FileText } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
+import { useTheme } from "@/context/theme-context";
 import SongHero from "@/components/song/SongHero";
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
-import SongTabs from "@/components/song/SongTabs";
 import { extractDominantColor } from "@/utils/extract-color";
+import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -28,13 +29,49 @@ function formatVideoEmbedUrl(url) {
   return trimmed;
 }
 
+function YouTubeVideoPlayer({ embedUrl, title, isPlaying }) {
+  const iframeRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!iframeRef.current) return;
+    if (isPlaying) {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
+        "*"
+      );
+    } else {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
+        "*"
+      );
+    }
+  }, [isPlaying]);
+
+  const srcWithJsApi = `${embedUrl}${embedUrl.includes("?") ? "&" : "?"}enablejsapi=1`;
+
+  return (
+    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-white/10 mx-auto">
+      <iframe
+        ref={iframeRef}
+        src={srcWithJsApi}
+        title={`${title} - Video`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full border-0"
+      />
+    </div>
+  );
+}
+
 function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showImmersiveLyrics = searchParams.get("view") === "lyrics";
+  const viewMode = searchParams.get("view"); // "video" | "lyrics" | null
 
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const {
     songs,
     currentSong,
@@ -50,7 +87,6 @@ function SongPageContent({ params }) {
   const [song, setSong] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("telugu");
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
-  const [activeTab, setActiveTab] = useState("lyrics");
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
@@ -75,7 +111,6 @@ function SongPageContent({ params }) {
 
     if (foundSong) {
       setSong(foundSong);
-      setActiveTab("lyrics");
       return;
     }
 
@@ -109,97 +144,70 @@ function SongPageContent({ params }) {
   }
 
   const isFavorited = favorites.includes(song.id);
+  const hasDualLyrics = !!(
+    song &&
+    Array.isArray(song.lyricsTelugu) &&
+    Array.isArray(song.lyricsEnglish) &&
+    song.lyricsTelugu.length > 0 &&
+    song.lyricsEnglish.length > 0
+  );
 
-    const hasDualLyrics = !!(
-      song &&
-      Array.isArray(song.lyricsTelugu) &&
-      Array.isArray(song.lyricsEnglish) &&
-      song.lyricsTelugu.length > 0 &&
-      song.lyricsEnglish.length > 0
-    );
-
+  const rawVideoUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
+  const embedUrl = formatVideoEmbedUrl(rawVideoUrl);
   const { r, g, b } = gradientColor;
 
-  // 1. IMMERSIVE LYRICS FULL SCREEN VIEW (?view=lyrics)
-  if (showImmersiveLyrics) {
+  // 1. FULL CENTER SCREEN VIDEO VIEW (?view=video)
+  if (viewMode === "video") {
     return (
       <div
-        className="relative flex-1 flex flex-col h-full overflow-hidden bg-[#070707] transition-all duration-500 ease-out"
+        className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
         style={{
-          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.32) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.10) 45%, #070707 100%)`,
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.05) 45%, var(--canvas) 100%)`,
         }}
       >
-        {/* Minimal ghost back link (no black box) */}
-        <button
-          onClick={() => router.back()}
-          className="absolute top-5 left-5 z-40 flex items-center gap-1.5 text-white/55 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
-          title="Back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        {/* Minimal back link */}
+        <div className="p-6 flex items-center justify-between z-40">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
 
-        {/* Top Bar: Tabs + Language Selector */}
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 flex-wrap justify-center">
-          <SongTabs
-            tabs={[
-              { id: "lyrics", label: "Lyrics" },
-              { id: "video", label: "Video" },
-            ]}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
-          {activeTab === "lyrics" && hasDualLyrics && (
-            <LanguageSegmented
-              selected={selectedLanguage}
-              onChange={setSelectedLanguage}
-              hasDual={hasDualLyrics}
-            />
-          )}
+          <Link
+            href={`/song/${encodeURIComponent(song.id)}?view=lyrics`}
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5 text-title" />
+            <span>View Lyrics</span>
+          </Link>
         </div>
 
-        {/* Immersive Main Display Area */}
-        <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative">
-          {activeTab === "lyrics" ? (
-            <div className="w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex-1 flex flex-col justify-center overflow-hidden">
-              <SongLyrics
-                song={song}
-                isImmersive={true}
-                selectedLanguage={selectedLanguage}
-                setSelectedLanguage={setSelectedLanguage}
+        {/* Center Main Screen Video Player */}
+        <div className="flex-1 w-full flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden">
+          {rawVideoUrl && embedUrl ? (
+            <div className="w-full max-w-5xl space-y-4">
+              <YouTubeVideoPlayer
+                embedUrl={embedUrl}
+                title={song.title}
+                isPlaying={isPlaying}
               />
+              <div className="text-center">
+                <h2 className={`text-xl md:text-2xl font-bold text-title ${song.teluguTitle ? "font-telugu" : ""}`}>
+                  {song.teluguTitle || song.title}
+                </h2>
+                <p className="text-xs text-muted mt-1">{song.artist}</p>
+              </div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center p-6 md:p-12">
-              {(() => {
-                const rawVideoUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
-                const embedUrl = formatVideoEmbedUrl(rawVideoUrl);
-                if (!rawVideoUrl) {
-                  return (
-                    <div className="flex flex-col items-center justify-center text-center px-8 py-16">
-                      <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-5">
-                        <Video className="w-9 h-9 text-muted" />
-                      </div>
-                      <h4 className="text-lg font-bold text-white/70 mb-2">No Video Available</h4>
-                      <p className="text-sm text-muted max-w-sm">A video for this track hasn&apos;t been added yet.</p>
-                    </div>
-                  );
-                }
-
-                if (embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be")) {
-                  return (
-                    <YouTubeVideoTab
-                      embedUrl={embedUrl}
-                      title={song.title}
-                      isPlaying={isPlaying}
-                    />
-                  );
-                }
-
-                return (
-                  <DirectVideoTab src={rawVideoUrl} isPlaying={isPlaying} />
-                );
-              })()}
+            <div className="flex flex-col items-center justify-center text-center px-8 py-16">
+              <div className="w-20 h-20 rounded-full bg-card border border-line flex items-center justify-center mb-5 shadow-sm">
+                <Video className="w-9 h-9 text-muted" />
+              </div>
+              <h4 className="text-lg font-bold text-muted mb-2">No Video Available</h4>
+              <p className="text-sm text-muted max-w-sm">A video for this track has not been added yet.</p>
             </div>
           )}
         </div>
@@ -207,77 +215,59 @@ function SongPageContent({ params }) {
     );
   }
 
-function YouTubeVideoTab({ embedUrl, title, isPlaying }) {
-  const iframeRef = React.useRef(null);
+  // 2. FULL SCREEN IMMERSIVE LYRICS VIEW (?view=lyrics)
+  if (viewMode === "lyrics") {
+    return (
+      <div
+        className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
+        style={{
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.05) 45%, var(--canvas) 100%)`,
+        }}
+      >
+        <div className="p-6 flex items-center justify-between z-40">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
 
-  React.useEffect(() => {
-    if (!iframeRef.current) return;
-    if (isPlaying) {
-      iframeRef.current.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
-        "*"
-      );
-    } else {
-      iframeRef.current.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
-        "*"
-      );
-    }
-  }, [isPlaying]);
+          <LanguageSegmented
+            selected={selectedLanguage}
+            onChange={setSelectedLanguage}
+            hasDual={true}
+          />
+        </div>
 
-  const srcWithJsApi = `${embedUrl}${embedUrl.includes("?") ? "&" : "?"}enablejsapi=1`;
+        <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
+          <SongLyrics
+            song={song}
+            isImmersive={true}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+          />
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-      <iframe
-        ref={iframeRef}
-        src={srcWithJsApi}
-        title={`${title} - Video`}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        className="absolute inset-0 w-full h-full border-0"
-      />
-    </div>
-  );
-}
-
-function DirectVideoTab({ src, isPlaying }) {
-  const videoRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.play().catch((e) => console.error(e));
-    } else {
-      videoRef.current.pause();
-    }
-  }, [isPlaying]);
-
-  return (
-    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-      <video
-        ref={videoRef}
-        src={src}
-        controls
-        className="w-full h-full object-contain"
-      />
-    </div>
-  );
-}
-
-  // 2. SONG DETAILS VIEW (DEFAULT)
+  // 3. MAIN SONG DETAILS VIEW (DEFAULT)
   return (
     <div
-      className="relative flex-1 min-h-0 flex flex-col overflow-y-auto bg-transparent min-w-0 font-lato"
+      className="relative flex-1 min-h-0 flex flex-col overflow-y-auto bg-canvas text-copy min-w-0 font-lato"
       style={{
-        background: `radial-gradient(140% 80% at 50% 0%, rgba(${r},${g},${b},0.28) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.08) 50%, transparent 100%)`,
+        background: isLight
+          ? "none"
+          : `radial-gradient(140% 80% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, transparent 80%)`,
       }}
     >
       {/* Back button at top of song page */}
-      <div className="sticky top-0 z-30 flex items-center px-6 md:px-8 pt-4 pb-2 bg-gradient-to-b from-[#070707]/80 to-transparent pointer-events-none">
+      <div className="sticky top-0 z-30 flex items-center px-6 md:px-8 pt-4 pb-2 bg-gradient-to-b from-canvas/90 via-canvas/60 to-transparent pointer-events-none">
         <button
           onClick={() => router.back()}
-          className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-black/60 hover:border-white/20 text-white/70 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer"
+          className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-card/85 backdrop-blur-md border border-line hover:bg-card-hover text-muted hover:text-title text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer shadow-sm"
           title="Go back"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -285,7 +275,8 @@ function DirectVideoTab({ src, isPlaying }) {
         </button>
       </div>
 
-      <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-6 flex-1 flex flex-col">
+      <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
+        {/* Song Hero Banner */}
         <SongHero
           song={song}
           currentSong={currentSong}
@@ -298,33 +289,27 @@ function DirectVideoTab({ src, isPlaying }) {
           removeSongFromPlaylist={removeSongFromPlaylist}
         />
 
-        {/* Language Selector for Lyrics */}
-        <div className="flex items-center justify-between pt-2 pb-1">
-          <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
-            Lyrics
-          </h3>
-          {hasDualLyrics && (
+        {/* Lyrics Section */}
+        <div className="space-y-4 pt-2 flex-1 flex flex-col">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
+              Lyrics
+            </h3>
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
-              hasDual={hasDualLyrics}
+              hasDual={true}
             />
-          )}
-        </div>
+          </div>
 
-        {/* Immersive-style Lyrics Display */}
-        <div
-          className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/5"
-          style={{
-            background: `radial-gradient(120% 100% at 50% 0%, rgba(${r},${g},${b},0.20) 0%, rgba(${Math.max(0, r-20)},${Math.max(0, g-20)},${Math.max(0, b-20)},0.04) 60%, transparent 100%)`,
-          }}
-        >
-          <SongLyrics
-            song={song}
-            isImmersive={true}
-            selectedLanguage={selectedLanguage}
-            setSelectedLanguage={setSelectedLanguage}
-          />
+          <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-line bg-card shadow-sm">
+            <SongLyrics
+              song={song}
+              isImmersive={true}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -333,12 +318,7 @@ function DirectVideoTab({ src, isPlaying }) {
 
 export default function SongPage({ params }) {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
-        <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-white">Loading...</h2>
-      </div>
-    }>
+    <Suspense fallback={<SongPageSkeleton />}>
       <SongPageContent params={params} />
     </Suspense>
   );

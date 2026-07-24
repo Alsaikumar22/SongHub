@@ -58,12 +58,12 @@ export default function AppLayout({ children }) {
   const isDiscover = pathname === "/";
 
   return (
-    <div className="h-screen flex flex-col bg-canvas text-copy font-sans">
+    <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
       <Header />
-      <div className="flex flex-1 min-h-0 min-w-0 md:p-2 p-0 md:gap-2 gap-0">
+      <div className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0">
         {/* SIDEBAR — with clean unified structure */}
         <aside
-          className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden md:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
+          className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
         >
           {/* ─── Top Nav ─── */}
           <div className="px-3 pt-3 pb-2 space-y-0.5">
@@ -122,7 +122,7 @@ export default function AppLayout({ children }) {
                     }`}
                   >
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-300 flex items-center justify-center shrink-0 shadow-sm">
-                      <Heart className="w-4.5 h-4.5 text-white fill-white" />
+                      <Heart className="w-4.5 h-4.5 text-title fill-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-copy block truncate">Favorites</span>
@@ -208,7 +208,8 @@ export default function AppLayout({ children }) {
         </aside>
 
         {/* MAIN PANEL CONTENT */}
-        <main className="flex-1 flex flex-col min-w-0 bg-card md:rounded-xl md:border md:border-line/30 overflow-hidden relative">
+        {/* pb-[116px] on mobile reserves space for fixed PlayerBar (~56px) + MobileNav (~60px) */}
+        <main className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0">
           {children}
         </main>
 
@@ -240,10 +241,10 @@ export default function AppLayout({ children }) {
               </div>
             </div>
           ) : currentSong ? (
-            /* Expanded: full content */
-            <div className="flex flex-col h-full p-5 space-y-5">
-              {/* Header with collapse button */}
-              <div className="flex items-center justify-between">
+            /* Expanded: full content - entire right panel scrolls */
+            <div className="flex flex-col h-full p-5 space-y-5 overflow-y-auto">
+              {/* Header with collapse button - sticky so collapse button stays accessible */}
+              <div className="flex items-center justify-between sticky top-0 bg-card z-10 py-1 -mt-1">
                 <h3 className="text-[10px] font-bold text-dim uppercase tracking-wider">
                   Now Playing
                 </h3>
@@ -256,7 +257,7 @@ export default function AppLayout({ children }) {
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 shrink-0">
                 <div className="aspect-square w-full rounded-lg overflow-hidden bg-card-hover border border-line">
                   <SongArtwork
                     song={currentSong}
@@ -274,27 +275,28 @@ export default function AppLayout({ children }) {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-2.5 min-h-0">
-                <h3 className="text-[10px] font-bold text-dim uppercase tracking-wider">
-                  Up Next
-                </h3>
-                <div className="space-y-2 overflow-y-auto">
+              <div className="flex flex-col space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold text-dim uppercase tracking-wider">
+                    Up Next ({songs.filter((s) => s.id !== currentSong?.id).length})
+                  </h3>
+                </div>
+                <div className="space-y-1.5 pr-1">
                   {songs
                     .filter((s) => s.id !== currentSong?.id)
-                    .slice(0, 5)
                     .map((song) => (
                       <button
                         key={song.id}
                         onClick={() => playSong(song)}
-                        className="w-full flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-card-hover transition-colors text-left cursor-pointer"
+                        className="w-full flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-card-hover transition-colors text-left cursor-pointer group"
                       >
                         <SongArtwork
                           song={song}
-                          className="w-8 h-8 object-cover rounded border border-line"
+                          className="w-8 h-8 object-cover rounded border border-line shrink-0"
                           iconSize="w-3 h-3"
                         />
                         <div className="min-w-0 flex-1">
-                          <span className="text-xs font-medium text-copy block truncate">
+                          <span className="text-xs font-medium text-copy group-hover:text-title block truncate">
                             {song.title}
                           </span>
                           <span className="text-[10px] text-dim block truncate">
@@ -315,7 +317,7 @@ export default function AppLayout({ children }) {
         <PlayerBar />
       </Suspense>
 
-      {/* MOBILE BOTTOM NAV — visible on < md screens */}
+      {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav />
 
       {/* CREATE PLAYLIST MODAL */}
@@ -357,7 +359,7 @@ export default function AppLayout({ children }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-card text-white rounded-lg text-xs font-semibold hover:bg-card-hover active:scale-98 transition-all shadow-sm"
+                  className="px-4 py-2 bg-card text-title rounded-lg text-xs font-semibold hover:bg-card-hover active:scale-98 transition-all shadow-sm"
                 >
                   Create
                 </button>
@@ -386,7 +388,7 @@ function SidebarNavItem({ icon, label, collapsed, active, onClick }) {
         <span className="truncate flex-1 text-left">{label}</span>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-title text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
           {label}
         </div>
       )}
@@ -415,7 +417,7 @@ function LibraryItem({ icon, title, subtitle, collapsed, active, onClick }) {
         </div>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-title text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
           <div className="font-medium">{title}</div>
           <div className="text-[10px] text-muted">{subtitle}</div>
         </div>

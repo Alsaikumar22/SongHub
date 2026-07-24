@@ -85,9 +85,9 @@ export default function SearchResults({
                   </span>
                   <span className="hidden group-hover:block">
                     {isCurrent && isPlaying ? (
-                      <Pause className="w-3 h-3 fill-current text-white" />
+                      <Pause className="w-3 h-3 fill-current text-title" />
                     ) : (
-                      <Play className="w-3 h-3 fill-current text-white ml-0.5" />
+                      <Play className="w-3 h-3 fill-current text-title ml-0.5" />
                     )}
                   </span>
                 </div>
@@ -106,7 +106,7 @@ export default function SearchResults({
                       className={`text-sm font-medium block truncate leading-tight transition-colors ${
                         isCurrent
                           ? "text-title"
-                          : "text-white group-hover:text-white/90"
+                          : "text-title group-hover:text-title/90"
                       } ${song.teluguTitle ? "font-telugu" : ""}`}
                     >
                       {song.teluguTitle || song.title}

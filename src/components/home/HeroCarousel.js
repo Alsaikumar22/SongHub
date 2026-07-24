@@ -3,138 +3,358 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAudio } from "@/context/audio-context";
-import { Play, Sparkles } from "lucide-react";
+import {
+  Play,
+  Pause,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Music,
+  Clock,
+  Volume2
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import useWeeklySongs from "@/hooks/useWeeklySongs";
+import { HeroCarouselSkeleton } from "@/components/ui/SongSkeleton";
+
+const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 
 export default function HeroCarousel() {
-  const { songs, playSong } = useAudio();
-  const { weeklySongs, weekNumber } = useWeeklySongs({ songs, count: 5 });
+  const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading } = useAudio();
+  const { weeklySongs } = useWeeklySongs({ songs, count: 5 });
+
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progressKey, setProgressKey] = useState(0);
 
-  // Transform weekly songs into carousel slide format
-  const carouselSlides = weeklySongs.map((song) => ({
-    id: song.id,
-    title: song.teluguTitle || song.title,
-    subtitle: (song.title || song.teluguTitle || "").toUpperCase(),
-    artist: typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist || "",
-    label: "✨ Songs of the Week",
-    bgUrl: song.coverUrl || song.imageUrl || "/worship_forest.png",
-    isTelugu: !!song.teluguTitle,
-    duration: song.duration || "0:00",
-  }));
+  // Touch swipe support
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
-  // Reset carousel if weekly songs change
+  const carouselSlides = weeklySongs.map((song) => {
+    const rawArtist = typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist;
+    const cleanArtist = rawArtist && rawArtist !== "NA" && rawArtist.trim() !== "" ? rawArtist : "Unknown Artist";
+
+    return {
+      id: song.id,
+      originalSong: song,
+      title: song.teluguTitle || song.title,
+      englishTitle: song.teluguTitle ? song.title : null,
+      artist: cleanArtist,
+      bgUrl: song.coverUrl || song.imageUrl || null,
+      isTelugu: !!song.teluguTitle,
+      duration: song.duration || "0:00",
+    };
+  });
+
   useEffect(() => {
     setCurrentSlide(0);
+    setProgressKey((prev) => prev + 1);
   }, [carouselSlides.length]);
 
+  // Auto-play timer
   useEffect(() => {
-    if (carouselSlides.length === 0) return;
+    if (carouselSlides.length === 0 || isPaused) return;
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [carouselSlides.length]);
+      setProgressKey((prev) => prev + 1);
+    }, AUTO_PLAY_DURATION);
 
-  if (carouselSlides.length === 0) {
-    return null;
+    return () => clearInterval(timer);
+  }, [carouselSlides.length, isPaused, currentSlide]);
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+    setProgressKey((prev) => prev + 1);
+  };
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
+    setProgressKey((prev) => prev + 1);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? carouselSlides.length - 1 : prev - 1));
+    setProgressKey((prev) => prev + 1);
+  };
+
+  if (songsLoading || carouselSlides.length === 0) {
+    return <HeroCarouselSkeleton />;
   }
 
+  const current = carouselSlides[currentSlide] || carouselSlides[0];
+  const isCurrentPlaying = currentSong?.id === current.id && isPlaying;
+  const isFavorited = favorites.includes(current.id);
+
+  // Touch Swipe Handlers
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsPaused(true);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    setIsPaused(false);
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const minSwipeDistance = 40;
+    if (distance > minSwipeDistance) {
+      nextSlide();
+    } else if (distance < -minSwipeDistance) {
+      prevSlide();
+    }
+  };
+
   return (
-    <div className="relative w-full min-h-[380px] md:h-[400px] rounded-2xl md:rounded-[32px] overflow-hidden bg-card border border-line/20 shadow-2xl flex items-center group">
-      {/* Ambient Blurred Background using current slide cover */}
-      <div
-        className="absolute inset-0 bg-cover bg-center blur-[80px] opacity-25 scale-110 pointer-events-none transition-all duration-1000 ease-in-out"
-        style={{ backgroundImage: `url(${carouselSlides[currentSlide].bgUrl})` }}
-      />
-      {/* Dark gradient mask */}
-      <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/90 to-transparent pointer-events-none" />
+    <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="relative w-full min-h-[380px] sm:min-h-[420px] md:h-[450px] rounded-2xl sm:rounded-3xl overflow-hidden bg-card border border-line shadow-2xl flex flex-col justify-between p-4 sm:p-6 md:p-10 group select-none transition-all duration-500"
+    >
+      {/* 1. ATMOSPHERIC AMBIENT BLUR BACKDROP */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`bg-ambient-${current.id}`}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 0.35, scale: 1.05 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8 }}
+          className="absolute inset-0 bg-cover bg-center blur-3xl pointer-events-none transform"
+          style={current.bgUrl ? { backgroundImage: `url(${current.bgUrl})` } : undefined}
+        />
+      </AnimatePresence>
 
-      {/* Slide Content wrapper */}
-      {carouselSlides.map((slide, idx) => {
-        const isActive = idx === currentSlide;
-        if (!isActive) return null;
+      {/* 2. HIGH DEFINITION FULL-BLEED COVER ARTWORK ON THE RIGHT */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`bg-cover-${current.id}`}
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="absolute inset-y-0 right-0 w-full md:w-3/5 bg-cover bg-center pointer-events-none"
+          style={current.bgUrl ? { backgroundImage: `url(${current.bgUrl})` } : undefined}
+        />
+      </AnimatePresence>
 
-        return (
-          <div
-            key={slide.id}
-            className="relative z-10 flex flex-col md:flex-row items-center gap-5 md:gap-12 px-5 md:px-12 pt-6 pb-12 md:py-0 w-full animate-in fade-in slide-in-from-right-4 duration-500"
-          >
-            {/* Left: Artwork */}
-            <div className="w-32 h-32 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-line flex-shrink-0 relative group/art select-none">
-              <img
-                src={slide.bgUrl}
-                alt={slide.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover/art:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/art:opacity-100 transition-opacity" />
-              {/* Duration badge on artwork */}
-              <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-md text-[11px] font-bold text-white/90 border border-white/10 shadow-sm">
-                {slide.duration}
-              </div>
-            </div>
+      {/* 3. GRADIENT OVERLAYS */}
+      <div className="absolute inset-0 bg-gradient-to-r from-card via-card/85 via-45% to-transparent pointer-events-none transition-all duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 via-30% to-transparent md:hidden pointer-events-none" />
 
-            {/* Right: Metadata & Action buttons */}
-            <div className="flex-1 text-center md:text-left min-w-0 space-y-4">
-              <div className="space-y-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-title/20 to-purple-500/20 border border-title/20 text-[10px] font-bold tracking-widest uppercase">
-                  <Sparkles className="w-3 h-3" />
-                  {slide.label} · Week {weekNumber}
-                </span>
-                <h2 className={`text-white text-2xl md:text-5xl font-black tracking-tight leading-tight truncate drop-shadow-md ${
-                  slide.isTelugu ? "font-telugu" : "font-lato"
-                }`}>
-                  {slide.title}
-                </h2>
-                <p className="text-muted text-sm font-semibold tracking-wide uppercase">
-                  {slide.subtitle} • <span className="text-dim">{slide.artist}</span>
-                </p>
-              </div>
+      {/* 4. TOP HEADER ROW: Badge & Progress */}
+      <div className="relative z-10 flex items-center justify-between gap-2">
+        {/* Badge — whitespace-nowrap prevents wrapping */}
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-card/85 backdrop-blur-xl border border-line shadow-sm shrink-0">
+          <span className="text-[9px] sm:text-[11px] font-extrabold text-title uppercase tracking-widest whitespace-nowrap">
+            Song of the Week
+          </span>
+        </div>
 
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+        {/* Progress Bar + Counter */}
+        <div className="flex items-center gap-2 bg-card/75 backdrop-blur-xl border border-line/60 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl shadow-sm min-w-0">
+          <div className="flex items-center gap-1 flex-1 min-w-[60px] sm:min-w-[112px]">
+            {carouselSlides.map((slide, idx) => {
+              const isActive = idx === currentSlide;
+              const isPast = idx < currentSlide;
+              return (
                 <button
-                  onClick={() => {
-                    const song = songs.find((s) => s.id === slide.id);
-                    if (song) playSong(song);
-                  }}
-                  className="px-6 h-11 bg-title text-card font-bold rounded-full hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                  key={slide.id}
+                  onClick={() => goToSlide(idx)}
+                  className="relative flex-1 h-1 rounded-full bg-title/20 overflow-hidden cursor-pointer transition-all duration-200 hover:h-1.5"
+                  title={`Go to track ${idx + 1}: ${slide.title}`}
+                  aria-label={`Slide ${idx + 1}`}
                 >
-                  <Play className="w-4 h-4 fill-current text-card" />
-                  <span>Play Now</span>
+                  {isPast && <div className="h-full w-full bg-title rounded-full" />}
+                  {isActive && (
+                    <div
+                      key={`progress-fill-${progressKey}-${isPaused}`}
+                      className="h-full bg-title rounded-full"
+                      style={{
+                        animation: isPaused ? "none" : `slideProgress ${AUTO_PLAY_DURATION}ms linear forwards`,
+                        width: isPaused ? "100%" : undefined,
+                      }}
+                    />
+                  )}
                 </button>
-                <Link
-                  href={`/song/${slide.id}`}
-                  className="px-6 h-11 border border-line hover:border-title bg-transparent hover:bg-card-hover text-white font-bold rounded-full flex items-center gap-2 transition-all hover:scale-105 active:scale-95 duration-200 cursor-pointer shadow-sm"
+              );
+            })}
+          </div>
+          <div className="text-[10px] sm:text-xs font-extrabold text-title flex items-center gap-0.5 shrink-0 pl-2 border-l border-line/60">
+            <span>0{currentSlide + 1}</span>
+            <span className="text-dim font-normal">/</span>
+            <span className="text-muted font-semibold">0{carouselSlides.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. MIDDLE HERO SECTION: Title & Metadata */}
+      <div className="relative z-10 my-auto py-3">
+        <div className="max-w-3xl space-y-3 min-w-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`content-${current.id}`}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="space-y-3"
+            >
+              {/* Main Song Title */}
+              <div className="py-1 pb-1 min-w-0">
+                <h1
+                  className={`text-title text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.3] drop-shadow-lg ${
+                    current.isTelugu ? "font-telugu" : ""
+                  }`}
                 >
-                  <span>📖 Lyrics</span>
-                  <span className="text-xs text-muted">↗</span>
-                </Link>
+                  {current.title}
+                </h1>
               </div>
+
+              {/* Metadata Chips */}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted font-medium">
+                {/* Artist Chip */}
+                <div className="flex items-center gap-1.5 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line shadow-sm">
+                  <Music className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span className="text-title font-semibold truncate max-w-[160px] sm:max-w-[220px] text-[11px] sm:text-xs">
+                    By {current.artist}
+                  </span>
+                </div>
+
+                {/* English Title Chip — hidden on very small screens */}
+                {current.englishTitle && (
+                  <span className="hidden sm:inline italic text-copy bg-card/65 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line shadow-sm truncate max-w-[200px] text-[11px]">
+                    "{current.englishTitle}"
+                  </span>
+                )}
+
+                {/* Duration Chip */}
+                <div className="flex items-center gap-1 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line text-[11px] sm:text-xs font-semibold text-muted shadow-sm">
+                  <Clock className="w-3 h-3 text-dim" />
+                  <span>{current.duration}</span>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* 6. BOTTOM ACTION ROW */}
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        {/* Left: Play + Lyrics + Favorite */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Play / Pause Button */}
+          <button
+            onClick={() => playSong(current.originalSong)}
+            className="px-4 sm:px-7 h-10 sm:h-12 bg-title text-card font-black text-[11px] sm:text-sm rounded-full shadow-xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            {isCurrentPlaying ? (
+              <>
+                <Pause className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 fill-current text-card" />
+                <span>Pause</span>
+                <div className="flex items-end gap-[2px] h-3 ml-0.5">
+                  <span className="w-[2px] bg-card rounded-full animate-music-bar-1" />
+                  <span className="w-[2px] bg-card rounded-full animate-music-bar-2" />
+                  <span className="w-[2px] bg-card rounded-full animate-music-bar-3" />
+                </div>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 fill-current text-card ml-0.5" />
+                <span>Play</span>
+              </>
+            )}
+          </button>
+
+          {/* Lyrics Link */}
+          <Link
+            href={`/song/${current.id}`}
+            className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
+            <span className="hidden sm:inline">View Lyrics</span>
+          </Link>
+
+          {/* Favorite Button */}
+          <button
+            onClick={() => toggleFavorite(current.id)}
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-card/85 hover:bg-card border border-line text-title flex items-center justify-center backdrop-blur-xl transition-all hover:scale-105 active:scale-90 cursor-pointer shadow-sm"
+            title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+          >
+            <Heart
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${
+                isFavorited ? "fill-red-500 text-red-500 scale-110" : "text-muted hover:text-title"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Right: Up Next thumbnails (hidden on mobile) + Nav Arrows */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3">
+            <span className="text-[10px] font-black text-white/80 uppercase tracking-widest shrink-0">
+              Up Next
+            </span>
+            <div className="flex items-center gap-1.5">
+              {carouselSlides.map((slide, idx) => {
+                const isActive = idx === currentSlide;
+                return (
+                  <button
+                    key={slide.id}
+                    onClick={() => goToSlide(idx)}
+                    className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden transition-all duration-300 cursor-pointer shadow-md ${
+                      isActive
+                        ? "border-2 border-white scale-105 shadow-xl z-10"
+                        : "border border-white/20 opacity-75 hover:opacity-100 hover:scale-105"
+                    }`}
+                    title={`Slide ${idx + 1}: ${slide.title}`}
+                  >
+                    {slide.bgUrl ? (
+                      <img src={slide.bgUrl} alt={slide.title} className="w-full h-full object-cover" onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZTFlMWUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwYTBhMGEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCNnKSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNDAiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zOCA1NSBMMzggODUgTDU1IDgwIEw1NSA1MFoiIGZpbGw9IiMzMzMiLz48L3N2Zz4='; }} />
+                    ) : (
+                      <div className="w-full h-full bg-card-hover" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        );
-      })}
 
-      {/* Week indicator dot */}
-      <div className="absolute bottom-4 left-4 z-20">
-        <span className="text-[9px] font-bold text-white/50 uppercase tracking-wider bg-black/30 px-2.5 py-1 rounded-full border border-white/5">
-          Week {weekNumber} · {carouselSlides.length} songs
-        </span>
+          {/* Navigation Arrows */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={prevSlide}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/15 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-md active:scale-90"
+              aria-label="Previous Slide"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/15 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-md active:scale-90"
+              aria-label="Next Slide"
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Pagination dots */}
-      <div className="absolute bottom-4 md:bottom-6 left-1/2 md:left-auto md:right-8 -translate-x-1/2 md:translate-x-0 z-20 flex gap-2">
-        {carouselSlides.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setCurrentSlide(idx)}
-            className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
-              idx === currentSlide ? "bg-title w-6" : "bg-dim/50 hover:bg-dim"
-            }`}
-            aria-label={`Go to slide ${idx + 1}`}
-          />
-        ))}
-      </div>
+      {/* Global CSS Animation Keyframes */}
+      <style jsx global>{`
+        @keyframes slideProgress {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 }

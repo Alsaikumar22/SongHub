@@ -27,39 +27,39 @@ const CATEGORY_DESCRIPTIONS = {
 };
 
 const CATEGORY_COLORS = {
-  "morning-worship": "from-[#7a2c02] to-[#070707]",
-  "prayer-songs": "from-[#024e75] to-[#070707]",
-  "worship-songs": "from-[#065f46] to-[#070707]",
-  "praise-songs": "from-[#991b1b] to-[#070707]",
-  "salvation-songs": "from-[#581c87] to-[#070707]",
-  "faith-hope-songs": "from-[#065f46] to-[#070707]",
-  "repentance-songs": "from-[#3730a3] to-[#070707]",
-  "holy-spirit-songs": "from-[#075985] to-[#070707]",
-  "healing-miracle-songs": "from-[#155e75] to-[#070707]",
-  "bible-based-songs": "from-[#065f46] to-[#070707]",
-  "festival-special-songs": "from-[#9d174d] to-[#070707]",
-  "children-songs": "from-[#92400e] to-[#070707]",
-  "youth-songs": "from-[#5b21b6] to-[#070707]",
-  "communion-songs": "from-[#881337] to-[#070707]",
-  "christmas-songs": "from-[#991b1b] to-[#070707]",
-  "good-friday-songs": "from-[#292524] to-[#070707]",
-  "easter-songs": "from-[#854d0e] to-[#070707]",
-  "baptism-songs": "from-[#155e75] to-[#070707]",
-  "marriage-songs": "from-[#be185d] to-[#070707]",
-  "thanksgiving-songs": "from-[#7a2c02] to-[#070707]"
+  "morning-worship": "from-[#7a2c02]/80 to-canvas",
+  "prayer-songs": "from-[#024e75]/80 to-canvas",
+  "worship-songs": "from-[#065f46]/80 to-canvas",
+  "praise-songs": "from-[#991b1b]/80 to-canvas",
+  "salvation-songs": "from-[#581c87]/80 to-canvas",
+  "faith-hope-songs": "from-[#065f46]/80 to-canvas",
+  "repentance-songs": "from-[#3730a3]/80 to-canvas",
+  "holy-spirit-songs": "from-[#075985]/80 to-canvas",
+  "healing-miracle-songs": "from-[#155e75]/80 to-canvas",
+  "bible-based-songs": "from-[#065f46]/80 to-canvas",
+  "festival-special-songs": "from-[#9d174d]/80 to-canvas",
+  "children-songs": "from-[#92400e]/80 to-canvas",
+  "youth-songs": "from-[#5b21b6]/80 to-canvas",
+  "communion-songs": "from-[#881337]/80 to-canvas",
+  "christmas-songs": "from-[#991b1b]/80 to-canvas",
+  "good-friday-songs": "from-[#292524]/80 to-canvas",
+  "easter-songs": "from-[#854d0e]/80 to-canvas",
+  "baptism-songs": "from-[#155e75]/80 to-canvas",
+  "marriage-songs": "from-[#be185d]/80 to-canvas",
+  "thanksgiving-songs": "from-[#7a2c02]/80 to-canvas"
 };
 
 export default function CategoryHeroBanner({ category, language, songCount }) {
   const name = language === "telugu" ? category.nameTe : category.nameEn;
   const langName = language === "telugu" ? "Telugu" : "English";
   const desc = CATEGORY_DESCRIPTIONS[category.id] || "Curated Christian worship and devotion collection.";
-  const bannerColor = CATEGORY_COLORS[category.id] || "from-[#1e293b] to-[#070707]";
+  const bannerColor = CATEGORY_COLORS[category.id] || "from-[#1e293b]/80 to-canvas";
 
   return (
     <div className={`relative w-full pt-16 pb-6 px-6 md:px-8 flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end select-none overflow-hidden bg-gradient-to-b ${bannerColor}`}>
       {/* Category artwork (sharp corners per Spotify Album design) */}
       <motion.div 
-        className="w-44 h-44 md:w-48 md:h-48 rounded-md overflow-hidden shrink-0 shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-10"
+        className="w-44 h-44 md:w-48 md:h-48 rounded-md overflow-hidden shrink-0 shadow-lg z-10 border border-line"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
@@ -69,17 +69,17 @@ export default function CategoryHeroBanner({ category, language, songCount }) {
 
       {/* Category details */}
       <div className="flex-1 text-center md:text-left z-10 flex flex-col justify-end">
-        <span className="text-[11px] font-bold text-white uppercase tracking-widest block mb-1">
+        <span className="text-[11px] font-bold text-muted uppercase tracking-widest block mb-1">
           Playlist
         </span>
-        <h1 className={`text-white text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${language === "telugu" ? "font-telugu" : ""}`}>
+        <h1 className={`text-title text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${language === "telugu" ? "font-telugu" : ""}`}>
           {name}
         </h1>
         <p className="text-xs md:text-sm text-muted max-w-xl mb-4 leading-relaxed font-medium">
           {desc}
         </p>
-        <div className="flex items-center justify-center md:justify-start gap-1.5 text-xs text-white/90 font-bold">
-          <span>SongHub</span>
+        <div className="flex items-center justify-center md:justify-start gap-1.5 text-xs text-title font-bold">
+          <span>youworship</span>
           <span className="text-muted/50">&bull;</span>
           <span className="text-muted font-medium">{langName}</span>
           <span className="text-muted/50">&bull;</span>

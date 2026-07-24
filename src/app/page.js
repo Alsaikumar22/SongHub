@@ -12,6 +12,7 @@ import RecentlyPlayed from "@/components/home/RecentlyPlayed";
 import SearchResults from "@/components/layout/SearchResults";
 import SongArtwork from "@/components/ui/SongArtwork";
 import CategoryExplorer from "@/components/categories/CategoryExplorer";
+import { FullAppSkeleton } from "@/components/ui/SongSkeleton";
 
 import {
   FolderHeart,
@@ -29,6 +30,14 @@ import {
   X,
   Music
 } from "lucide-react";
+
+const searchableText = (value) => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value.toLowerCase();
+  if (typeof value === "number") return String(value).toLowerCase();
+  if (typeof value === "object" && typeof value.name === "string") return value.name.toLowerCase();
+  return "";
+};
 
 function HomeContent() {
   const router = useRouter();
@@ -163,10 +172,10 @@ function HomeContent() {
       const q = trimmedQuery.toLowerCase();
       list = list.filter(
         (s) =>
-          (s.teluguTitle || s.title).toLowerCase().includes(q) ||
-          s.title.toLowerCase().includes(q) ||
-          s.artist.toLowerCase().includes(q) ||
-          s.album.toLowerCase().includes(q),
+          searchableText(s.teluguTitle || s.title).includes(q) ||
+          searchableText(s.title).includes(q) ||
+          searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
+          searchableText(s.album).includes(q),
       );
     }
     return list;
@@ -181,10 +190,10 @@ function HomeContent() {
     if (!q) return [];
     return songs.filter(
       (s) =>
-        (s.teluguTitle || s.title).toLowerCase().includes(q) ||
-        s.title.toLowerCase().includes(q) ||
-        s.artist.toLowerCase().includes(q) ||
-        s.album.toLowerCase().includes(q)
+        searchableText(s.teluguTitle || s.title).includes(q) ||
+        searchableText(s.title).includes(q) ||
+        searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
+        searchableText(s.album).includes(q)
     );
   }, [songs, searchQuery]);
 
@@ -203,13 +212,13 @@ function HomeContent() {
       {/* ──────────────────────────────────────────────────────── */}
       {/* ─── DESKTOP VIEW ─── */}
       {/* ──────────────────────────────────────────────────────── */}
-      <div className="hidden md:block space-y-8 p-4">
+      <div className="hidden lg:block space-y-8 p-4">
         {/* VIEW HEADER */}
         {activeTab && activeTab !== "discover" && activeTab !== "categories" && !selectedLetter && (
           <div>
             {activeTab === "favorites" && (
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
                   <FolderHeart className="w-5 h-5 text-red-500" />
                   My Favorites
                 </h1>
@@ -218,7 +227,7 @@ function HomeContent() {
             )}
             {activeTab === "playlist" && activePlaylist && (
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
                   <ListMusic className="w-5 h-5 text-muted" />
                   {activePlaylist.name}
                 </h1>
@@ -230,7 +239,7 @@ function HomeContent() {
             )}
             {activeTab === "recently-played" && (
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
                   <Clock className="w-5 h-5 text-muted" />
                   Recently Played
                 </h1>
@@ -287,7 +296,7 @@ function HomeContent() {
       {/* ──────────────────────────────────────────────────────── */}
       {/* ─── MOBILE VIEW ─── */}
       {/* ──────────────────────────────────────────────────────── */}
-      <div className="block md:hidden p-4 space-y-6">
+      <div className="block lg:hidden p-4 space-y-6">
         
         {/* 1. BROWSE TAB */}
         {activeTab === "discover" && (
@@ -295,7 +304,7 @@ function HomeContent() {
             {!selectedLetter && (
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-muted uppercase tracking-wider">Good day</span>
-                <h1 className="text-2xl font-black text-white tracking-tight">Explore Music</h1>
+                <h1 className="text-2xl font-black text-title tracking-tight">Explore Music</h1>
               </div>
             )}
             
@@ -328,7 +337,7 @@ function HomeContent() {
                   /* Standard Spotify header & clean input */
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <div className="flex flex-col">
-                      <h1 className="text-3xl font-black text-white tracking-tight">Search</h1>
+                      <h1 className="text-3xl font-black text-title tracking-tight">Search</h1>
                     </div>
                     <div className="relative flex items-center w-full">
                       <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
@@ -367,7 +376,7 @@ function HomeContent() {
                             setSearchQuery("");
                             setShowFullResults(false);
                           }}
-                          className="p-1 hover:bg-white/10 rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-white cursor-pointer transition-colors duration-150"
+                          className="p-1 hover:bg-card-hover rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-title cursor-pointer transition-colors duration-150"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -379,7 +388,7 @@ function HomeContent() {
                         setSearchQuery("");
                         setShowFullResults(false);
                       }}
-                      className="text-xs font-bold text-white hover:text-dim active:scale-95 transition-all duration-150 pr-1"
+                      className="text-xs font-bold text-title hover:text-dim active:scale-95 transition-all duration-150 pr-1"
                     >
                       Cancel
                     </button>
@@ -395,11 +404,11 @@ function HomeContent() {
               /* focused empty state: Recent Searches */
               <div className="space-y-4 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-white">Recent searches</h2>
+                  <h2 className="text-base font-bold text-title">Recent searches</h2>
                   {recentSearches.length > 0 && (
                     <button
                       onClick={() => setRecentSearches([])}
-                      className="text-xs font-bold text-dim hover:text-white transition-colors cursor-pointer"
+                      className="text-xs font-bold text-dim hover:text-title transition-colors cursor-pointer"
                     >
                       Clear all
                     </button>
@@ -416,7 +425,7 @@ function HomeContent() {
                     {recentSearches.map((query, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-card-hover/40 cursor-pointer transition-colors"
                         onClick={() => {
                           setSearchQuery(query);
                           setShowFullResults(true);
@@ -424,14 +433,14 @@ function HomeContent() {
                       >
                         <div className="flex items-center gap-3.5">
                           <Clock className="w-4 h-4 text-muted" />
-                          <span className="text-sm font-semibold text-white">{query}</span>
+                          <span className="text-sm font-semibold text-title">{query}</span>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setRecentSearches(recentSearches.filter((_, i) => i !== index));
                           }}
-                          className="p-1 hover:bg-white/10 rounded-full text-dim hover:text-white cursor-pointer transition-colors"
+                          className="p-1 hover:bg-card-hover rounded-full text-dim hover:text-title cursor-pointer transition-colors"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -464,7 +473,7 @@ function HomeContent() {
                           key={song.id}
                           onClick={() => playSong(song)}
                           className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                            isCurrent ? "bg-card-hover border border-white/5" : ""
+                            isCurrent ? "bg-card-hover border border-line" : ""
                           }`}
                         >
                           <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
@@ -472,7 +481,7 @@ function HomeContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className={`text-sm font-semibold block truncate ${
-                              isCurrent ? "text-title" : "text-white"
+                              isCurrent ? "text-title" : "text-title"
                             } ${song.teluguTitle ? "font-telugu" : ""}`}>
                               {song.teluguTitle || song.title}
                             </span>
@@ -503,15 +512,15 @@ function HomeContent() {
         {activeTab === "favorites" && (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Visual Hero Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-600 to-indigo-950 p-6 shadow-xl border border-white/5">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-600 to-indigo-950 p-6 shadow-xl border border-line">
+              <div className="absolute top-0 right-0 w-36 h-36 bg-card-hover rounded-full blur-2xl pointer-events-none" />
               <div className="relative z-10 flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center shadow-md">
+                <div className="w-12 h-12 rounded-xl bg-card-hover backdrop-blur-md border border-line flex items-center justify-center shadow-md">
                   <Heart className="w-6 h-6 text-white fill-white animate-pulse" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-black text-white tracking-tight">Favorites</h1>
-                  <p className="text-xs text-white/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"} liked by you</p>
+                  <p className="text-xs text-title/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"} liked by you</p>
                 </div>
 
                 {filteredSongs.length > 0 && (
@@ -545,7 +554,7 @@ function HomeContent() {
                       <div
                         key={song.id}
                         className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                          isCurrent ? "bg-card-hover border border-white/5" : ""
+                          isCurrent ? "bg-card-hover border border-line" : ""
                         }`}
                       >
                         <div onClick={() => playSong(song)} className="flex items-center gap-3 flex-1 min-w-0">
@@ -554,7 +563,7 @@ function HomeContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className={`text-sm font-semibold block truncate ${
-                              isCurrent ? "text-title" : "text-white"
+                              isCurrent ? "text-title" : "text-title"
                             } ${song.teluguTitle ? "font-telugu" : ""}`}>
                               {song.teluguTitle || song.title}
                             </span>
@@ -587,21 +596,21 @@ function HomeContent() {
               <div className="space-y-6">
                 <button
                   onClick={() => setActivePlaylistId(null)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-muted hover:text-white transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-bold text-muted hover:text-title transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Back to Playlists</span>
                 </button>
 
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-800 to-slate-950 p-6 shadow-xl border border-white/5">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-800 to-slate-950 p-6 shadow-xl border border-line">
+                  <div className="absolute top-0 right-0 w-36 h-36 bg-card-hover rounded-full blur-2xl pointer-events-none" />
                   <div className="relative z-10 flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center shadow-md">
+                    <div className="w-12 h-12 rounded-xl bg-card-hover backdrop-blur-md border border-line flex items-center justify-center shadow-md">
                       <ListMusic className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h1 className="text-2xl font-black text-white tracking-tight">{activePlaylist.name}</h1>
-                      <p className="text-xs text-white/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"}</p>
+                      <p className="text-xs text-title/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"}</p>
                     </div>
 
                     {filteredSongs.length > 0 && (
@@ -632,7 +641,7 @@ function HomeContent() {
                           <div
                             key={song.id}
                             className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                              isCurrent ? "bg-card-hover border border-white/5" : ""
+                              isCurrent ? "bg-card-hover border border-line" : ""
                             }`}
                           >
                             <div onClick={() => playSong(song)} className="flex items-center gap-3 flex-1 min-w-0">
@@ -641,7 +650,7 @@ function HomeContent() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <span className={`text-sm font-semibold block truncate ${
-                                  isCurrent ? "text-title" : "text-white"
+                                  isCurrent ? "text-title" : "text-title"
                                 } ${song.teluguTitle ? "font-telugu" : ""}`}>
                                   {song.teluguTitle || song.title}
                                 </span>
@@ -668,10 +677,10 @@ function HomeContent() {
               /* 4b. PLAYLISTS HUB (LIST OF PLAYLISTS) */
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-black text-white tracking-tight">Playlists</h1>
+                  <h1 className="text-2xl font-black text-title tracking-tight">Playlists</h1>
                   <button
                     onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-card-hover border border-line rounded-lg text-xs font-bold text-white cursor-pointer active:scale-95 transition-transform"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-card-hover border border-line rounded-lg text-xs font-bold text-title cursor-pointer active:scale-95 transition-transform"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Create</span>
@@ -688,7 +697,7 @@ function HomeContent() {
                       placeholder="e.g. Gospel, Devotional Vibes"
                       value={newPlaylistName}
                       onChange={(e) => setNewPlaylistName(e.target.value)}
-                      className="w-full px-3 py-2 border border-line rounded-lg text-xs focus:outline-none focus:border-dim text-white bg-card"
+                      className="w-full px-3 py-2 border border-line rounded-lg text-xs focus:outline-none focus:border-dim text-title bg-card"
                     />
                     <div className="flex justify-end gap-2 pt-1.5">
                       <button
@@ -720,7 +729,7 @@ function HomeContent() {
                     playlists.map((list) => (
                       <div
                         key={list.id}
-                        className="group relative flex items-center justify-between p-3.5 bg-card border border-line/65 rounded-xl hover:border-white/20 active:bg-card-hover transition-colors"
+                        className="group relative flex items-center justify-between p-3.5 bg-card border border-line/65 rounded-xl hover:border-line active:bg-card-hover transition-colors"
                       >
                         <div
                           onClick={() => setActivePlaylistId(list.id)}
@@ -730,7 +739,7 @@ function HomeContent() {
                             <ListMusic className="w-5.5 h-5.5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white block truncate">{list.name}</span>
+                            <span className="text-sm font-semibold text-title block truncate">{list.name}</span>
                             <span className="text-xs text-muted block mt-0.5">{list.songIds.length} song{list.songIds.length !== 1 && "s"}</span>
                           </div>
                         </div>
@@ -758,7 +767,7 @@ function HomeContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="flex-1 bg-canvas flex items-center justify-center text-muted">Loading SongHub...</div>}>
+    <Suspense fallback={<FullAppSkeleton />}>
       <HomeContent />
     </Suspense>
   );

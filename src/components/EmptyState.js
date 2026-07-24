@@ -21,7 +21,7 @@ export default function EmptyState({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-5 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-all cursor-pointer"
+          className="mt-5 px-4 py-2 bg-card-hover hover:bg-white/15 text-title text-xs font-semibold rounded-lg flex items-center gap-2 transition-all cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Refresh Data</span>

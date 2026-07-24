@@ -2,8 +2,7 @@
 
 import React from "react";
 import SongCard from "./SongCard";
-import Loading from "./Loading";
-import EmptyState from "./EmptyState";
+import { SongsSectionSkeleton } from "./ui/SongSkeleton";
 
 /**
  * Reusable SongGrid component handling loading, empty, error, and list states.
@@ -16,7 +15,7 @@ export default function SongGrid({
   onRetry
 }) {
   if (loading) {
-    return <Loading message="Loading songs from Youworship_songs..." />;
+    return <SongsSectionSkeleton />;
   }
 
   if (error) {

@@ -14,11 +14,10 @@ import {
  * Splits by double newlines or single newlines if needed
  */
 function parseLyrics(lyrics) {
-  if (!lyrics || typeof lyrics !== "string") return [];
-  return lyrics
-    .split(/\n\n+/)
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0);
+  if (!lyrics) return "";
+  if (typeof lyrics === "string") return lyrics.trim();
+  if (Array.isArray(lyrics)) return lyrics;
+  return "";
 }
 
 function formatSecondsToDisplay(seconds) {
@@ -64,10 +63,22 @@ export function transformSongDoc(docSnap) {
   const slug = data.slug || docId;
 
   // 2. Artist Object
-  const artistObj = typeof data.artist === "object" && data.artist !== null
-    ? data.artist
-    : { id: null, name: data.artist || "Unknown Artist" };
-  const artistName = artistObj.name || "Unknown Artist";
+  let rawArtistName = "";
+  if (typeof data.artist === "object" && data.artist !== null) {
+    rawArtistName = data.artist.name || "";
+  } else if (typeof data.artist === "string") {
+    rawArtistName = data.artist;
+  } else if (typeof data.artistName === "string") {
+    rawArtistName = data.artistName;
+  }
+
+  const cleanArtist = rawArtistName.trim();
+  const invalidArtistValues = ["na", "n/a", "unknown", "none", "null", "undefined", ""];
+  const artistName = (!cleanArtist || invalidArtistValues.includes(cleanArtist.toLowerCase()))
+    ? "Unknown Artist"
+    : cleanArtist;
+
+  const artistObj = { id: null, name: artistName };
 
   // 3. Categories & Tags
   const categoryArr = Array.isArray(data.category)
@@ -96,8 +107,8 @@ export function transformSongDoc(docSnap) {
   let audioUrl = rawAudio;
   let videoUrl = rawVideo;
 
-  // If audio field contains a YouTube URL, route it to video & clear audioUrl for HTML5 audio
-  if (rawAudio.includes("youtube.com") || rawAudio.includes("youtu.be")) {
+  // If audio field contains a YouTube URL or fake placeholder with YouTube video present, route to video & clear audioUrl
+  if (rawAudio.includes("youtube.com") || rawAudio.includes("youtu.be") || (youtubeId && rawAudio.includes("soundhelix.com"))) {
     if (!videoUrl) videoUrl = rawAudio;
     audioUrl = "";
   }
@@ -107,7 +118,7 @@ export function transformSongDoc(docSnap) {
       data.media?.image ||
       data.imageUrl ||
       data.coverUrl ||
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+      "",
     audio: audioUrl ? audioUrl.trim() : "",
     video: videoUrl ? videoUrl.trim() : "",
     youtubeId: youtubeId || null,
@@ -307,13 +318,15 @@ export const songService = {
     if (!searchQuery || !searchQuery.trim()) return this.getAllSongs();
     const q = searchQuery.trim().toLowerCase();
     const allSongs = await this.getAllSongs();
-    return allSongs.filter(
-      (s) =>
+    return allSongs.filter((s) => {
+      const lyricsStr = Array.isArray(s.lyrics) ? s.lyrics.join(" ") : (s.lyrics || "");
+      return (
         s.title.toLowerCase().includes(q) ||
         s.titleEnglish.toLowerCase().includes(q) ||
         s.artist.toLowerCase().includes(q) ||
         s.category.toLowerCase().includes(q) ||
-        s.lyrics.toLowerCase().includes(q)
-    );
+        lyricsStr.toLowerCase().includes(q)
+      );
+    });
   }
 };

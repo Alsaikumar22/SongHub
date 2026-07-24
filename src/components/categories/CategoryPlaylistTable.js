@@ -24,8 +24,8 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
   if (songs.length === 0) {
     return (
-      <div className="p-12 text-center text-muted border border-white/5 rounded-xl bg-white/[0.02]">
-        <span className="font-semibold block text-white text-lg">No songs available</span>
+      <div className="p-12 text-center text-muted border border-line rounded-xl bg-card-hover/20">
+        <span className="font-semibold block text-title text-lg">No songs available</span>
         <span className="text-xs block mt-1">Try another language or search for a different theme.</span>
       </div>
     );
@@ -63,7 +63,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   return (
     <div className="w-full flex flex-col select-none">
       {/* Sticky Table Header */}
-      <div className="sticky top-0 z-20 bg-canvas py-3 border-b border-white/10 grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
+      <div className="sticky top-0 z-20 bg-canvas py-3 border-b border-line grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
         <div className="text-center">#</div>
         <div>Title</div>
         <div className="hidden md:block">Album</div>
@@ -108,23 +108,23 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
               }}
               className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-3 rounded-lg cursor-pointer transition-colors duration-150 select-none ${
                 isCurrent
-                  ? "bg-white/[0.06] text-white"
-                  : "bg-transparent hover:bg-white/[0.04]"
+                  ? "bg-card-hover/60 text-white"
+                  : "bg-transparent hover:bg-card-hover/40"
               }`}
             >
               {/* Index / Play Button */}
               <div className="w-10 flex items-center justify-center">
                 {isHovered ? (
-                  <button className="text-white hover:scale-110 active:scale-95 transition-transform cursor-pointer">
+                  <button className="text-title hover:scale-110 active:scale-95 transition-transform cursor-pointer">
                     {isSongPlaying ? (
-                      <Pause className="w-4 h-4 fill-current text-white" />
+                      <Pause className="w-4 h-4 fill-current text-title" />
                     ) : (
-                      <Play className="w-4 h-4 fill-current ml-0.5 text-white" />
+                      <Play className="w-4 h-4 fill-current ml-0.5 text-title" />
                     )}
                   </button>
                 ) : isCurrent ? (
                   /* Animated Visualizer using white styling */
-                  <div className="flex items-end gap-[2px] w-4 h-4 text-white">
+                  <div className="flex items-end gap-[2px] w-4 h-4 text-title">
                     <div className="w-[3px] bg-current rounded-full animate-music-bar-1" style={{ height: '30%' }}></div>
                     <div className="w-[3px] bg-current rounded-full animate-music-bar-2" style={{ height: '60%' }}></div>
                     <div className="w-[3px] bg-white rounded-full animate-music-bar-3" style={{ height: '40%' }}></div>
@@ -139,13 +139,14 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
               {/* Title, Artist and Transliteration */}
               <div className="flex items-center gap-3 min-w-0">
                 <img
-                  src={song.coverUrl || "/worship_forest.png"}
+                  src={song.coverUrl}
                   alt={song.title}
-                  className="w-10 h-10 object-cover rounded-lg border border-white/5 shrink-0"
+                  className="w-10 h-10 object-cover rounded-lg border border-line shrink-0"
+                  onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZTFlMWUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwYTBhMGEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCNnKSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNDAiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zOCA1NSBMMzggODUgTDU1IDgwIEw1NSA1MFoiIGZpbGw9IiMzMzMiLz48L3N2Zz4='; }}
                 />
                 <div className="min-w-0 flex-1">
                   <span className={`font-bold text-sm block truncate transition-colors ${
-                    isCurrent ? "text-white font-extrabold" : "text-white"
+                    isCurrent ? "text-title font-extrabold" : "text-title"
                   }`}>
                     {displayTitle}
                   </span>
@@ -187,7 +188,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                       e.stopPropagation();
                       toggleFavorite(song.id);
                     }}
-                    className={`p-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-muted hover:text-white"}`}
+                    className={`p-1.5 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-muted hover:text-title"}`}
                     title={isFav ? "Remove Favorite" : "Favorite"}
                   >
                     <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
@@ -199,22 +200,22 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                         e.stopPropagation();
                         setActiveMenuSongId(activeMenuSongId === song.id ? null : song.id);
                       }}
-                      className={`p-1.5 rounded-full hover:bg-white/5 text-muted hover:text-white transition-colors cursor-pointer ${activeMenuSongId === song.id ? "text-white animate-pulse" : ""}`}
+                      className={`p-1.5 rounded-full hover:bg-card-hover text-muted hover:text-title transition-colors cursor-pointer ${activeMenuSongId === song.id ? "text-white animate-pulse" : ""}`}
                       title="More options"
                     >
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </button>
 
                     {activeMenuSongId === song.id && (
-                      <div className="absolute right-0 top-[110%] bg-dropdown border border-white/[0.08] rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute right-0 top-[110%] bg-dropdown border border-line rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleShare(e, song.id);
                             setActiveMenuSongId(null);
                           }}
-                          className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2 ${
-                            sharedSongId === song.id ? "text-white" : "text-white"
+                          className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2 ${
+                            sharedSongId === song.id ? "text-title" : "text-title"
                           }`}
                         >
                           {sharedSongId === song.id ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
@@ -226,7 +227,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                             handleDownload(e, song.title);
                             setActiveMenuSongId(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-xs font-semibold text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-title hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Download</span>

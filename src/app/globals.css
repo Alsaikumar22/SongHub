@@ -1,12 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=NTR&display=swap');
 @import "tailwindcss";
 
 .font-telugu {
-  font-family: 'NTR', sans-serif;
+  font-family: var(--font-ntr), 'NTR', sans-serif;
 }
 
 .font-lato {
-  font-family: 'Lato', sans-serif;
+  font-family: 'Lato', var(--font-lato), sans-serif;
 }
 
 /* ─────────────────────────────────────────────── */
@@ -40,19 +39,19 @@
 [data-theme="light"] {
   --card: #ffffff;
   --card-hover: #f3f4f6;
-  --input: rgba(255, 255, 255, 0.9);
+  --input: #ffffff;
   --canvas: #f9fafb;
   --line: #e5e7eb;
-  --line-muted: #f0f0f0;
-  --title: #111111;
-  --copy: #4b5563;
-  --muted: #6b7280;
-  --dim: #9ca3af;
-  --handle: #6b7280;
+  --line-muted: #e5e7eb;
+  --title: #111827;
+  --copy: #374151;
+  --muted: #4b5563;
+  --dim: #6b7280;
+  --handle: #4b5563;
   --accent: #1db954;
-  --white: #111111;
-  --black: #ffffff;
-  --chip-bg: rgba(0, 0, 0, 0.06);
+  --white: #ffffff;
+  --black: #000000;
+  --chip-bg: rgba(0, 0, 0, 0.05);
   --chip-text: var(--title);
   --overlay: rgba(0, 0, 0, 0.08);
   --dropdown-bg: #ffffff;
@@ -76,24 +75,30 @@
   --color-chip-bg: var(--chip-bg);
   --color-chip-text: var(--chip-text);
   --color-overlay: var(--overlay);
-  --font-sans: 'Lato', var(--font-geist-sans), sans-serif;
+  --font-sans: var(--font-lato), var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--canvas);
   color: var(--title);
-  font-family: 'Lato', Arial, Helvetica, sans-serif;
-  transition: background 0.3s ease, color 0.3s ease;
+  font-family: var(--font-lato), Arial, Helvetica, sans-serif;
 }
 
-html {
-  transition: color-scheme 0.3s ease;
+/* Controlled smooth transitions during user-initiated theme toggles */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.25s ease-out, border-color 0.25s ease-out, color 0.25s ease-out !important;
+  transition-delay: 0s !important;
 }
 
-/* Smooth transitions for theme-sensitive properties only on themed containers */
-body, .bg-card, .bg-canvas, .bg-card-hover, .bg-line, .border-line, .text-title, .text-copy, .text-muted, .text-dim, .text-handle {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+/* Modern View Transitions API animation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+  animation-timing-function: ease-in-out;
 }
 
 @keyframes bounce-bar {

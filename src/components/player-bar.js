@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
@@ -19,7 +19,9 @@ import {
   Maximize2,
   ListMusic,
   ChevronDown,
-  Music
+  Music,
+  Video,
+  X
 } from "lucide-react";
 
 // Inline MicVocal SVG to bypass Turbopack / lucide caching errors
@@ -72,6 +74,7 @@ export default function PlayerBar() {
   const router = useRouter();
 
   const [sliderVal, setSliderVal] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
@@ -85,10 +88,10 @@ export default function PlayerBar() {
   }, []);
 
   useEffect(() => {
-    setTimeout(() => {
+    if (!isDragging) {
       setSliderVal(progress);
-    }, 0);
-  }, [progress]);
+    }
+  }, [progress, isDragging]);
 
   useEffect(() => {
     if (currentSong?.coverUrl) {
@@ -113,10 +116,16 @@ export default function PlayerBar() {
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
+  const handleProgressInput = (e) => {
+    const newProgress = parseFloat(e.target.value);
+    setSliderVal(newProgress);
+  };
+
   const handleProgressChange = (e) => {
     const newProgress = parseFloat(e.target.value);
     setSliderVal(newProgress);
     seekTo(newProgress);
+    setIsDragging(false);
   };
 
   const handleContainerClick = (e) => {
@@ -137,65 +146,57 @@ export default function PlayerBar() {
 
   return (
     <>
-      {/* ──────────────────────────────────────────────────────── */}
-      {/* ─── MAIN PLAYER BAR CONTAINER (DESKTOP & MOBILE WRAP) ─── */}
-      {/* ──────────────────────────────────────────────────────── */}
-      <div className={`shrink-0 transition-all duration-300 relative border-t border-line-muted ${
-        currentSong 
-          ? "h-14 md:h-22 bg-card md:bg-canvas/95 md:backdrop-blur-md" 
-          : "h-0 md:h-0 bg-transparent overflow-hidden border-none"
-      }`}>
-        
-        {/* ─── MOBILE ATTACHED MINI PLAYER (< md) ─── */}
-        {currentSong && !isExpanded && (
-          <div 
-            className="w-full h-full flex flex-col md:hidden select-none relative"
+      {/* ─── MOBILE MINI PLAYER — fixed above MobileNav ─── */}
+      {currentSong && !isExpanded && (
+        <div
+          className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none pb-2"
+          style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px))` }}
+        >
+          {/* Seek Bar */}
+          <div
+            className="shrink-0 h-2 group cursor-pointer touch-pan-y"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const pct = x / rect.width;
+              const targetTime = pct * (duration || 100);
+              setSliderVal(targetTime);
+              seekTo(targetTime);
+            }}
           >
-            {/* Interactive Seek Bar (always at top) */}
-            <div 
-              className="shrink-0 h-1.5 group cursor-pointer touch-pan-y"
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const pct = x / rect.width;
-                const targetTime = pct * (duration || 100);
-                setSliderVal(targetTime);
-                seekTo(targetTime);
-              }}
-            >
-              <div className="relative w-full h-full bg-white/10">
+            <div className="relative w-full h-full bg-line">
                 <div
-                  className="absolute inset-y-0 left-0 bg-white/70 group-active:bg-white transition-all duration-75"
+                  className="absolute inset-y-0 left-0 bg-title/70 group-active:bg-title transition-all duration-75"
                   style={{ width: `${(sliderVal / (duration || 100)) * 100}%` }}
                 />
                 {/* Moving cursor/thumb — follows the playhead position */}
                 <div
-                  className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md transition-opacity duration-75 ${
+                  className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-title rounded-full shadow-md transition-opacity duration-75 ${
                     sliderVal > 0 && duration > 0
                       ? "opacity-50 group-active:opacity-100 group-hover:opacity-80"
                       : "opacity-0"
                   }`}
-                  style={{ left: `calc(${(sliderVal / (duration || 100)) * 100}% - 6px)` }}
+                  style={{ left: `calc(${(sliderVal / (duration || 100)) * 100}% - 7px)` }}
                 />
               </div>
             </div>
 
             {/* Content row */}
-            <div 
+            <div
               onClick={handleContainerClick}
-              className="flex-1 flex items-center justify-between px-4 min-h-0 cursor-pointer"
+              className="flex-1 flex items-center justify-between px-4 pt-3 min-h-[56px] cursor-pointer"
             >
 
             {/* Left: Artwork + Titles */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <SongArtwork
                 song={currentSong}
-                className="w-9 h-9 object-cover rounded-md border border-white/10 shrink-0"
+                className="w-9 h-9 object-cover rounded-md border border-line shrink-0"
                 iconSize="w-4.5 h-4.5"
               />
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-white block truncate leading-tight">
+                <span className="text-xs font-bold text-title block truncate leading-tight">
                   {currentSong.teluguTitle || currentSong.title}
                 </span>
                 <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
@@ -206,6 +207,19 @@ export default function PlayerBar() {
 
             {/* Right: Controls */}
             <div className="flex items-center gap-3.5 shrink-0">
+              {currentSong?.id && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/song/${encodeURIComponent(currentSong.id)}?view=video`);
+                  }}
+                  className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
+                  aria-label="Watch Video"
+                  title="Watch Video"
+                >
+                  <Video className="w-4.5 h-4.5 text-red-400" />
+                </button>
+              )}
               <button
                 onClick={() => toggleFavorite(currentSong.id)}
                 className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
@@ -215,7 +229,7 @@ export default function PlayerBar() {
                   className={`w-4.5 h-4.5 ${
                     isFavorited
                       ? "fill-red-500 text-red-500"
-                      : "text-dim hover:text-white"
+                      : "text-dim hover:text-title"
                   }`}
                 />
               </button>
@@ -234,8 +248,8 @@ export default function PlayerBar() {
           </div>
         )}
 
-        {/* ─── DESKTOP PLAYER BAR (md+) ─── */}
-        <div className="hidden md:flex items-center justify-between w-full h-full px-8">
+        {/* ─── DESKTOP PLAYER BAR (lg+) ─── */}
+        <div className="hidden lg:flex items-center justify-between w-full h-20 shrink-0 px-8 border-t border-line-muted bg-canvas/95">
           {/* Left section: Song Details */}
           <div className="flex items-center gap-3 w-[30%] min-w-0">
             {currentSong ? (
@@ -324,13 +338,13 @@ export default function PlayerBar() {
                 onClick={togglePlay}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm cursor-pointer ${
                   isPlaying
-                    ? "bg-card text-white hover:bg-card-hover"
+                    ? "bg-card text-title hover:bg-card-hover"
                     : "bg-card-hover text-title hover:bg-line border border-line"
                 }`}
                 title={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
-                  <Pause className="w-4 h-4 fill-white" />
+                  <Pause className="w-4 h-4 fill-current" />
                 ) : (
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 )}
@@ -368,7 +382,10 @@ export default function PlayerBar() {
                   min="0"
                   max={duration || 100}
                   value={sliderVal}
+                  onInput={handleProgressInput}
                   onChange={handleProgressChange}
+                  onMouseDown={() => setIsDragging(true)}
+                  onTouchStart={() => setIsDragging(true)}
                   disabled={!currentSong}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
@@ -399,6 +416,16 @@ export default function PlayerBar() {
 
           {/* Right section: Volume & Options */}
           <div className="flex items-center gap-2 w-[30%] justify-end min-w-0">
+            {currentSong?.id && (
+              <button
+                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.id)}?view=video`)}
+                className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
+                title="Watch Video"
+              >
+                <Video className="w-4 h-4 text-red-400" />
+              </button>
+            )}
+
             {currentSong ? (
               <Link
                 href={isLyricsPage ? `/song/${currentSong.id}` : `/song/${currentSong.id}?view=lyrics`}
@@ -454,7 +481,6 @@ export default function PlayerBar() {
                 }}
               />
             </div>
-          </div>
         </div>
       </div>
 
@@ -548,7 +574,7 @@ export default function PlayerBar() {
                   max={duration || 100}
                   value={sliderVal}
                   onChange={handleProgressChange}
-                  className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
+                  className="w-full h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
                   style={{
                     background: `linear-gradient(to right, #fff 0%, #fff ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) 100%)`
                   }}
@@ -629,7 +655,7 @@ export default function PlayerBar() {
                 step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
+                className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
                 style={{
                   background: `linear-gradient(to right, #b3b3b3 0%, #b3b3b3 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) 100%)`
                 }}
@@ -640,42 +666,6 @@ export default function PlayerBar() {
         </div>
       )}
 
-      {/* Hidden YouTube Audio Stream Player (resumes from pause timestamp) */}
-      <YouTubeBackgroundPlayer
-        youtubeId={currentSong?.youtubeId}
-        isPlaying={isPlaying}
-      />
     </>
-  );
-}
-
-function YouTubeBackgroundPlayer({ youtubeId, isPlaying }) {
-  const iframeRef = useRef(null);
-
-  useEffect(() => {
-    if (!iframeRef.current) return;
-    if (isPlaying) {
-      iframeRef.current.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
-        "*"
-      );
-    } else {
-      iframeRef.current.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
-        "*"
-      );
-    }
-  }, [isPlaying]);
-
-  if (!youtubeId) return null;
-
-  return (
-    <iframe
-      ref={iframeRef}
-      className="hidden pointer-events-none w-0 h-0 absolute opacity-0"
-      src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1`}
-      allow="autoplay"
-      title="YouTube Audio Stream"
-    />
   );
 }

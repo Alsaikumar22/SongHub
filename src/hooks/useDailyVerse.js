@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { COLLECTIONS } from "@/firebase/firestore";
-import VERSES from "@/data/verses";
+
+const TOTAL_VERSES_COUNT = 176;
 
 /**
  * Returns the current date's day-of-year (1-365/366) in Indian Standard Time (UTC+5:30).
@@ -100,14 +101,11 @@ export default function useDailyVerse(options = {}) {
     return verseIndex !== undefined ? verseIndex : getISTDayOfYear();
   }, [verseIndex, tick]);
 
-  // Total verses available locally
-  const totalLocalVerses = VERSES.length;
-
   // Index for fetching from Firebase (1-based: verse_1, verse_2, ...)
   const verseDocId = useMemo(() => {
-    const index = (dayOfYear - 1) % totalLocalVerses;
+    const index = (dayOfYear - 1) % TOTAL_VERSES_COUNT;
     return `verse_${index + 1}`;
-  }, [dayOfYear, totalLocalVerses]);
+  }, [dayOfYear]);
 
   // Fetch verse from Firebase
   const fetchVerse = useCallback(async () => {
@@ -118,7 +116,7 @@ export default function useDailyVerse(options = {}) {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const verseData = buildVerse(data, totalLocalVerses);
+        const verseData = buildVerse(data, TOTAL_VERSES_COUNT);
         setFirebaseVerse(verseData);
         setSource("firebase");
         setLoading(false);
@@ -130,38 +128,41 @@ export default function useDailyVerse(options = {}) {
       const metaSnap = await getDoc(metaRef);
 
       if (!metaSnap.exists()) {
-        // Collection doesn't exist or hasn't been seeded yet
-        console.warn("⚠️ bible_chapters collection not found. Falling back to local verses.");
+        console.warn("⚠️ bible_chapters collection not found in Firestore.");
       }
     } catch (error) {
-      console.warn("⚠️ Failed to fetch verse from Firebase, falling back to local:", error.message);
+      console.warn("⚠️ Failed to fetch verse from Firebase:", error.message);
     }
 
-    // Fallback to local verses.js
-    setSource("local");
+    setSource("fallback");
     setLoading(false);
-  }, [verseDocId, totalLocalVerses]);
+  }, [verseDocId]);
 
   // Re-fetch when day changes
   useEffect(() => {
     fetchVerse();
   }, [fetchVerse, tick]);
 
-  // Build the verse from local data as fallback
-  const localVerse = useMemo(() => {
-    const index = (dayOfYear - 1) % totalLocalVerses;
-    const v = VERSES[index];
-    if (!v) return null;
-    return buildVerse(v, totalLocalVerses);
-  }, [dayOfYear, totalLocalVerses]);
-
-  // Use Firebase verse if available, otherwise local
-  const verse = useMemo(() => {
-    return firebaseVerse || localVerse || buildVerse(
-      { id: 1, book: "Psalm", bookTelugu: "కీర్తనలు", chapter: 23, verse: 4, textEnglish: "Even though I walk through the valley...", textTelugu: "మరణ ఛాయ లోయలో..." },
-      totalLocalVerses
+  // Default fallback verse if network fails
+  const fallbackVerse = useMemo(() => {
+    return buildVerse(
+      {
+        id: 1,
+        book: "Psalm",
+        bookTelugu: "కీర్తనలు",
+        chapter: 23,
+        verse: 4,
+        textEnglish: "Even though I walk through the valley of the shadow of death, I will fear no evil, for you are with me.",
+        textTelugu: "గాఢాంధకారపు లోయలో నేను సంచరించినను ఏ అపాయమునకు భయపడను, నీవు నాకు తోడై యుందువు."
+      },
+      TOTAL_VERSES_COUNT
     );
-  }, [firebaseVerse, localVerse, totalLocalVerses]);
+  }, []);
+
+  // Use Firebase verse if available, otherwise fallback
+  const verse = useMemo(() => {
+    return firebaseVerse || fallbackVerse;
+  }, [firebaseVerse, fallbackVerse]);
 
   // Periodically retry Firebase if it failed (every 5 minutes)
   useEffect(() => {
@@ -179,7 +180,7 @@ export default function useDailyVerse(options = {}) {
     reference: verse.reference,
     referenceTelugu: verse.referenceTelugu,
     dayOfYear,
-    totalVerses: totalLocalVerses,
+    totalVerses: TOTAL_VERSES_COUNT,
     loading,
     source,
   };

@@ -71,7 +71,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className="md:hidden flex items-center justify-around bg-canvas/95 backdrop-blur-md border-t border-line-muted px-2 py-1.5 shrink-0 z-40">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around bg-card/95 backdrop-blur-md border-t border-line px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
       {tabs.map((tab) => {
         const isActive = !isOnSongPage && activeTab === tab.id;
         return (

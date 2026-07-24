@@ -42,8 +42,22 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  }, []);
+    const nextTheme = theme === "dark" ? "light" : "dark";
+
+    if (typeof document !== "undefined" && document.startViewTransition) {
+      document.startViewTransition(() => {
+        setTheme(nextTheme);
+      });
+    } else if (typeof document !== "undefined") {
+      document.documentElement.classList.add("theme-transition");
+      setTheme(nextTheme);
+      setTimeout(() => {
+        document.documentElement.classList.remove("theme-transition");
+      }, 300);
+    } else {
+      setTheme(nextTheme);
+    }
+  }, [theme]);
 
   // Provide a default theme during SSR to prevent useTheme() errors
   const contextValue = mounted ? { theme, toggleTheme } : { theme: "dark", toggleTheme: () => {} };
