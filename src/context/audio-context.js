@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./auth-context";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/config";
@@ -30,6 +30,15 @@ function getDisplayArtist(song) {
   }
 
   return "Unknown Artist";
+}
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function normalizeSongForUi(song) {
@@ -62,6 +71,7 @@ export const AudioProvider = ({ children }) => {
   const [isLooping, setIsLooping] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
   const [queue, setQueue] = useState([]);
+  const [originalQueue, setOriginalQueue] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
@@ -69,43 +79,99 @@ export const AudioProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState("discover");
   const [activePlaylistId, setActivePlaylistId] = useState(null);
 
-  const handleNextSong = () => {
-    if (queue.length === 0) return;
+  const isLoopingRef = useRef(isLooping);
+  const isShuffledRef = useRef(isShuffled);
+  const queueRef = useRef(queue);
+  const currentSongRef = useRef(currentSong);
+
+  useEffect(() => {
+    isLoopingRef.current = isLooping;
+  }, [isLooping]);
+
+  useEffect(() => {
+    isShuffledRef.current = isShuffled;
+  }, [isShuffled]);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    currentSongRef.current = currentSong;
+  }, [currentSong]);
+
+  const getCurrentContextSongs = (currentPlayingSong) => {
+    let contextSongs = songs;
+    if (activeTab === "favorites") {
+      contextSongs = songs.filter(s => favorites.includes(s.id));
+    } else if (activeTab === "playlist" && activePlaylistId) {
+      const pl = playlists.find(p => p.id === activePlaylistId);
+      if (pl) {
+        contextSongs = songs.filter(s => pl.songIds.includes(s.id));
+      } else {
+        contextSongs = [];
+      }
+    } else if (activeTab === "recently-played") {
+      contextSongs = recentlyPlayed.map(id => songs.find(s => s.id === id)).filter(Boolean);
+    }
+
+    // Ensure the playing song is part of the queue
+    if (currentPlayingSong && !contextSongs.some(s => s.id === currentPlayingSong.id)) {
+      return songs;
+    }
+    return contextSongs;
+  };
+
+  const handleSetIsShuffled = (shuffledVal) => {
+    setIsShuffled(shuffledVal);
+    if (shuffledVal) {
+      const remaining = originalQueue.filter(s => s.id !== currentSong?.id);
+      const shuffled = currentSong 
+        ? [currentSong, ...shuffleArray(remaining)] 
+        : shuffleArray(originalQueue);
+      setQueue(shuffled);
+    } else {
+      setQueue(originalQueue);
+    }
+  };
+
+  const handleNextSong = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (currentQueue.length === 0) return;
 
     let nextIndex = 0;
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * queue.length);
-    } else if (currentSong) {
-      const currentIndex = queue.findIndex(s => s.id === currentSong.id);
-      if (currentIndex !== -1 && currentIndex < queue.length - 1) {
+    if (currentSongRef.current) {
+      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
         nextIndex = currentIndex + 1;
       }
     }
 
-    setCurrentSong(queue[nextIndex]);
+    setCurrentSong(currentQueue[nextIndex]);
     setIsPlaying(true);
     setProgress(0);
-  };
+  }, []);
 
-  const handlePrevSong = () => {
-    if (queue.length === 0) return;
+  const handlePrevSong = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (currentQueue.length === 0) return;
 
     let prevIndex = 0;
-    if (isShuffled) {
-      prevIndex = Math.floor(Math.random() * queue.length);
-    } else if (currentSong) {
-      const currentIndex = queue.findIndex(s => s.id === currentSong.id);
-      if (currentIndex > 0) {
-        prevIndex = currentIndex - 1;
-      } else {
-        prevIndex = queue.length - 1; // loop back to end
+    if (currentSongRef.current) {
+      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      if (currentIndex !== -1) {
+        if (currentIndex > 0) {
+          prevIndex = currentIndex - 1;
+        } else {
+          prevIndex = currentQueue.length - 1; // loop back to end
+        }
       }
     }
 
-    setCurrentSong(queue[prevIndex]);
+    setCurrentSong(currentQueue[prevIndex]);
     setIsPlaying(true);
     setProgress(0);
-  };
+  }, []);
 
   const audioRef = useRef(null);
   const isPlayingRef = useRef(isPlaying);
@@ -149,6 +215,7 @@ export const AudioProvider = ({ children }) => {
           : [];
         setSongs(fetchedSongs);
         setQueue(fetchedSongs);
+        setOriginalQueue(fetchedSongs);
         setSongsLoading(false);
         console.log(`✓ Loaded ${fetchedSongs.length} songs from API`);
       })
@@ -161,11 +228,19 @@ export const AudioProvider = ({ children }) => {
     return () => { isMounted = false; };
   }, []);
 
+  // Sync native looping property of the HTML5 Audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
+
   // Initialize browser-dependent values
   useEffect(() => {
     // 1. Initialize HTML Audio Element
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
+    audioRef.current.loop = isLoopingRef.current;
 
     // 2. Load lists from localStorage (fallback for non-auth users)
     const savedFavorites = localStorage.getItem("songhub_favorites");
@@ -217,7 +292,7 @@ export const AudioProvider = ({ children }) => {
 
     const handleEnded = () => {
       // Handles auto-play next
-      if (isLooping) {
+      if (isLoopingRef.current) {
         audio.currentTime = 0;
         audio.play().catch(err => console.log("Playback error: ", err));
       } else {
@@ -411,7 +486,7 @@ export const AudioProvider = ({ children }) => {
             onStateChange: (event) => {
               if (!isMounted) return;
               if (event.data === 0) {
-                if (isLooping) {
+                if (isLoopingRef.current) {
                   if (typeof player?.seekTo === "function") try { player.seekTo(0); } catch (e) {}
                   if (typeof player?.playVideo === "function") try { player.playVideo(); } catch (e) {}
                 } else {
@@ -506,6 +581,18 @@ export const AudioProvider = ({ children }) => {
       setCurrentSong(song);
       setIsPlaying(true);
       setProgress(0);
+
+      // Set queue and originalQueue for this context
+      const contextSongs = getCurrentContextSongs(song);
+      setOriginalQueue(contextSongs);
+
+      if (isShuffled) {
+        const remaining = contextSongs.filter(s => s.id !== song.id);
+        const shuffled = [song, ...shuffleArray(remaining)];
+        setQueue(shuffled);
+      } else {
+        setQueue(contextSongs);
+      }
 
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
@@ -676,7 +763,7 @@ export const AudioProvider = ({ children }) => {
         adjustVolume,
         toggleMute,
         setIsLooping,
-        setIsShuffled,
+        setIsShuffled: handleSetIsShuffled,
         toggleFavorite,
         createPlaylist,
         deletePlaylist,
