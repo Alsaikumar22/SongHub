@@ -25,13 +25,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
-        if (result) {
-          console.log("Redirect login successful:", result.user);
+        if (result?.user) {
+          console.log(result.user);
         }
       })
-      .catch((error) => {
-        console.error("Redirect login error:", error);
-      });
+      .catch(console.error);
   }, []);
 
   // Listen for auth state changes
@@ -59,24 +57,11 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async () => {
     try {
-      const isMobile = typeof window !== "undefined" && 
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       if (isMobile) {
-        console.log("Mobile device detected: Using signInWithRedirect");
         await signInWithRedirect(auth, googleProvider);
       } else {
-        console.log("Desktop device detected: Using signInWithPopup");
-        try {
-          await signInWithPopup(auth, googleProvider);
-        } catch (popupError) {
-          if (popupError.code === "auth/popup-blocked" || popupError.code === "auth/popup-closed-by-user") {
-            console.warn("Popup blocked or closed by user. Falling back to signInWithRedirect...");
-            await signInWithRedirect(auth, googleProvider);
-          } else {
-            throw popupError;
-          }
-        }
+        await signInWithPopup(auth, googleProvider);
       }
     } catch (error) {
       console.error("Google sign-in error:", error);
