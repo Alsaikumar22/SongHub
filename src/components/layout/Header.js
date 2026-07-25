@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Search, X, Play, ArrowRight, LayoutGrid, Sun, Moon, LogIn, LogOut, User, Music } from "lucide-react";
+import {
+  Search,
+  X,
+  Play,
+  ArrowRight,
+  LayoutGrid,
+  Sun,
+  Moon,
+  LogIn,
+  LogOut,
+  User,
+  Music,
+} from "lucide-react";
 import { useSearch } from "@/context/search-context";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
@@ -33,7 +45,8 @@ function SearchResultImage({ song }) {
 
 export default function Header() {
   const router = useRouter();
-  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
+  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } =
+    useSearch();
   const { songs, playSong, activeTab, setActiveTab } = useAudio();
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated, signInWithGoogle, signOut } = useAuth();
@@ -59,13 +72,19 @@ export default function Header() {
 
   const trimmedQuery = searchQuery.trim().toLowerCase();
 
-  const totalMatches = songs.filter(song => {
+  const totalMatches = songs.filter((song) => {
     if (!trimmedQuery) return false;
     const titleMatch = (song.title || "").toLowerCase().includes(trimmedQuery);
-    const telTitleMatch = (song.teluguTitle || "").toLowerCase().includes(trimmedQuery);
-    const artistMatch = (song.artist || "").toLowerCase().includes(trimmedQuery);
+    const telTitleMatch = (song.teluguTitle || "")
+      .toLowerCase()
+      .includes(trimmedQuery);
+    const artistMatch = (song.artist || "")
+      .toLowerCase()
+      .includes(trimmedQuery);
     const lyricsRaw = song.lyrics;
-    const lyricsStr = Array.isArray(lyricsRaw) ? lyricsRaw.join(" ") : (lyricsRaw || "");
+    const lyricsStr = Array.isArray(lyricsRaw)
+      ? lyricsRaw.join(" ")
+      : lyricsRaw || "";
     const lyricsMatch = lyricsStr.toLowerCase().includes(trimmedQuery);
     return titleMatch || telTitleMatch || artistMatch || lyricsMatch;
   });
@@ -82,21 +101,27 @@ export default function Header() {
   };
 
   return (
-    <header className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex ${
-      activeTab === "discover" ? "flex" : "hidden"
-    }`}>
-      <Link href="/" className="flex items-center gap-3 flex-shrink-0 group" aria-label="youworship home">
+    <header
+      className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex ${
+        activeTab === "discover" ? "flex" : "hidden"
+      }`}
+    >
+      <Link
+        href="/"
+        className="flex items-center gap-4 flex-shrink-0 group"
+        aria-label="You Worship home"
+      >
         <img
           src="/youlogo.png"
-          alt="youworship"
-          className="w-10 h-10 object-contain"
+          alt="You Worship"
+          className="w-11 h-11 object-contain"
         />
         <div className="flex min-w-0 flex-col leading-none">
-          <span className="text-[17px] font-black tracking-[0.01em] text-title whitespace-nowrap">
-            youworship
+          <span className="text-[19px] font-black tracking-[0.01em] text-title whitespace-nowrap">
+            You Worship
           </span>
-          <span className="mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-muted sm:block">
-            Worship Music
+          <span className="mt-1 hidden text-[11px] font-bold tracking-[0.16em] text-amber-400 sm:block">
+            🎸Anywhere🎸
           </span>
         </div>
       </Link>
@@ -116,7 +141,7 @@ export default function Header() {
           onKeyDown={handleKeyDown}
           className="w-full h-full pl-11 pr-16 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-white/35 focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
         />
-        
+
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
           {searchQuery && (
             <button
@@ -132,7 +157,9 @@ export default function Header() {
           )}
           <button
             onClick={() => {
-              setActiveTab(activeTab === "categories" ? "discover" : "categories");
+              setActiveTab(
+                activeTab === "categories" ? "discover" : "categories",
+              );
               if (activeTab !== "categories") {
                 setSearchQuery("");
                 setShowFullResults(false);
@@ -140,7 +167,9 @@ export default function Header() {
               }
             }}
             className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
-              activeTab === "categories" ? "text-title bg-card-hover" : "text-dim hover:text-copy"
+              activeTab === "categories"
+                ? "text-title bg-card-hover"
+                : "text-dim hover:text-copy"
             }`}
             title="Browse Categories"
           >
@@ -157,7 +186,8 @@ export default function Header() {
                 Songs
               </span>
               <span className="text-[10px] text-dim tabular-nums">
-                {totalMatches.length} result{totalMatches.length !== 1 ? "s" : ""}
+                {totalMatches.length} result
+                {totalMatches.length !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -219,7 +249,9 @@ export default function Header() {
         <button
           onClick={toggleTheme}
           className={`p-2 rounded-full transition-all duration-300 cursor-pointer hover:bg-card-hover active:scale-90 text-title`}
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={
+            theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+          }
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (
