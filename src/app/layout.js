@@ -30,8 +30,9 @@ const ntr = NTR({
 });
 
 export const metadata = {
-  title: "youworship",
-  description: "A sleek and clean minimalist music player built with Next.js and TailwindCSS",
+  title: "YouWorship",
+  description:
+    "A sleek and clean minimalist music player built with Next.js and TailwindCSS",
   icons: {
     icon: "/youlogo.png",
   },
