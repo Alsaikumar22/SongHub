@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Play, Pause, ChevronLeft, ChevronRight, Grid, List, Plus, Share2, Check } from "lucide-react";
+import {
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  Grid,
+  List,
+  Plus,
+  Share2,
+  Check,
+} from "lucide-react";
 import SongCard from "./SongCard";
 import SongArtwork from "../ui/SongArtwork";
 import { useAudio } from "@/context/audio-context";
@@ -10,23 +20,71 @@ import { SongsSectionSkeleton } from "../ui/SongSkeleton";
 import { AnimatePresence, motion } from "framer-motion";
 
 const TELUGU_ALPHABET_ORDER = [
-  "అ", "ఆ", "ఇ", "ఈ", "ఉ", "ఊ", "ఋ", "ౠ", "ఎ", "ఏ", "ఐ", "ఒ", "ఓ", "ఔ", "అం", "అః",
-  "క", "ఖ", "గ", "ఘ", "ఙ", "చ", "ఛ", "జ", "ఝ", "ఞ", "ట", "ఠ", "డ", "ఢ", "ణ",
-  "త", "థ", "ద", "ధ", "న", "ప", "ఫ", "బ", "భ", "మ", "య", "ర", "ల", "వ",
-  "శ", "ష", "స", "హ", "ళ", "క్ష", "ఱ",
+  "అ",
+  "ఆ",
+  "ఇ",
+  "ఈ",
+  "ఉ",
+  "ఊ",
+  "ఋ",
+  "ౠ",
+  "ఎ",
+  "ఏ",
+  "ఐ",
+  "ఒ",
+  "ఓ",
+  "ఔ",
+  "అం",
+  "అః",
+  "క",
+  "ఖ",
+  "గ",
+  "ఘ",
+  "ఙ",
+  "చ",
+  "ఛ",
+  "జ",
+  "ఝ",
+  "ఞ",
+  "ట",
+  "ఠ",
+  "డ",
+  "ఢ",
+  "ణ",
+  "త",
+  "థ",
+  "ద",
+  "ధ",
+  "న",
+  "ప",
+  "ఫ",
+  "బ",
+  "భ",
+  "మ",
+  "య",
+  "ర",
+  "ల",
+  "వ",
+  "శ",
+  "ష",
+  "స",
+  "హ",
+  "ళ",
+  "క్ష",
+  "ఱ",
 ];
 
 function teluguSort(a, b) {
   const o = TELUGU_ALPHABET_ORDER;
   const idxA = o.indexOf(a);
   const idxB = o.indexOf(b);
-  
+
   if (idxA !== -1 && idxB !== -1) {
     return idxA - idxB;
   }
   if (idxA !== -1) return -1;
   if (idxB !== -1) return 1;
-  
+
   return a.localeCompare(b);
 }
 
@@ -76,8 +134,8 @@ export default function SongsSection({
         ...prev,
         [letter]: {
           left: el.scrollLeft > 10,
-          right: el.scrollLeft < el.scrollWidth - el.clientWidth - 10
-        }
+          right: el.scrollLeft < el.scrollWidth - el.clientWidth - 10,
+        },
       }));
     }
   };
@@ -92,7 +150,7 @@ export default function SongsSection({
         if (!groups[tLetter]) groups[tLetter] = [];
         groups[tLetter].push(song);
       }
-      
+
       // 2. Group under English letter if the title starts with an English character
       const firstChar = song.title ? song.title.charAt(0).toUpperCase() : "";
       if (/[A-Z]/.test(firstChar)) {
@@ -152,7 +210,9 @@ export default function SongsSection({
   const handleShare = () => {
     setIsShared(true);
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/?tab=discover&letter=${selectedLetter}`);
+      navigator.clipboard.writeText(
+        `${window.location.origin}/?tab=discover&letter=${selectedLetter}`,
+      );
     }
     setTimeout(() => setIsShared(false), 2000);
   };
@@ -172,7 +232,9 @@ export default function SongsSection({
     return (
       <div className="p-12 text-center text-muted">
         <span className="font-semibold block text-copy">No songs found</span>
-        <span className="text-xs block mt-1">Try adjusting your search or browse a different category.</span>
+        <span className="text-xs block mt-1">
+          Try adjusting your search or browse a different category.
+        </span>
       </div>
     );
   }
@@ -250,18 +312,26 @@ export default function SongsSection({
               <span className="text-[11px] font-bold text-title uppercase tracking-widest block mb-1">
                 Alphabet Browser
               </span>
-              <h1 className={`text-title text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${/[A-Z]/.test(selectedLetter) ? "" : "font-telugu"}`}>
+              <h1
+                className={`text-title text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${/[A-Z]/.test(selectedLetter) ? "" : "font-telugu"}`}
+              >
                 Songs starting with &ldquo;{selectedLetter}&rdquo;
               </h1>
               <p className="text-xs md:text-sm text-muted max-w-xl mb-4 leading-relaxed font-medium">
-                Browse Christian worship songs starting with the alphabet letter {selectedLetter}.
+                Browse Christian worship songs starting with the alphabet letter{" "}
+                {selectedLetter}.
               </p>
               <div className="flex items-center justify-center md:justify-start gap-1.5 text-xs text-title/90 font-bold">
-                <span>youworship</span>
+                <span>YouWorship</span>
                 <span className="text-muted/50">&bull;</span>
-                <span className="text-muted font-medium">{scriptLang === "telugu" ? "Telugu" : "English"}</span>
+                <span className="text-muted font-medium">
+                  {scriptLang === "telugu" ? "Telugu" : "English"}
+                </span>
                 <span className="text-muted/50">&bull;</span>
-                <span>{letterGroups[selectedLetter]?.length || 0} track{(letterGroups[selectedLetter]?.length || 0) !== 1 && "s"}</span>
+                <span>
+                  {letterGroups[selectedLetter]?.length || 0} track
+                  {(letterGroups[selectedLetter]?.length || 0) !== 1 && "s"}
+                </span>
               </div>
             </div>
           </div>
@@ -297,20 +367,25 @@ export default function SongsSection({
                       Add to Playlist
                     </span>
                     {playlists.length === 0 ? (
-                      <span className="text-xs text-muted px-4 py-2 block">No playlists created</span>
+                      <span className="text-xs text-muted px-4 py-2 block">
+                        No playlists created
+                      </span>
                     ) : (
                       playlists.map((list) => (
                         <button
                           key={list.id}
                           onClick={() => {
-                            const letterSongs = letterGroups[selectedLetter] || [];
+                            const letterSongs =
+                              letterGroups[selectedLetter] || [];
                             letterSongs.forEach((song) => {
                               if (!list.songIds.includes(song.id)) {
                                 addSongToPlaylist(list.id, song.id);
                               }
                             });
                             setShowPlaylistDropdown(false);
-                            alert(`Added ${letterSongs.length} songs to "${list.name}"`);
+                            alert(
+                              `Added ${letterSongs.length} songs to "${list.name}"`,
+                            );
                           }}
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-title hover:bg-card-hover transition-colors cursor-pointer"
                         >
@@ -330,14 +405,20 @@ export default function SongsSection({
                 }`}
                 title="Copy link"
               >
-                {isShared ? <Check className="w-6 h-6" /> : <Share2 className="w-6 h-6" />}
+                {isShared ? (
+                  <Check className="w-6 h-6" />
+                ) : (
+                  <Share2 className="w-6 h-6" />
+                )}
               </button>
             </div>
 
             {/* View layout toggler */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setViewMode(viewMode === "playlist" ? "cards" : "playlist")}
+                onClick={() =>
+                  setViewMode(viewMode === "playlist" ? "cards" : "playlist")
+                }
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-card-hover text-xs font-bold text-muted hover:text-title transition-colors cursor-pointer"
               >
                 {viewMode === "playlist" ? (
@@ -387,7 +468,7 @@ export default function SongsSection({
                     category={{
                       id: `letter-${selectedLetter}`,
                       nameTe: `అక్షరం "${selectedLetter}"`,
-                      nameEn: `Letter "${selectedLetter}"`
+                      nameEn: `Letter "${selectedLetter}"`,
                     }}
                     songs={letterGroups[selectedLetter] || []}
                     language={scriptLang}
@@ -402,16 +483,24 @@ export default function SongsSection({
           {availableLetters.map((letter) => (
             <div
               key={letter}
-              ref={(el) => { sectionRefs.current[letter] = el; }}
+              ref={(el) => {
+                sectionRefs.current[letter] = el;
+              }}
               data-letter={letter}
               className="scroll-mt-24"
             >
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
-                  <span className={`text-2xl font-bold text-title ${
-                    /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
-                  }`}>{letter}</span>
-                  <span className="text-xs text-muted/80 font-medium ml-1">({letterGroups[letter].length})</span>
+                  <span
+                    className={`text-2xl font-bold text-title ${
+                      /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+                    }`}
+                  >
+                    {letter}
+                  </span>
+                  <span className="text-xs text-muted/80 font-medium ml-1">
+                    ({letterGroups[letter].length})
+                  </span>
                 </div>
                 <button
                   onClick={() => setSelectedLetter(letter)}
@@ -434,7 +523,9 @@ export default function SongsSection({
                 </button>
 
                 <div
-                  ref={(el) => { scrollRefs.current[letter] = el; }}
+                  ref={(el) => {
+                    scrollRefs.current[letter] = el;
+                  }}
                   onScroll={() => updateLetterScroll(letter)}
                   className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth"
                 >
@@ -454,7 +545,9 @@ export default function SongsSection({
                 <button
                   onClick={() => scrollRow(letter, "right")}
                   className={`absolute right-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
-                    scrollStates[letter]?.right !== false ? "md:flex" : "md:hidden"
+                    scrollStates[letter]?.right !== false
+                      ? "md:flex"
+                      : "md:hidden"
                   } animate-in fade-in zoom-in`}
                   title="Scroll Right"
                 >

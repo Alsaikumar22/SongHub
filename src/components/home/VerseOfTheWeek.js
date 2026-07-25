@@ -21,13 +21,13 @@ export default function VerseOfTheWeek() {
 ${verse.textTelugu}
 — ${referenceTelugu}
 
-youworship — Daily Bible Verse`;
+YouWorship — Daily Bible Verse`;
 
     // Try native Web Share API first (mobile & modern desktop)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `youworship - ${reference}`,
+          title: `YouWorship - ${reference}`,
           text: shareText,
         });
         return;
@@ -50,13 +50,13 @@ youworship — Daily Bible Verse`;
   }, [verse, reference, referenceTelugu]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">
+    <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">
       {/* Ambient Background Glows */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-title/5 rounded-full blur-[60px] pointer-events-none group-hover:bg-title/8 transition-all duration-700" />
-      <div className="absolute bottom-0 left-0 w-36 h-36 bg-white/2 rounded-full blur-[40px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-36 h-36 bg-white/2 rounded-full blur-2xl pointer-events-none" />
 
       {/* Left Accent Bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-title via-title/50 to-transparent" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-title via-title/50 to-transparent" />
 
       {/* Content Column */}
       <div className="relative z-10 flex-1 space-y-4 min-w-0">
