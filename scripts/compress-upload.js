@@ -20,7 +20,8 @@ const path = require("path");
 const sharp = require("sharp");
 const { createClient } = require("@supabase/supabase-js");
 const adminModule = require("firebase-admin");
-const admin = adminModule.apps ? adminModule : (adminModule.default || adminModule);
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const admin = adminModule.getApps ? adminModule : (adminModule.apps ? adminModule : (adminModule.default || adminModule));
 
 // ─── Configuration & Directories ──────────────────────────────────────────────
 const inputFolder = "./photos";
@@ -46,35 +47,53 @@ if (supabaseUrl && supabaseSecretKey) {
 let db = null;
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY
-  ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
-  : undefined;
+let firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+if (firebasePrivateKey) {
+  firebasePrivateKey = firebasePrivateKey.trim();
+  // Remove wrapping quotes/commas from copy-paste
+  firebasePrivateKey = firebasePrivateKey.replace(/^[^a-zA-Z0-9+\/=_-]+|[^a-zA-Z0-9+\/=_-]+$/g, '');
+  
+  // Fix leftover 'n' from '\n' if header was removed
+  if (firebasePrivateKey.startsWith('nMII')) {
+    firebasePrivateKey = '-----BEGIN PRIVATE KEY-----\n' + firebasePrivateKey.substring(1);
+  }
+  
+  // Ensure BEGIN/END headers exist
+  if (!firebasePrivateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+    firebasePrivateKey = '-----BEGIN PRIVATE KEY-----\n' + firebasePrivateKey;
+  }
+  if (!firebasePrivateKey.endsWith('-----END PRIVATE KEY-----')) {
+    firebasePrivateKey = firebasePrivateKey + '\n-----END PRIVATE KEY-----';
+  }
+  
+  firebasePrivateKey = firebasePrivateKey.replace(/\\n/g, "\n");
+}
 
-const apps = admin.apps || [];
+const apps = admin.getApps ? admin.getApps() : (admin.apps || []);
 if (apps.length === 0) {
   if (firebaseProjectId && firebaseClientEmail && firebasePrivateKey) {
     try {
       admin.initializeApp({
-        credential: admin.credential.cert({
+        credential: admin.cert({
           projectId: firebaseProjectId,
           clientEmail: firebaseClientEmail,
           privateKey: firebasePrivateKey,
         }),
       });
-      db = admin.firestore();
+      db = getFirestore();
     } catch (err) {
       console.warn(`⚠️  Firebase Admin initialization warning: ${err.message}`);
     }
   } else if (firebaseProjectId) {
     try {
       admin.initializeApp({ projectId: firebaseProjectId });
-      db = admin.firestore();
+      db = getFirestore();
     } catch (err) {
       // Fallback
     }
   }
 } else {
-  db = admin.firestore();
+  db = getFirestore();
 }
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
@@ -192,7 +211,6 @@ async function saveToFirestore(docId, data) {
   if (!db) return false;
   try {
     const docRef = db.collection(FIRESTORE_COLLECTION).doc(docId);
-    const FieldValue = (admin.firestore || adminModule.firestore).FieldValue;
     const payload = {
       ...data,
       uploadedAt: FieldValue.serverTimestamp(),

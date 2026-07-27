@@ -3,6 +3,7 @@
 import React from "react";
 import { Play, Pause, Search, Music, Clock } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 export default function SearchResults({
   results,
@@ -61,9 +62,9 @@ export default function SearchResults({
           {results.map((song, index) => {
             const isCurrent = currentSong?.id === song.id;
             return (
+              <ProtectedAction action={() => playSong(song)}>
               <div
                 key={song.id}
-                onClick={() => playSong(song)}
                 className="grid grid-cols-[28px_1fr_48px] items-center gap-4 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-white/[0.03] active:bg-white/[0.05]"
               >
                 {/* Index / Play indicator */}
@@ -122,6 +123,7 @@ export default function SearchResults({
                   {song.duration}
                 </div>
               </div>
+              </ProtectedAction>
             );
           })}
         </div>

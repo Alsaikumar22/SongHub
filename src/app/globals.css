@@ -171,3 +171,84 @@ html.theme-transition *::after {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
+
+/* ─────────────────────────────────────────────── */
+/* Auth Animations                               */
+/* ─────────────────────────────────────────────── */
+
+/* Fade in animation for auth modals */
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-auth-in {
+  animation: auth-fade-in 0.3s ease-out forwards;
+}
+
+/* Success check animation */
+@keyframes auth-success-check {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-auth-success {
+  animation: auth-success-check 0.5s ease-out forwards;
+}
+
+/* Slide up for auth pages */
+@keyframes auth-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: auth-slide-up 0.35s ease-out forwards;
+}
+
+/* Auth input focus ring styles */
+input[type="text"]:focus-visible {
+  outline: 2px solid #D4A32A;
+  outline-offset: -2px;
+}
+
+/* Ensure no autofill background on auth inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #111111 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+}
+
+/* Gold accent glow for active states */
+.auth-gold-glow {
+  box-shadow: 0 0 20px rgba(212, 163, 42, 0.15), 0 0 40px rgba(212, 163, 42, 0.05);
+}
+
+/* Auth backdrop blur */
+.auth-backdrop {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

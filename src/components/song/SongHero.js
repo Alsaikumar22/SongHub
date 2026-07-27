@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Play, Pause, Heart, Plus, Share2, Check, Video } from "lucide-react";
 import { extractDominantColor } from "@/utils/extract-color";
 import SongArtwork from "../ui/SongArtwork";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
+import ProtectedAction from "@/components/auth/ProtectedAction";
+import { useAuth } from "@/context/auth-context";
 
 export default function SongHero({
   song,
@@ -20,9 +22,22 @@ export default function SongHero({
   removeSongFromPlaylist,
 }) {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [shareNotification, setShareNotification] = useState(false);
+  const playlistDropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!showPlaylistDropdown) return;
+    const handleClickOutside = (e) => {
+      if (playlistDropdownRef.current && !playlistDropdownRef.current.contains(e.target)) {
+        setShowPlaylistDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showPlaylistDropdown]);
 
   useEffect(() => {
     extractDominantColor(song.coverUrl).then(setGradientColor);
@@ -98,31 +113,34 @@ export default function SongHero({
 
       {/* 2. Separated Action Row (Spotify-Style Placement) */}
       <div className="flex items-center justify-start gap-3 md:gap-4 py-2 border-b border-line pb-6">
-        <button
-          onClick={handlePlayClick}
-          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer"
-          title={isCurrentSong && isPlaying ? "Pause" : "Play"}
-        >
-          {isCurrentSong && isPlaying ? (
-            <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" />
-          ) : (
-            <Play className="w-5 h-5 md:w-6 md:h-6 fill-current ml-0.5" />
-          )}
-        </button>
+        <ProtectedAction action={handlePlayClick}>
+          <button
+            className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer"
+            title={isCurrentSong && isPlaying ? "Pause" : "Play"}
+          >
+            {isCurrentSong && isPlaying ? (
+              <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" />
+            ) : (
+              <Play className="w-5 h-5 md:w-6 md:h-6 fill-current ml-0.5" />
+            )}
+          </button>
+        </ProtectedAction>
 
-        <button
-          onClick={toggleFavorite}
-          className={`w-9 h-9 md:w-11 md:h-11 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm ${
-            isFavorited
-              ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-[pulse_1.5s_infinite]"
-              : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
-          }`}
-          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isFavorited ? "fill-current" : ""}`} />
-        </button>
+        <ProtectedAction action={toggleFavorite}>
+          <button
+            className={`w-9 h-9 md:w-11 md:h-11 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm ${
+              isFavorited
+                ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-[pulse_1.5s_infinite]"
+                : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
+            }`}
+            title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isFavorited ? "fill-current" : ""}`} />
+          </button>
+        </ProtectedAction>
 
-        <div className="relative">
+        <ProtectedAction action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}>
+        <div className="relative" ref={playlistDropdownRef}>
           <button
             onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
             className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
@@ -132,51 +150,46 @@ export default function SongHero({
           </button>
 
           {showPlaylistDropdown && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowPlaylistDropdown(false)}
-              />
-              <div className="absolute left-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                  Select Playlist
-                </div>
-                {playlists.length > 0 ? (
-                  playlists.map((list) => {
-                    const isInPlaylist = list.songIds.includes(song.id);
-                    return (
-                      <button
-                        key={list.id}
-                        onClick={() => {
-                          if (isInPlaylist) {
-                            removeSongFromPlaylist(list.id, song.id);
-                          } else {
-                            addSongToPlaylist(list.id, song.id);
-                          }
-                          setShowPlaylistDropdown(false);
-                        }}
-                        className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
-                      >
-                        <span className="truncate">{list.name}</span>
-                        {isInPlaylist ? (
-                          <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
-                            Added
-                          </span>
-                        ) : (
-                          <Plus className="w-3.5 h-3.5 text-muted" />
-                        )}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-3 py-2 text-xs text-muted italic text-center">
-                    No custom playlists
-                  </div>
-                )}
+            <div className="absolute left-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
+              <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
+                Select Playlist
               </div>
-            </>
+              {playlists.length > 0 ? (
+                playlists.map((list) => {
+                  const isInPlaylist = list.songIds.includes(song.id);
+                  return (
+                    <button
+                      key={list.id}
+                      onClick={() => {
+                        if (isInPlaylist) {
+                          removeSongFromPlaylist(list.id, song.id);
+                        } else {
+                          addSongToPlaylist(list.id, song.id);
+                        }
+                        setShowPlaylistDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
+                    >
+                      <span className="truncate">{list.name}</span>
+                      {isInPlaylist ? (
+                        <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
+                          Added
+                        </span>
+                      ) : (
+                        <Plus className="w-3.5 h-3.5 text-muted" />
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-2 text-xs text-muted italic text-center">
+                  No custom playlists
+                </div>
+              )}
+            </div>
           )}
         </div>
+        </ProtectedAction>
 
         {(song?.media?.video || song?.videoUrl || song?.youtubeUrl || song?.youtubeId) && (
           <Link

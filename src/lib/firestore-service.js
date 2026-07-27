@@ -3,6 +3,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  collection,
+  addDoc,
 } from "firebase/firestore";
 
 /**
@@ -16,15 +18,19 @@ async function getUserDoc(uid, userProfile = null) {
   if (!snap.exists()) {
     // Create a brand new document with defaults + profile info
     const defaultData = {
+      uid: uid,
+      role: "user",
       favorites: [],
       playlists: [],
       recentlyPlayed: [],
       createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
       ...(userProfile
         ? {
             email: userProfile.email || null,
             displayName: userProfile.displayName || null,
             photoURL: userProfile.photoURL || null,
+            provider: userProfile.provider || null,
           }
         : {}),
     };
@@ -40,6 +46,7 @@ async function getUserDoc(uid, userProfile = null) {
         email: userProfile.email || null,
         displayName: userProfile.displayName || null,
         photoURL: userProfile.photoURL || null,
+        lastLogin: new Date().toISOString(),
       },
       { merge: true }
     );
@@ -62,6 +69,29 @@ export async function fetchUserData(uid, userProfile = null) {
   } catch (error) {
     console.error("Error fetching user data:", error);
     return null;
+  }
+}
+
+/**
+ * Save user login data to Firestore (provider, timestamps).
+ */
+export async function saveUserLoginData(uid, loginData) {
+  if (!uid) return;
+  try {
+    const ref = doc(db, "Youworship_users", uid);
+    await setDoc(
+      ref,
+      {
+        email: loginData.email || null,
+        displayName: loginData.displayName || null,
+        photoURL: loginData.photoURL || null,
+        provider: loginData.provider || "unknown",
+        lastLogin: loginData.lastLogin || new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error saving login data:", error);
   }
 }
 
@@ -119,5 +149,39 @@ export async function saveUserData(uid, { favorites, playlists, recentlyPlayed }
     );
   } catch (error) {
     console.error("Error saving user data:", error);
+  }
+}
+
+/**
+ * Save song request to Firestore.
+ */
+export async function saveSongRequest(requestData) {
+  try {
+    const ref = collection(db, "Youworship_requests");
+    await addDoc(ref, {
+      ...requestData,
+      createdAt: new Date().toISOString(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error saving song request:", error);
+    throw error;
+  }
+}
+
+/**
+ * Save user feedback to Firestore.
+ */
+export async function saveFeedback(feedbackData) {
+  try {
+    const ref = collection(db, "Youworship_feedback");
+    await addDoc(ref, {
+      ...feedbackData,
+      createdAt: new Date().toISOString(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error saving feedback:", error);
+    throw error;
   }
 }
