@@ -14,18 +14,20 @@ import {
 import { useAudio } from "@/context/audio-context";
 import { useSearch } from "@/context/search-context";
 import { useAuth } from "@/context/auth-context";
+import LogoutConfirm from "@/components/auth/LogoutConfirm";
 
-export default function MobileNav() {
+export default function MobileNav({ setShowAuth }) {
   const {
     activeTab,
     setActiveTab,
     activePlaylistId,
     setActivePlaylistId,
     setViewedSongId,
+    setShowFullHome,
   } = useAudio();
 
   const { setShowFullResults } = useSearch();
-  const { user, loading, isAuthenticated, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, isAuthenticated, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -56,6 +58,7 @@ export default function MobileNav() {
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
+        setShowFullHome(true);
         if (isOnSongPage) router.push("/");
       },
     },
@@ -149,9 +152,9 @@ export default function MobileNav() {
                 </button>
               ) : (
                 <button
-                  onClick={signInWithGoogle}
+                  onClick={() => setShowAuth(true)}
                   className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
-                  title="Sign in with Google"
+                  title="Sign In"
                 >
                   <LogIn className="w-5 h-5" />
                 </button>

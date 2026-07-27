@@ -16,9 +16,32 @@ export default function CategoryDetails({ category, language, onBack }) {
 
   const songIds = language === "telugu" ? category.songIdsTe : category.songIdsEn;
   
-  // Filter songs based on category and language
-  const categorySongs = (songs || [])
-    .filter((song) => songIds.includes(song.id));
+  // Filter songs based on category and language dynamically
+  const categorySongs = (songs || []).filter((song) => {
+    // Verify language matches the selected tab language strictly
+    const songLanguage = (song.language || "").toLowerCase();
+    const matchesLanguage = language === "telugu"
+      ? (songLanguage === "te" || songLanguage === "telugu")
+      : (songLanguage === "en" || songLanguage === "english");
+
+    if (!matchesLanguage) return false;
+
+    // If active tab is telugu, ensure the song title contains Telugu script to hide duplicates with English titles
+    if (language === "telugu") {
+      const hasTeluguScript = /[\u0C00-\u0C7F]/.test(song.title) || /[\u0C00-\u0C7F]/.test(song.teluguTitle);
+      if (!hasTeluguScript) return false;
+    }
+
+    // 1. Match by database category array or string
+    const matchByCategoryField = Array.isArray(song.categoryArr)
+      ? song.categoryArr.some(cat => cat.toLowerCase() === category.nameEn.toLowerCase() || cat.toLowerCase() === category.nameTe.toLowerCase())
+      : (typeof song.category === "string" && (song.category.toLowerCase() === category.nameEn.toLowerCase() || song.category.toLowerCase() === category.nameTe.toLowerCase()));
+
+    // 2. Fallback: match by the hardcoded list in categoryData.js
+    const matchByHardcodedList = songIds.includes(song.id);
+
+    return matchByCategoryField || matchByHardcodedList;
+  });
 
   // Reset viewMode when category changes and scroll to top
   useEffect(() => {

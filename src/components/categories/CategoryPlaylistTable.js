@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
   const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
@@ -86,26 +87,25 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const isFav = favorites.includes(song.id);
           const isHovered = hoveredRowId === song.id;
 
-          const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : song.title;
-          const subtitle = language === "telugu" && song.teluguTitle ? song.title : null;
+          const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
+          const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
 
           // Mock date added based on releaseYear or ID
           const year = song.releaseYear || 2024;
           const dateAdded = `Jan 15, ${year}`;
 
           return (
+            <ProtectedAction key={song.id} action={() => {
+              if (isCurrent) {
+                togglePlay();
+              } else {
+                playSong(song);
+              }
+            }}>
             <motion.div
-              key={song.id}
               variants={itemVariants}
               onMouseEnter={() => setHoveredRowId(song.id)}
               onMouseLeave={() => setHoveredRowId(null)}
-              onClick={() => {
-                if (isCurrent) {
-                  togglePlay();
-                } else {
-                  playSong(song);
-                }
-              }}
               className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-3 rounded-lg cursor-pointer transition-colors duration-150 select-none ${
                 isCurrent
                   ? "bg-card-hover/60 text-white"
@@ -238,6 +238,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 </div>
               </div>
             </motion.div>
+            </ProtectedAction>
           );
         })}
       </motion.div>

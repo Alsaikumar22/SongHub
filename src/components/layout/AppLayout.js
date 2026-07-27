@@ -6,9 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
 import PlayerBar from "@/components/player-bar";
+import AuthModal from "@/components/auth/AuthModal";
+import TalkToUsDrawer from "./TalkToUsDrawer";
+import { useAuth } from "@/context/auth-context";
 import SongArtwork from "@/components/ui/SongArtwork";
 import {
-  Compass,
+  Music,
+  PlayCircle,
+  LayoutGrid,
   Plus,
   ListMusic,
   SquareChevronLeft,
@@ -17,15 +22,24 @@ import {
   Library,
   Search,
   Heart,
-  Trash2
+  Info,
+  Trash2,
+  MessageSquare,
+  Shield,
+  Sparkles,
+  HelpCircle,
+  ChevronDown
 } from "lucide-react";
 
 export default function AppLayout({ children }) {
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState("signup");
   const {
     songs,
     currentSong,
     isPlaying,
     playSong,
+    togglePlay,
     favorites,
     playlists,
     createPlaylist,
@@ -35,16 +49,23 @@ export default function AppLayout({ children }) {
     setActiveTab,
     activePlaylistId,
     setActivePlaylistId,
-    setViewedSongId
+    setViewedSongId,
+    setShowFullHome
   } = useAudio();
 
   const pathname = usePathname();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [showTalkToUs, setShowTalkToUs] = useState(false);
+  const [talkToUsTab, setTalkToUsTab] = useState("request");
+  const [talkToUsCategory, setTalkToUsCategory] = useState("Account & Login");
+  const [queriesExpanded, setQueriesExpanded] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const handleCreatePlaylist = (e) => {
     e.preventDefault();
@@ -57,23 +78,90 @@ export default function AppLayout({ children }) {
 
   const isDiscover = pathname === "/";
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "Space" || e.key === " ") {
+        // Skip hotkey when typing in input, textarea, select, button, or contenteditable
+        const active = document.activeElement;
+        if (
+          active &&
+          (active.tagName === "INPUT" ||
+            active.tagName === "TEXTAREA" ||
+            active.tagName === "SELECT" ||
+            active.tagName === "BUTTON" ||
+            active.isContentEditable)
+        ) {
+          return;
+        }
+
+        // Prevent default spacebar scroll behavior
+        e.preventDefault();
+
+        // Toggle playback status
+        togglePlay();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [togglePlay]);
+
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
-      <Header />
+      <Header
+        setShowAuth={setShowAuth}
+        setAuthMode={setAuthMode}
+      />
       <div className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0">
-        {/* SIDEBAR — with clean unified structure */}
+        {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
         >
-          {/* ─── Top Nav ─── */}
+          {/* ─── Main Navigation ─── */}
           <div className="px-3 pt-3 pb-2 space-y-0.5">
             <SidebarNavItem
-              icon={<Compass className="w-5 h-5" />}
-              label="Browse"
+              icon={<Music className="w-5 h-5" />}
+              label="Songs"
               collapsed={sidebarCollapsed}
-              active={isDiscover && (activeTab === "discover" || activeTab === "categories")}
+              active={isDiscover && activeTab === "discover"}
               onClick={() => {
                 setActiveTab("discover");
+                setActivePlaylistId(null);
+                setViewedSongId(null);
+                setShowFullHome(false);
+                router.push("/");
+              }}
+            />
+            <SidebarNavItem
+              icon={<PlayCircle className="w-5 h-5" />}
+              label="Now Playing"
+              collapsed={sidebarCollapsed}
+              active={false}
+              onClick={() => {
+                if (currentSong) {
+                  if (!isAuthenticated) {
+                    setShowAuth(true);
+                    setAuthMode("signup");
+                    return;
+                  }
+                  router.push(`/song/${encodeURIComponent(currentSong.id)}?view=lyrics`);
+                } else {
+                  setActiveTab("discover");
+                  setActivePlaylistId(null);
+                  setViewedSongId(null);
+                  router.push("/");
+                }
+              }}
+            />
+            <SidebarNavItem
+              icon={<LayoutGrid className="w-5 h-5" />}
+              label="Categories"
+              collapsed={sidebarCollapsed}
+              active={isDiscover && activeTab === "categories"}
+              onClick={() => {
+                setActiveTab("categories");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
                 router.push("/");
@@ -84,13 +172,13 @@ export default function AppLayout({ children }) {
           {/* ─── Divider ─── */}
           <div className="mx-3 border-t border-line/10" />
 
-          {/* ─── Collection Section ─── */}
+          {/* ─── Your Library Section ─── */}
           <div className="flex-1 flex flex-col overflow-hidden px-3 pt-2 pb-1">
-            {/* Collection Header */}
+            {/* Library Header */}
             <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}>
               {!sidebarCollapsed && (
                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
-                  Collection
+                  Your Library
                 </span>
               )}
               {sidebarCollapsed ? (
@@ -106,7 +194,7 @@ export default function AppLayout({ children }) {
               )}
             </div>
 
-            {/* Favorites */}
+            {/* Collection (Favorites) */}
             {!sidebarCollapsed && (
               <div className="px-1 mb-1">
                 <div className="group relative">
@@ -125,7 +213,7 @@ export default function AppLayout({ children }) {
                       <Heart className="w-4.5 h-4.5 text-title fill-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-copy block truncate">Favorites</span>
+                      <span className="text-sm font-medium text-copy block truncate">Collection</span>
                       <span className="text-xs text-muted block truncate">{favorites.length} songs</span>
                     </div>
                   </button>
@@ -189,6 +277,91 @@ export default function AppLayout({ children }) {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* ─── Divider ─── */}
+          <div className="mx-3 border-t border-line/10" />
+
+          {/* ─── Queries Dropdown Section ─── */}
+          <div className="px-3 pt-1.5 pb-2 space-y-0.5">
+            <button
+              onClick={() => {
+                if (sidebarCollapsed) {
+                  setSidebarCollapsed(false);
+                  setQueriesExpanded(true);
+                } else {
+                  setQueriesExpanded((v) => !v);
+                }
+              }}
+              className={`w-full flex items-center justify-between px-3 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                queriesExpanded && !sidebarCollapsed
+                  ? "text-copy bg-card-hover/40"
+                  : "text-muted hover:text-copy hover:bg-card-hover/20"
+              }`}
+              title="Queries & Support"
+            >
+              <div className="flex items-center gap-4">
+                <HelpCircle className="w-5 h-5 shrink-0" />
+                {!sidebarCollapsed && <span>Queries</span>}
+              </div>
+              {!sidebarCollapsed && (
+                <ChevronDown
+                  className={`w-4 h-4 text-muted transition-transform duration-200 ${
+                    queriesExpanded ? "rotate-180" : ""
+                  }`}
+                />
+              )}
+            </button>
+
+            {/* Dropdown Options */}
+            {queriesExpanded && !sidebarCollapsed && (
+              <div className="pl-4 pr-1 py-1 space-y-0.5 border-l border-line/25 ml-5.5 animate-in slide-in-from-top-2 duration-150">
+                <SidebarNavItem
+                  icon={<Shield className="w-4 h-4 text-indigo-400 shrink-0" />}
+                  label="Account & Login Issues"
+                  collapsed={false}
+                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Account & Login"}
+                  onClick={() => {
+                    setTalkToUsTab("feedback");
+                    setTalkToUsCategory("Account & Login");
+                    setShowTalkToUs(true);
+                  }}
+                  isSubItem={true}
+                />
+                <SidebarNavItem
+                  icon={<Sparkles className="w-4 h-4 text-[#D4A32A] shrink-0" />}
+                  label="Feature Requests"
+                  collapsed={false}
+                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Feature Request"}
+                  onClick={() => {
+                    setTalkToUsTab("feedback");
+                    setTalkToUsCategory("Feature Request");
+                    setShowTalkToUs(true);
+                  }}
+                  isSubItem={true}
+                />
+                <SidebarNavItem
+                  icon={<MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />}
+                  label="Contact Us"
+                  collapsed={false}
+                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Contact Us"}
+                  onClick={() => {
+                    setTalkToUsTab("feedback");
+                    setTalkToUsCategory("Contact Us");
+                    setShowTalkToUs(true);
+                  }}
+                  isSubItem={true}
+                />
+              </div>
+            )}
+
+            <SidebarNavItem
+              icon={<Info className="w-5 h-5 text-sky-400" />}
+              label="About"
+              collapsed={sidebarCollapsed}
+              active={showAboutModal}
+              onClick={() => setShowAboutModal(true)}
+            />
           </div>
 
           {/* ─── Bottom Collapse Toggle ─── */}
@@ -318,7 +491,9 @@ export default function AppLayout({ children }) {
       </Suspense>
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
-      <MobileNav />
+      <MobileNav
+        setShowAuth={setShowAuth}
+      />
 
       {/* CREATE PLAYLIST MODAL */}
       {showCreateModal && (
@@ -368,27 +543,126 @@ export default function AppLayout({ children }) {
           </div>
         </div>
       )}
+
+      {/* AUTH MODAL — rendered at top level to avoid stacking context issues */}
+      {showAuth && (
+        <AuthModal
+          initialStep={authMode}
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => setShowAuth(false)}
+        />
+      )}
+
+      {/* ABOUT MODAL */}
+      {showAboutModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-line rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line-muted">
+              <span className="font-semibold text-title text-sm">
+                About
+              </span>
+              <button
+                onClick={() => setShowAboutModal(false)}
+                className="p-1 hover:bg-card-hover rounded-full text-dim hover:text-handle"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-4 pb-3 border-b border-line">
+                <img
+                  src="/youlogo.png"
+                  alt="You Worship"
+                  className="w-14 h-14 object-contain"
+                />
+                <div>
+                  <h2 className="text-lg font-bold text-title">You Worship</h2>
+                  <p className="text-xs text-muted">🎸Anywhere🎸</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted leading-relaxed">
+                  A worship song collection app designed to help you explore, search, and
+                  immerse yourself in devotional music. Featuring a curated library of songs
+                  with lyrics in Telugu and English, video playback, and personalized playlists.
+                </p>
+              </div>
+
+              <div className="bg-card-hover rounded-lg p-3 border border-line space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Song Collection</span>
+                  <span className="text-title font-semibold">{songs.length} tracks</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Categories</span>
+                  <span className="text-title font-semibold">Multiple genres</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Languages</span>
+                  <span className="text-title font-semibold">Telugu, English</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center pt-1">
+                <button
+                  onClick={() => setShowAboutModal(false)}
+                  className="px-6 py-2 bg-card-hover border border-line rounded-lg text-xs font-semibold text-copy hover:bg-line transition-all active:scale-95"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating "Talk to us" circular button on the right side */}
+      <button
+        onClick={() => setShowTalkToUs(true)}
+        className="fixed right-6 bottom-24 z-40 w-12.5 h-12.5 bg-[#D4A32A] hover:bg-[#c49527] text-black shadow-[0_4px_25px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group"
+        title="Talk to us"
+        aria-label="Open Talk to us drawer"
+      >
+        <MessageSquare className="w-5.5 h-5.5 text-black fill-black/10 transition-transform duration-200 group-hover:rotate-12" />
+        {/* Tooltip on hover */}
+        <span className="absolute right-full mr-3 px-2.5 py-1.5 bg-card text-title text-xs font-bold rounded-lg shadow-xl border border-line opacity-0 scale-95 origin-right group-hover:opacity-100 group-hover:scale-100 transition-all pointer-events-none whitespace-nowrap">
+          Talk to us
+        </span>
+      </button>
+
+      {/* TALK TO US DRAWER */}
+      <TalkToUsDrawer
+        isOpen={showTalkToUs}
+        onClose={() => setShowTalkToUs(false)}
+        initialTab={talkToUsTab}
+        initialCategory={talkToUsCategory}
+      />
     </div>
   );
 }
 
-function SidebarNavItem({ icon, label, collapsed, active, onClick }) {
+function SidebarNavItem({ icon, label, collapsed, active, onClick, isSubItem = false }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-4"} px-3 py-3 rounded-lg text-sm font-semibold transition-all group relative cursor-pointer ${
+      className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-3"} ${
+        isSubItem ? "px-2 py-2 text-xs" : "px-3 py-3 text-sm"
+      } rounded-lg font-semibold transition-all group relative cursor-pointer ${
         active
-          ? "text-copy"
-          : "text-muted hover:text-copy"
+          ? "text-copy bg-card-hover/20"
+          : "text-muted hover:text-copy hover:bg-card-hover/10"
       }`}
       title={collapsed ? label : undefined}
     >
-      <span className="shrink-0 group-hover:scale-105 transition-transform">{icon}</span>
+      {icon}
       {!collapsed && (
-        <span className="truncate flex-1 text-left">{label}</span>
+        <span className={`truncate ${active ? "text-title" : "text-muted group-hover:text-title"}`}>
+          {label}
+        </span>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-title text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
+        <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-card text-title text-xs font-bold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
           {label}
         </div>
       )}

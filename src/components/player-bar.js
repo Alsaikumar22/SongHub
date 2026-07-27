@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
 import {
@@ -134,13 +135,6 @@ export default function PlayerBar() {
     setIsExpanded(true);
   };
 
-  const handleLyricsClick = () => {
-    setIsExpanded(false);
-    if (currentSong) {
-      router.push(`/song/${currentSong.id}?view=lyrics`);
-    }
-  };
-
   const isFavorited = currentSong && favorites.includes(currentSong.id);
   const { r, g, b } = ambientColor;
 
@@ -220,8 +214,8 @@ export default function PlayerBar() {
                   <Video className="w-4.5 h-4.5 text-red-400" />
                 </button>
               )}
+              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
               <button
-                onClick={() => toggleFavorite(currentSong.id)}
                 className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
                 aria-label="Add to favorites"
               >
@@ -233,6 +227,7 @@ export default function PlayerBar() {
                   }`}
                 />
               </button>
+              </ProtectedAction>
               <button
                 onClick={togglePlay}
                 className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer"
@@ -280,8 +275,8 @@ export default function PlayerBar() {
                     {currentSong.artist}
                   </span>
                 </div>
+                <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
                 <button
-                  onClick={() => toggleFavorite(currentSong.id)}
                   className="p-1 hover:bg-card-hover rounded-full group transition-colors flex-shrink-0 cursor-pointer"
                   aria-label="Add to favorites"
                 >
@@ -293,6 +288,7 @@ export default function PlayerBar() {
                     }`}
                   />
                 </button>
+                </ProtectedAction>
               </>
             ) : (
               <div className="flex items-center gap-3">
@@ -427,17 +423,28 @@ export default function PlayerBar() {
             )}
 
             {currentSong ? (
-              <Link
-                href={isLyricsPage ? `/song/${currentSong.id}` : `/song/${currentSong.id}?view=lyrics`}
-                className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                  isLyricsPage
-                    ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
-                    : "text-muted hover:text-copy hover:bg-card-hover"
-                }`}
-                title={isLyricsPage ? "Close Lyrics" : "Lyrics"}
-              >
-                <MicIcon className="w-4 h-4" />
-              </Link>
+              isLyricsPage ? (
+                <Link
+                  href={`/song/${currentSong.id}`}
+                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                    isLyricsPage
+                      ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
+                      : "text-muted hover:text-copy hover:bg-card-hover"
+                  }`}
+                  title="Close Lyrics"
+                >
+                  <MicIcon className="w-4 h-4" />
+                </Link>
+              ) : (
+                <ProtectedAction action={() => router.push(`/song/${currentSong.id}?view=lyrics`)}>
+                  <button
+                    className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
+                    title="View Lyrics"
+                  >
+                    <MicIcon className="w-4 h-4" />
+                  </button>
+                </ProtectedAction>
+              )
             ) : (
               <span className="p-1.5 text-muted">
                 <MicIcon className="w-4 h-4" />
@@ -512,13 +519,19 @@ export default function PlayerBar() {
                 {pathname === "/" ? "Home Catalog" : "Details Page"}
               </span>
             </div>
-            <button
-              onClick={handleLyricsClick}
-              className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
-              title="View lyrics"
-            >
-              <MicIcon className="w-5.5 h-5.5" />
-            </button>
+            <ProtectedAction action={() => {
+              setIsExpanded(false);
+              if (currentSong) {
+                router.push(`/song/${currentSong.id}?view=lyrics`);
+              }
+            }}>
+              <button
+                className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                title="View lyrics"
+              >
+                <MicIcon className="w-5.5 h-5.5" />
+              </button>
+            </ProtectedAction>
           </div>
 
           {/* Album Artwork Section */}
@@ -551,8 +564,8 @@ export default function PlayerBar() {
                   {currentSong.artist}
                 </span>
               </div>
+              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
               <button
-                onClick={() => toggleFavorite(currentSong.id)}
                 className="p-2 rounded-full hover:bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
               >
                 <Heart
@@ -563,6 +576,7 @@ export default function PlayerBar() {
                   }`}
                 />
               </button>
+              </ProtectedAction>
             </div>
 
             {/* Timeline Progress Scrubber */}

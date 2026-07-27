@@ -4,18 +4,26 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Heart, Share2, Download, MoreVertical, Check } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 export default function CategorySongCard({ song, language, onClick }) {
-  const { toggleFavorite, favorites, currentSong, isPlaying } = useAudio();
+  const { toggleFavorite, favorites, currentSong, isPlaying, playSong } = useAudio();
   const [isShared, setIsShared] = useState(false);
+
+  const handlePlayClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      playSong(song);
+    }
+  };
 
   const isCurrent = currentSong?.id === song.id;
   const isSongPlaying = isCurrent && isPlaying;
   const isFav = favorites.includes(song.id);
 
-  // If language is Telugu, show Telugu title, and English title as transliteration.
-  const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : song.title;
-  const subtitle = language === "telugu" && song.teluguTitle ? song.title : null;
+  const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
+  const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
@@ -63,11 +71,13 @@ export default function CategorySongCard({ song, language, onClick }) {
         />
 
         {/* Hover overlay with Play button */}
-        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
-            <Play className="w-5 h-5 fill-current ml-0.5" />
+        <ProtectedAction action={handlePlayClick}>
+          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
+              <Play className="w-5 h-5 fill-current ml-0.5" />
+            </div>
           </div>
-        </div>
+        </ProtectedAction>
 
         {/* Active Now Playing indicator */}
         {isSongPlaying && (

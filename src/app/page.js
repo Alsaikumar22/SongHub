@@ -62,6 +62,7 @@ function HomeContent() {
     activePlaylistId,
     setActivePlaylistId,
     setViewedSongId,
+    showFullHome,
   } = useAudio();
 
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
@@ -82,19 +83,38 @@ function HomeContent() {
     if (!searchParams) return;
     
     const tabParam = searchParams.get("tab");
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    if (tabParam) {
+      if (tabParam !== activeTab) {
+        setActiveTab(tabParam);
+      }
+    } else {
+      if (activeTab !== "discover") {
+        setActiveTab("discover");
+      }
     }
     
     const playlistIdParam = searchParams.get("playlistId");
-    if (playlistIdParam && playlistIdParam !== activePlaylistId) {
-      setActivePlaylistId(playlistIdParam);
+    if (playlistIdParam) {
+      if (playlistIdParam !== activePlaylistId) {
+        setActivePlaylistId(playlistIdParam);
+      }
+    } else {
+      if (activePlaylistId) {
+        setActivePlaylistId(null);
+      }
     }
     
     const queryParam = searchParams.get("q");
-    if (queryParam && queryParam !== searchQuery) {
-      setSearchQuery(queryParam);
-      setShowFullResults(true);
+    if (queryParam) {
+      if (queryParam !== searchQuery) {
+        setSearchQuery(queryParam);
+        setShowFullResults(true);
+      }
+    } else {
+      if (searchQuery) {
+        setSearchQuery("");
+        setShowFullResults(false);
+      }
     }
   }, [searchParams]);
 
@@ -151,7 +171,7 @@ function HomeContent() {
     setTimeout(() => {
       setSelectedLetter(null);
     }, 0);
-  }, [activeTab, activePlaylistId, searchQuery]);
+  }, [activeTab, activePlaylistId, searchQuery, searchParams]);
 
   const getFilteredSongs = () => {
     const safeSongs = Array.isArray(songs) ? songs : [];
@@ -249,16 +269,18 @@ function HomeContent() {
           </div>
         )}
 
-        {/* Box 1 & 2 — Carousel & Verse (Browse tab only) */}
-        {activeTab === "discover" && !(searchQuery && showFullResults) && !selectedLetter && (
-          <>
-            <HeroCarousel />
-            <VerseOfTheWeek />
-          </>
+        {/* Hero Carousel (Only when showFullHome is true) */}
+        {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
+          <HeroCarousel />
         )}
 
-        {/* Box 3 — Recently Played */}
+        {/* Box 2 — Verse (Browse tab only) */}
         {activeTab === "discover" && !(searchQuery && showFullResults) && !selectedLetter && (
+          <VerseOfTheWeek />
+        )}
+
+        {/* Recently Played (Only when showFullHome is true) */}
+        {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
           <RecentlyPlayed />
         )}
 
@@ -301,20 +323,16 @@ function HomeContent() {
         {/* 1. BROWSE TAB */}
         {activeTab === "discover" && (
           <div className="space-y-6">
-            {!selectedLetter && (
+            {!selectedLetter && showFullHome && (
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-muted uppercase tracking-wider">Good day</span>
                 <h1 className="text-2xl font-black text-title tracking-tight">Explore Music</h1>
               </div>
             )}
             
-            {!selectedLetter && (
-              <>
-                <HeroCarousel />
-                <VerseOfTheWeek />
-                <RecentlyPlayed />
-              </>
-            )}
+            {!selectedLetter && showFullHome && <HeroCarousel />}
+            {!selectedLetter && <VerseOfTheWeek />}
+            {!selectedLetter && showFullHome && <RecentlyPlayed />}
 
             <SongsSection
               songs={filteredSongs}

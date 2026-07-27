@@ -149,7 +149,8 @@ export function transformSongDoc(docSnap) {
   return {
     id: docId,
     title,
-    slug,
+    titleEnglish: data.titleEnglish || "",
+    slug: slug || docId,
     artist: artistName,
     artistObj: artistObj,
     artistName: artistName,
@@ -275,11 +276,18 @@ export const songService = {
   async getSongsByCategory(category) {
     if (!category) return this.getAllSongs();
     try {
-      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
-      const q = query(songsRef, where("category", "==", category));
-      const snapshot = await getDocs(q);
-      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap));
-      return songs.sort((a, b) => a.title.localeCompare(b.title));
+      const allSongs = await this.getAllSongs();
+      const lowerCat = category.trim().toLowerCase();
+      const songs = allSongs.filter((s) => {
+        if (Array.isArray(s.categoryArr)) {
+          return s.categoryArr.some((c) => c.trim().toLowerCase() === lowerCat);
+        }
+        if (typeof s.category === "string") {
+          return s.category.trim().toLowerCase() === lowerCat;
+        }
+        return false;
+      });
+      return songs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
     } catch (error) {
       console.error(`❌ [songService.getSongsByCategory] Error:`, error);
       throw error;
