@@ -3,6 +3,7 @@
 import React from "react";
 import { Play, Pause } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md" }) {
   const isCurrent = currentSong?.id === song.id;
@@ -11,8 +12,8 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
   const isSmall = size === "sm";
 
   return (
+    <ProtectedAction action={() => playSong(song)}>
     <div
-      onClick={() => playSong(song)}
       className={`relative flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
     >
       <div
@@ -59,5 +60,6 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
         {typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist || ""}
       </span>
     </div>
+    </ProtectedAction>
   );
 }

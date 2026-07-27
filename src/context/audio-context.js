@@ -78,6 +78,7 @@ export const AudioProvider = ({ children }) => {
   const [viewedSongId, setViewedSongId] = useState(null);
   const [activeTab, setActiveTab] = useState("discover");
   const [activePlaylistId, setActivePlaylistId] = useState(null);
+  const [showFullHome, setShowFullHome] = useState(true);
 
   const isLoopingRef = useRef(isLooping);
   const isShuffledRef = useRef(isShuffled);
@@ -774,7 +775,9 @@ export const AudioProvider = ({ children }) => {
         activeTab,
         setActiveTab,
         activePlaylistId,
-        setActivePlaylistId
+        setActivePlaylistId,
+        showFullHome,
+        setShowFullHome
       }}
     >
       {children}

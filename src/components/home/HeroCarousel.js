@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useAudio } from "@/context/audio-context";
 import {
   Play,
@@ -15,12 +14,15 @@ import {
   Volume2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import useWeeklySongs from "@/hooks/useWeeklySongs";
 import { HeroCarouselSkeleton } from "@/components/ui/SongSkeleton";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 
 export default function HeroCarousel() {
+  const router = useRouter();
   const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading } = useAudio();
   const { weeklySongs } = useWeeklySongs({ songs, count: 5 });
 
@@ -252,8 +254,8 @@ export default function HeroCarousel() {
         {/* Left: Play + Lyrics + Favorite */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Play / Pause Button */}
+          <ProtectedAction action={() => playSong(current.originalSong)}>
           <button
-            onClick={() => playSong(current.originalSong)}
             className="px-4 sm:px-7 h-10 sm:h-12 bg-title text-card font-black text-[11px] sm:text-sm rounded-full shadow-xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             {isCurrentPlaying ? (
@@ -273,19 +275,21 @@ export default function HeroCarousel() {
               </>
             )}
           </button>
+          </ProtectedAction>
 
           {/* Lyrics Link */}
-          <Link
-            href={`/song/${current.id}`}
-            className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-          >
-            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
-            <span className="hidden sm:inline">View Lyrics</span>
-          </Link>
+          <ProtectedAction action={() => router.push(`/song/${current.id}`)}>
+            <button
+              className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+            >
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
+              <span className="hidden sm:inline">View Lyrics</span>
+            </button>
+          </ProtectedAction>
 
           {/* Favorite Button */}
+          <ProtectedAction action={() => toggleFavorite(current.id)}>
           <button
-            onClick={() => toggleFavorite(current.id)}
             className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-card/85 hover:bg-card border border-line text-title flex items-center justify-center backdrop-blur-xl transition-all hover:scale-105 active:scale-90 cursor-pointer shadow-sm"
             title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
           >
@@ -295,6 +299,7 @@ export default function HeroCarousel() {
               }`}
             />
           </button>
+          </ProtectedAction>
         </div>
 
         {/* Right: Up Next thumbnails (hidden on mobile) + Nav Arrows */}

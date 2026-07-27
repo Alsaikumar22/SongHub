@@ -11,11 +11,14 @@ import {
   Plus,
   Share2,
   Check,
+  Heart,
+  Download,
 } from "lucide-react";
 import SongCard from "./SongCard";
 import SongArtwork from "../ui/SongArtwork";
 import { useAudio } from "@/context/audio-context";
 import CategoryPlaylistTable from "../categories/CategoryPlaylistTable";
+import { useRouter } from "next/navigation";
 import { SongsSectionSkeleton } from "../ui/SongSkeleton";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -97,13 +100,14 @@ export default function SongsSection({
   selectedLetter,
   setSelectedLetter,
 }) {
+  const router = useRouter();
   const sectionRefs = useRef({});
   const scrollRefs = useRef({});
   const [activeLetter, setActiveLetter] = useState(selectedLetter || null);
   const [scriptLang, setScriptLang] = useState("telugu");
 
   // State hooks for Spotify-style letter detail views
-  const { playlists, addSongToPlaylist } = useAudio();
+  const { playlists, addSongToPlaylist, favorites, toggleFavorite, showFullHome } = useAudio();
   const [viewMode, setViewMode] = useState("playlist"); // "playlist" | "cards"
   const [isShared, setIsShared] = useState(false);
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
@@ -479,7 +483,7 @@ export default function SongsSection({
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className={showFullHome ? "space-y-6" : "space-y-8"}>
           {availableLetters.map((letter) => (
             <div
               key={letter}
@@ -489,71 +493,194 @@ export default function SongsSection({
               data-letter={letter}
               className="scroll-mt-24"
             >
-              <div className="flex items-center justify-between mb-3 px-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-2xl font-bold text-title ${
-                      /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
-                    }`}
-                  >
-                    {letter}
-                  </span>
-                  <span className="text-xs text-muted/80 font-medium ml-1">
-                    ({letterGroups[letter].length})
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedLetter(letter)}
-                  className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
-                >
-                  Show all
-                </button>
-              </div>
+              {showFullHome ? (
+                <>
+                  {/* Original Simple Header */}
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-2xl font-bold text-title ${
+                          /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+                        }`}
+                      >
+                        {letter}
+                      </span>
+                      <span className="text-xs text-muted/80 font-medium ml-1">
+                        ({letterGroups[letter].length})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedLetter(letter)}
+                      className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
+                    >
+                      Show all
+                    </button>
+                  </div>
 
-              <div className="relative group/row">
-                {/* Left overlay arrow — centered vertically on md cover art (top-[96px]) */}
-                <button
-                  onClick={() => scrollRow(letter, "left")}
-                  className={`absolute left-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
-                    scrollStates[letter]?.left ? "md:flex" : "md:hidden"
-                  } animate-in fade-in zoom-in`}
-                  title="Scroll Left"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+                  {/* Original Horizontal Scrolling Row */}
+                  <div className="relative group/row">
+                    {/* Left overlay arrow — centered vertically on md cover art (top-[96px]) */}
+                    <button
+                      onClick={() => scrollRow(letter, "left")}
+                      className={`absolute left-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
+                        scrollStates[letter]?.left ? "md:flex" : "md:hidden"
+                      } animate-in fade-in zoom-in`}
+                      title="Scroll Left"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
 
-                <div
-                  ref={(el) => {
-                    scrollRefs.current[letter] = el;
-                  }}
-                  onScroll={() => updateLetterScroll(letter)}
-                  className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth"
-                >
-                  {letterGroups[letter].slice(0, 10).map((song) => (
-                    <SongCard
-                      key={song.id}
-                      song={song}
-                      currentSong={currentSong}
-                      isPlaying={isPlaying}
-                      playSong={playSong}
-                      size="md"
-                    />
-                  ))}
-                </div>
+                    <div
+                      ref={(el) => {
+                        scrollRefs.current[letter] = el;
+                      }}
+                      onScroll={() => updateLetterScroll(letter)}
+                      className="flex gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth"
+                    >
+                      {letterGroups[letter].slice(0, 10).map((song) => (
+                        <SongCard
+                          key={song.id}
+                          song={song}
+                          currentSong={currentSong}
+                          isPlaying={isPlaying}
+                          playSong={playSong}
+                          size="md"
+                        />
+                      ))}
+                    </div>
 
-                {/* Right overlay arrow — centered vertically on md cover art (top-[96px]) */}
-                <button
-                  onClick={() => scrollRow(letter, "right")}
-                  className={`absolute right-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
-                    scrollStates[letter]?.right !== false
-                      ? "md:flex"
-                      : "md:hidden"
-                  } animate-in fade-in zoom-in`}
-                  title="Scroll Right"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+                    {/* Right overlay arrow — centered vertically on md cover art (top-[96px]) */}
+                    <button
+                      onClick={() => scrollRow(letter, "right")}
+                      className={`absolute right-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
+                        scrollStates[letter]?.right !== false
+                          ? "md:flex"
+                          : "md:hidden"
+                      } animate-in fade-in zoom-in`}
+                      title="Scroll Right"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Linked Divider Header Row */}
+                  <div className="flex items-center gap-4 mb-4 select-none px-1">
+                    <div className="w-10 h-10 rounded-xl bg-card-hover border border-line flex items-center justify-center text-lg font-black text-title shadow-sm shrink-0">
+                      {letter}
+                    </div>
+                    <div className="flex-1 h-px bg-line/35" />
+                    <button
+                      onClick={() => setSelectedLetter(letter)}
+                      className="px-3.5 py-1.5 rounded-xl bg-card-hover border border-line text-xs font-black text-dim hover:text-title hover:border-line-muted transition-all shadow-sm shrink-0 select-none cursor-pointer"
+                    >
+                      {letterGroups[letter].length}
+                    </button>
+                  </div>
+
+                  {/* 2-Column Song List Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {letterGroups[letter].slice(0, 10).map((song) => {
+                      const isCurrent = currentSong?.id === song.id;
+                      const isThisPlaying = isCurrent && isPlaying;
+                      const isFavorite = favorites.includes(song.id);
+
+                      return (
+                        <div
+                          key={song.id}
+                          className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer select-none ${
+                            isCurrent
+                              ? "border-[#D4A32A]/40 bg-[#D4A32A]/5"
+                              : "border-line/40 bg-card-hover/20 hover:bg-card-hover/40 hover:border-line-muted"
+                          }`}
+                          onClick={() => router.push(`/song/${encodeURIComponent(song.id)}`)}
+                        >
+                          {/* Left: Toggle Favorite */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(song.id);
+                            }}
+                            className="p-1.5 text-dim hover:text-red-500 transition-all cursor-pointer mr-2.5 shrink-0"
+                          >
+                            <Heart
+                              className={`w-4.5 h-4.5 transition-all ${
+                                isFavorite
+                                  ? "text-red-500 fill-red-500 scale-105"
+                                  : "text-muted hover:scale-110"
+                              }`}
+                            />
+                          </button>
+
+                          {/* Song Cover Artwork Image */}
+                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-line shrink-0 mr-3 shadow-sm bg-card-hover select-none">
+                            <SongArtwork
+                              song={song}
+                              className="w-full h-full object-cover"
+                              iconSize="w-4.5 h-4.5"
+                            />
+                          </div>
+
+                          {/* Middle: Titles */}
+                          <div className="flex-1 min-w-0 pr-4">
+                            <span
+                              className={`font-semibold text-sm text-title block truncate ${
+                                /[\u0C00-\u0C7F]/ .test(song.teluguTitle || song.title) ? "font-telugu text-base leading-snug" : ""
+                              }`}
+                            >
+                              {song.teluguTitle || song.title}
+                            </span>
+                            {(song.titleEnglish || song.title) && (
+                              <span className="text-[11px] text-muted block truncate mt-0.5 font-medium">
+                                {song.titleEnglish || song.title}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Right: Controls */}
+                          <div className="flex items-center gap-3 shrink-0 select-none">
+                            {/* Play/Pause Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playSong(song);
+                              }}
+                              className={`p-1.5 rounded-full transition-all hover:bg-card-hover ${
+                                isCurrent ? "text-[#D4A32A]" : "text-dim hover:text-copy"
+                              }`}
+                            >
+                              {isThisPlaying ? (
+                                <Pause className="w-4 h-4 fill-current" />
+                              ) : (
+                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                              )}
+                            </button>
+
+                            {/* Download link */}
+                            {song.audioUrl && (
+                              <a
+                                href={song.audioUrl}
+                                download
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 text-dim hover:text-copy hover:bg-card-hover rounded-full transition-all"
+                                title="Download Song"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            )}
+
+                            {/* Chevron Arrow */}
+                            <ChevronRight className="w-4 h-4 text-dim/50" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
