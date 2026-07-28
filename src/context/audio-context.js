@@ -79,6 +79,7 @@ export const AudioProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState("discover");
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [showFullHome, setShowFullHome] = useState(true);
+  const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
 
   const isLoopingRef = useRef(isLooping);
   const isShuffledRef = useRef(isShuffled);
@@ -562,6 +563,41 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isPlaying]);
 
+  // Handle YouTube iframe sizing and styling for Mini Player mode
+  useEffect(() => {
+    const player = youtubePlayerRef.current;
+    if (!player) return;
+    try {
+      const iframe = player.getIframe();
+      if (!iframe) return;
+
+      if (isMiniPlayerActive) {
+        iframe.style.display = "block";
+        iframe.style.position = "fixed";
+        iframe.style.bottom = "100px";
+        iframe.style.right = "24px";
+        iframe.style.width = "320px";
+        iframe.style.height = "180px";
+        iframe.style.zIndex = "9999";
+        iframe.style.borderRadius = "12px";
+        iframe.style.border = "2px solid rgba(255, 255, 255, 0.15)";
+        iframe.style.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
+        if (typeof player.setSize === "function") {
+          player.setSize(320, 180);
+        }
+      } else {
+        iframe.style.display = "none";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        if (typeof player.setSize === "function") {
+          player.setSize(1, 1);
+        }
+      }
+    } catch (e) {
+      console.warn("Mini player effect sizing error:", e);
+    }
+  }, [isMiniPlayerActive, currentSong?.id]);
+
 
 
   const playSong = (song) => {
@@ -777,7 +813,9 @@ export const AudioProvider = ({ children }) => {
         activePlaylistId,
         setActivePlaylistId,
         showFullHome,
-        setShowFullHome
+        setShowFullHome,
+        isMiniPlayerActive,
+        setIsMiniPlayerActive
       }}
     >
       {children}

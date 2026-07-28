@@ -159,7 +159,7 @@ export default function AppLayout({ children }) {
                 setActiveTab("categories");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
-                router.push("/");
+                router.push("/?tab=categories");
               }}
             />
           </div>
@@ -198,7 +198,7 @@ export default function AppLayout({ children }) {
                       setActiveTab("favorites");
                       setActivePlaylistId(null);
                       setViewedSongId(null);
-                      router.push("/");
+                      router.push("/?tab=favorites");
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
                       isDiscover && activeTab === "favorites" ? "bg-card-hover" : "hover:bg-card-hover"
@@ -257,7 +257,7 @@ export default function AppLayout({ children }) {
                       setActiveTab("playlist");
                       setActivePlaylistId(list.id);
                       setViewedSongId(null);
-                      router.push("/");
+                      router.push(`/?tab=playlist&playlistId=${list.id}`);
                     }}
                   />
                   {!sidebarCollapsed && (
@@ -465,10 +465,10 @@ export default function AppLayout({ children }) {
                         />
                         <div className="min-w-0 flex-1">
                           <span className="text-xs font-medium text-copy group-hover:text-title block truncate">
-                            {song.title}
+                            {song.teluguTitle || song.title}
                           </span>
                           <span className="text-[10px] text-dim block truncate">
-                            {song.artist}
+                            {song.titleEnglish}
                           </span>
                         </div>
                       </button>

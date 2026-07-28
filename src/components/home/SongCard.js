@@ -57,7 +57,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
       </span>
 
       <span className={`text-muted block truncate mt-0.5 ${isSmall ? "text-xs" : "text-sm"}`}>
-        {typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist || ""}
+        {song.titleEnglish}
       </span>
     </div>
     </ProtectedAction>

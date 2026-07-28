@@ -632,9 +632,9 @@ export default function SongsSection({
                             >
                               {song.teluguTitle || song.title}
                             </span>
-                            {(song.titleEnglish || song.title) && (
+                            {song.titleEnglish && (
                               <span className="text-[11px] text-muted block truncate mt-0.5 font-medium">
-                                {song.titleEnglish || song.title}
+                                {song.titleEnglish}
                               </span>
                             )}
                           </div>

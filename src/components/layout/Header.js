@@ -85,6 +85,9 @@ export default function Header({ setShowAuth, setAuthMode }) {
     const telTitleMatch = (song.teluguTitle || "")
       .toLowerCase()
       .includes(trimmedQuery);
+    const titleEnglishMatch = (song.titleEnglish || "")
+      .toLowerCase()
+      .includes(trimmedQuery);
     const artistMatch = (song.artist || "")
       .toLowerCase()
       .includes(trimmedQuery);
@@ -93,7 +96,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
       ? lyricsRaw.join(" ")
       : lyricsRaw || "";
     const lyricsMatch = lyricsStr.toLowerCase().includes(trimmedQuery);
-    return titleMatch || telTitleMatch || artistMatch || lyricsMatch;
+    return titleMatch || telTitleMatch || titleEnglishMatch || artistMatch || lyricsMatch;
   });
 
   const matchingSongs = totalMatches.slice(0, 5);
@@ -188,14 +191,10 @@ export default function Header({ setShowAuth, setAuthMode }) {
             )}
             <button
               onClick={() => {
-                setActiveTab(
-                  activeTab === "categories" ? "discover" : "categories",
-                );
-                if (activeTab !== "categories") {
-                  setSearchQuery("");
-                  setShowFullResults(false);
-                  router.push("/");
-                }
+                setActiveTab("categories");
+                setSearchQuery("");
+                setShowFullResults(false);
+                router.push("/");
               }}
               className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
                 activeTab === "categories"
@@ -241,7 +240,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                         {song.teluguTitle || song.title}
                       </span>
                       <span className="text-[10px] text-muted block truncate mt-0.5">
-                        {song.artist}
+                        {song.titleEnglish}
                       </span>
                     </div>
                     <div className="w-7 h-7 rounded-full bg-card-hover group-hover:bg-white flex items-center justify-center text-title group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">

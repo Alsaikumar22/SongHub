@@ -14,7 +14,8 @@ import {
   Check,
   Play,
   Pause,
-  Heart
+  Heart,
+  Maximize2
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
@@ -84,6 +85,37 @@ function SongPageContent({ params }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const viewMode = searchParams.get("view"); // "video" | "lyrics" | null
+
+  const lyricsContainerRef = useRef(null);
+  const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
+  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1.1);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreenLyrics(document.fullscreenElement === lyricsContainerRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreenLyrics = () => {
+    const el = lyricsContainerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const increaseFontSize = () => {
+    setFontSizeMultiplier((prev) => Math.min(prev + 0.15, 2.0));
+  };
+  const decreaseFontSize = () => {
+    setFontSizeMultiplier((prev) => Math.max(prev - 0.15, 0.7));
+  };
 
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
@@ -691,22 +723,63 @@ function SongPageContent({ params }) {
 
         {/* Lyrics Section */}
         <div className="space-y-4 pt-2 flex-1 flex flex-col">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
               Lyrics
             </h3>
-            <LanguageSegmented
-              selected={selectedLanguage}
-              onChange={setSelectedLanguage}
-            />
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <LanguageSegmented
+                selected={selectedLanguage}
+                onChange={setSelectedLanguage}
+              />
+              
+              {/* Size & Full Screen Controls */}
+              <div className="flex items-center bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm h-9 md:h-11 overflow-hidden shrink-0">
+                {/* A- (Decrease Font Size) */}
+                <button
+                  onClick={decreaseFontSize}
+                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-xs"
+                  title="Decrease Font Size"
+                >
+                  A
+                </button>
+                {/* A+ (Increase Font Size) */}
+                <button
+                  onClick={increaseFontSize}
+                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-base"
+                  title="Increase Font Size"
+                >
+                  A
+                </button>
+                <div className="w-[1px] h-4 bg-line/30 mx-1 shrink-0" />
+                {/* Full Screen Toggle */}
+                <button
+                  onClick={toggleFullscreenLyrics}
+                  className={`px-3 h-full flex items-center justify-center transition-all cursor-pointer rounded-full hover:bg-card/45 ${
+                    isFullscreenLyrics
+                      ? "text-amber-500 font-bold"
+                      : "text-muted hover:text-title"
+                  }`}
+                  title="Toggle Fullscreen Lyrics"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-line bg-card shadow-sm">
+          <div
+            ref={lyricsContainerRef}
+            className={`relative flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden border border-line bg-card shadow-sm transition-all ${
+              isFullscreenLyrics ? "p-6 md:p-12 bg-card" : ""
+            }`}
+          >
             <SongLyrics
               song={song}
               isImmersive={true}
               selectedLanguage={selectedLanguage}
               setSelectedLanguage={setSelectedLanguage}
+              fontSizeMultiplier={fontSizeMultiplier}
             />
           </div>
         </div>

@@ -47,6 +47,27 @@ function MicIcon({ className }) {
   );
 }
 
+// Inline Picture in Picture SVG component
+function PipIcon({ className }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+      <rect width="10" height="7" x="12" y="13" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export default function PlayerBar() {
   const {
     currentSong,
@@ -67,7 +88,9 @@ export default function PlayerBar() {
     setIsLooping,
     setIsShuffled,
     favorites,
-    toggleFavorite
+    toggleFavorite,
+    isMiniPlayerActive,
+    setIsMiniPlayerActive
   } = useAudio();
 
   const pathname = usePathname();
@@ -127,6 +150,16 @@ export default function PlayerBar() {
     setSliderVal(newProgress);
     seekTo(newProgress);
     setIsDragging(false);
+  };
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
   };
 
   const handleContainerClick = (e) => {
@@ -272,7 +305,7 @@ export default function PlayerBar() {
                     {currentSong.teluguTitle || currentSong.title}
                   </Link>
                   <span className="text-xs text-muted block truncate">
-                    {currentSong.artist}
+                    {currentSong.titleEnglish}
                   </span>
                 </div>
                 <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
@@ -488,6 +521,34 @@ export default function PlayerBar() {
                 }}
               />
             </div>
+
+            {/* Open Mini Player Button */}
+            {currentSong ? (
+              <button
+                onClick={() => setIsMiniPlayerActive(!isMiniPlayerActive)}
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                  isMiniPlayerActive
+                    ? "text-amber-500 bg-card-hover scale-105 shadow-sm"
+                    : "text-muted hover:text-copy hover:bg-card-hover"
+                }`}
+                title={isMiniPlayerActive ? "Close Mini Player" : "Open Mini Player"}
+              >
+                <PipIcon className="w-4 h-4" />
+              </button>
+            ) : (
+              <span className="p-1.5 text-muted opacity-40 cursor-not-allowed" title="Play a song to use Mini Player">
+                <PipIcon className="w-4 h-4" />
+              </span>
+            )}
+
+            {/* Full Screen Button */}
+            <button
+              onClick={toggleFullScreen}
+              className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
+              title="Toggle Fullscreen"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
         </div>
       </div>
 
@@ -561,7 +622,7 @@ export default function PlayerBar() {
                   {currentSong.teluguTitle || currentSong.title}
                 </h2>
                 <span className="text-sm font-medium text-muted block text-left mt-1 truncate">
-                  {currentSong.artist}
+                  {currentSong.titleEnglish}
                 </span>
               </div>
               <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
@@ -678,6 +739,17 @@ export default function PlayerBar() {
 
           </div>
         </div>
+      )}
+
+      {/* Floating close button for Mini Player */}
+      {isMiniPlayerActive && currentSong && (
+        <button
+          onClick={() => setIsMiniPlayerActive(false)}
+          className="fixed bottom-[245px] right-[30px] z-[10000] p-1 bg-black/80 hover:bg-black text-white hover:text-red-400 rounded-full border border-white/10 shadow-lg cursor-pointer transition-all hover:scale-105 active:scale-95"
+          title="Close Mini Player"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       )}
 
     </>

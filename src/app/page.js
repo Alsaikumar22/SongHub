@@ -193,6 +193,7 @@ function HomeContent() {
       list = list.filter(
         (s) =>
           searchableText(s.teluguTitle || s.title).includes(q) ||
+          searchableText(s.titleEnglish).includes(q) ||
           searchableText(s.title).includes(q) ||
           searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
           searchableText(s.album).includes(q),
@@ -211,6 +212,7 @@ function HomeContent() {
     return songs.filter(
       (s) =>
         searchableText(s.teluguTitle || s.title).includes(q) ||
+        searchableText(s.titleEnglish).includes(q) ||
         searchableText(s.title).includes(q) ||
         searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
         searchableText(s.album).includes(q)
@@ -503,7 +505,9 @@ function HomeContent() {
                             } ${song.teluguTitle ? "font-telugu" : ""}`}>
                               {song.teluguTitle || song.title}
                             </span>
-                            <span className="text-xs text-muted block truncate mt-0.5">{song.artist}</span>
+                            <span className="text-xs text-muted block truncate mt-0.5">
+                              {song.titleEnglish}
+                            </span>
                           </div>
                           <div className="shrink-0 text-xs text-dim pr-1">
                             {isCurrent && isPlaying ? (
@@ -585,7 +589,9 @@ function HomeContent() {
                             } ${song.teluguTitle ? "font-telugu" : ""}`}>
                               {song.teluguTitle || song.title}
                             </span>
-                            <span className="text-xs text-muted block truncate mt-0.5">{song.artist}</span>
+                            <span className="text-xs text-muted block truncate mt-0.5">
+                              {song.titleEnglish}
+                            </span>
                           </div>
                         </div>
                         <div className="shrink-0 flex items-center gap-3 pr-1">
@@ -672,7 +678,9 @@ function HomeContent() {
                                 } ${song.teluguTitle ? "font-telugu" : ""}`}>
                                   {song.teluguTitle || song.title}
                                 </span>
-                                <span className="text-xs text-muted block truncate mt-0.5">{song.artist}</span>
+                                <span className="text-xs text-muted block truncate mt-0.5">
+                                  {song.titleEnglish}
+                                </span>
                               </div>
                             </div>
                             <div className="shrink-0 flex items-center gap-3 pr-1">
