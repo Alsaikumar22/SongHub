@@ -1,4 +1,6 @@
-import { getSongById, getAllSongs } from "@/lib/song-service";
+import { songService } from "@/services/songService";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
   try {
@@ -11,19 +13,9 @@ export async function GET(request, { params }) {
       targetId = rawId;
     }
 
-    let song = await getSongById(targetId);
+    let song = await songService.getSongById(targetId);
     if (!song && targetId !== rawId) {
-      song = await getSongById(rawId);
-    }
-
-    if (!song) {
-      const allSongs = await getAllSongs();
-      song = allSongs.find(
-        (s) =>
-          s.id === targetId ||
-          s.id === rawId ||
-          decodeURIComponent(s.id || "") === targetId
-      );
+      song = await songService.getSongById(rawId);
     }
 
     if (!song) {

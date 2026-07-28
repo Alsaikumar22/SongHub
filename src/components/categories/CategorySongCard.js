@@ -34,7 +34,7 @@ export default function CategorySongCard({ song, language, onClick }) {
     e.stopPropagation();
     setIsShared(true);
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/song/${song.id}`);
+      navigator.clipboard.writeText(`${window.location.origin}/song/${song.slug || song.id}`);
     }
     setTimeout(() => setIsShared(false), 2000);
   };

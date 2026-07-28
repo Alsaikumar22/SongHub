@@ -204,7 +204,7 @@ export const AudioProvider = ({ children }) => {
     let isMounted = true;
     setSongsLoading(true);
     
-    fetch("/api/songs")
+    fetch("/api/songs", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();

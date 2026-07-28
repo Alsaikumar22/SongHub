@@ -42,7 +42,7 @@ export default function SongCard({ song, onPlay }) {
       {/* Info Header */}
       <div className="space-y-1 min-w-0">
         <Link
-          href={`/song/${encodeURIComponent(song.id)}`}
+          href={`/song/${encodeURIComponent(song.slug || song.id)}`}
           className="font-bold text-sm text-title hover:text-title block truncate tracking-tight"
         >
           {song.title}

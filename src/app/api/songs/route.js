@@ -1,5 +1,7 @@
 import { songService } from "@/services/songService";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/songs
  * Optional server-side API route returning all songs from Youworship_songs
