@@ -113,7 +113,7 @@ export default function SearchResults({
                       {song.teluguTitle || song.title}
                     </span>
                     <span className="text-xs text-muted block truncate mt-0.5 leading-tight">
-                      {song.artist}
+                      {song.titleEnglish}
                     </span>
                   </div>
                 </div>

@@ -247,6 +247,16 @@ async function processImages() {
   console.log("--------------------------------------------------\n");
 
   let metadataList = [];
+  const metadataPath = path.resolve(process.cwd(), METADATA_FILE);
+  if (fs.existsSync(metadataPath)) {
+    try {
+      metadataList = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
+      console.log(`Loaded ${metadataList.length} existing metadata items from ${METADATA_FILE}`);
+    } catch (err) {
+      console.warn(`⚠️ Error reading existing metadata file: ${err.message}. Starting fresh.`);
+    }
+  }
+
   let stats = {
     totalFound,
     compressedSuccess: 0,
@@ -257,19 +267,29 @@ async function processImages() {
     totalCompressedSize: 0,
   };
 
+  let nextId = metadataList.length > 0 ? Math.max(...metadataList.map(item => item.id)) + 1 : 1;
+
   for (let i = 0; i < relativeFilePaths.length; i++) {
     const relPath = relativeFilePaths[i];
     const inputPath = path.join(inputFolder, relPath);
     const ext = path.extname(relPath);
     const originalFileName = path.basename(relPath);
-    const title = path.basename(relPath, ext).replace(/\u00A0/g, " ").normalize("NFC");
     
+    // Check if already processed
+    const isAlreadyProcessed = metadataList.some(item => item.originalFileName === originalFileName);
+    if (isAlreadyProcessed) {
+      console.log(`Skipping already processed file [${i + 1}/${totalFound}]: ${originalFileName}\n`);
+      console.log("--------------------------------------------------\n");
+      continue;
+    }
+
+    const title = path.basename(relPath, ext).replace(/\u00A0/g, " ").normalize("NFC");
     const uploadedFileName = title + ".webp";
     const targetRelPath = path.join(path.dirname(relPath), uploadedFileName);
     const docId = title;
-    const itemId = i + 1;
+    const itemId = nextId++;
 
-    console.log(`Processing [${itemId}/${totalFound}]:`);
+    console.log(`Processing [${i + 1}/${totalFound}]:`);
     console.log(`${originalFileName} ➔ ${uploadedFileName}\n`);
 
     let compressionRes = null;
@@ -346,7 +366,6 @@ async function processImages() {
   }
 
   // ─── Save image-metadata.json ──────────────────────────────────────────────
-  const metadataPath = path.resolve(process.cwd(), METADATA_FILE);
   fs.writeFileSync(metadataPath, JSON.stringify(metadataList, null, 2), "utf-8");
   console.log(`📄 Saved metadata JSON file to: ${metadataPath}\n`);
 
