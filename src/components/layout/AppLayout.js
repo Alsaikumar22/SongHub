@@ -141,12 +141,7 @@ export default function AppLayout({ children }) {
               active={false}
               onClick={() => {
                 if (currentSong) {
-                  if (!isAuthenticated) {
-                    setShowAuth(true);
-                    setAuthMode("signup");
-                    return;
-                  }
-                  router.push(`/song/${encodeURIComponent(currentSong.id)}?view=lyrics`);
+                  router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                 } else {
                   setActiveTab("discover");
                   setActivePlaylistId(null);

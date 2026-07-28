@@ -248,18 +248,27 @@ export const songService = {
         }
       }
 
-      // 3. Fallback: Search all songs list for matching ID
+      // 3. Fallback: Search all songs list for matching ID or Slug (with NFC normalization)
       const allSongs = await this.getAllSongs();
-      const match = allSongs.find(
-        (s) =>
-          s.id === targetId ||
-          s.id === songId ||
-          decodeURIComponent(s.id || "") === targetId
-      );
+      const targetNFC = (targetId || "").normalize("NFC");
+      const songNFC = (songId || "").normalize("NFC");
+
+      const match = allSongs.find((s) => {
+        const sIdNFC = (s.id || "").normalize("NFC");
+        const sSlugNFC = (s.slug || "").normalize("NFC");
+        return (
+          sIdNFC === targetNFC ||
+          sIdNFC === songNFC ||
+          sSlugNFC === targetNFC ||
+          sSlugNFC === songNFC ||
+          decodeURIComponent(sIdNFC) === targetNFC ||
+          decodeURIComponent(sSlugNFC) === targetNFC
+        );
+      });
 
       if (match) return match;
 
-      console.warn(`⚠️ Song document with ID '${songId}' not found.`);
+      console.warn(`⚠️ Song document with ID/Slug '${songId}' not found.`);
       return null;
     } catch (error) {
       console.error(`❌ [songService.getSongById] Error fetching song '${songId}':`, error);
