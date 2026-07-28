@@ -11,16 +11,20 @@ import {
   Plus,
   Share2,
   Copy,
-  Check
+  Check,
+  Play,
+  Pause,
+  Heart
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
 import { useSearch } from "@/context/search-context";
-import SongHero from "@/components/song/SongHero";
+
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
 import { extractDominantColor } from "@/utils/extract-color";
 import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import { songService } from "@/services/songService";
 
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -101,7 +105,8 @@ function SongPageContent({ params }) {
   const [song, setSong] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("telugu");
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
-  const [fetching, setFetching] = useState(false);
+  const fetchingRef = useRef(false);
+  const prevIdRef = useRef(id);
 
   const isCurrentSong = currentSong?.id === song?.id;
   const isThisPlaying = isCurrentSong && isPlaying;
@@ -250,6 +255,12 @@ function SongPageContent({ params }) {
   };
 
   useEffect(() => {
+    if (prevIdRef.current !== id) {
+      setSong(null);
+      fetchingRef.current = false;
+      prevIdRef.current = id;
+    }
+
     let decodedId = id;
     try {
       decodedId = decodeURIComponent(id || "");
@@ -257,32 +268,70 @@ function SongPageContent({ params }) {
       decodedId = id;
     }
 
+    const targetNFC = (decodedId || "").normalize("NFC");
+    const rawNFC = (id || "").normalize("NFC");
+
     const foundSong =
-      songs.find(
-        (s) =>
-          s.id === decodedId ||
-          s.id === id ||
-          encodeURIComponent(s.id) === id ||
-          decodeURIComponent(s.id || "") === decodedId
-      ) ||
-      (currentSong && (currentSong.id === decodedId || currentSong.id === id)
-        ? currentSong
-        : null);
+      songs.find((s) => {
+        const sIdNFC = (s.id || "").normalize("NFC");
+        const sSlugNFC = (s.slug || "").normalize("NFC");
+        return (
+          sIdNFC === targetNFC ||
+          sIdNFC === rawNFC ||
+          sSlugNFC === targetNFC ||
+          sSlugNFC === rawNFC ||
+          decodeURIComponent(sIdNFC) === targetNFC ||
+          decodeURIComponent(sSlugNFC) === targetNFC
+        );
+      }) ||
+      (currentSong && (
+        (currentSong.id || "").normalize("NFC") === targetNFC ||
+        (currentSong.id || "").normalize("NFC") === rawNFC ||
+        (currentSong.slug || "").normalize("NFC") === targetNFC ||
+        (currentSong.slug || "").normalize("NFC") === rawNFC
+      ) ? currentSong : null);
 
     if (foundSong) {
       setSong(foundSong);
       return;
     }
 
-    if (fetching) return;
-    setFetching(true);
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
 
-    fetch(`/api/songs/${encodeURIComponent(decodedId)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.song) setSong(data.song);
+    songService.getSongById(decodedId)
+      .then((fetchedSong) => {
+        if (fetchedSong) {
+          setSong(fetchedSong);
+          fetchingRef.current = false;
+        } else {
+          // Fallback to Next.js API route if not found directly
+          fetch(`/api/songs/${encodeURIComponent(decodedId)}`, { cache: "no-store" })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.song) setSong(data.song);
+              fetchingRef.current = false;
+            })
+            .catch((err) => {
+              console.error("API fallback fetch failed:", err);
+              fetchingRef.current = false;
+            });
+        }
       })
-      .catch((err) => console.error("Failed to fetch song:", err));
+      .catch((err) => {
+        console.error("Failed to fetch song directly from Firestore:", err);
+        // Fallback to API route on error
+        fetch(`/api/songs/${encodeURIComponent(decodedId)}`, { cache: "no-store" })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.song) setSong(data.song);
+            fetchingRef.current = false;
+          })
+          .catch((fetchErr) => {
+            console.error("API fallback fetch failed on direct error:", fetchErr);
+            fetchingRef.current = false;
+          });
+      });
   }, [id, songs, currentSong]);
 
   useEffect(() => {
@@ -290,6 +339,20 @@ function SongPageContent({ params }) {
       extractDominantColor(song.coverUrl).then(setGradientColor);
     }
   }, [song]);
+
+  useEffect(() => {
+    if (song) {
+      const hasTelugu = !!(
+        ((typeof song.lyricsTelugu === "string" && song.lyricsTelugu.trim().length > 0) || (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) ||
+        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te"))
+      );
+      setSelectedLanguage(hasTelugu ? "telugu" : "english");
+    }
+  }, [song]);
+
+  const handlePlayClick = () => {
+    playSong(song);
+  };
 
   if (!song) {
     return (
@@ -306,10 +369,8 @@ function SongPageContent({ params }) {
   const isFavorited = favorites.includes(song.id);
   const hasDualLyrics = !!(
     song &&
-    Array.isArray(song.lyricsTelugu) &&
-    Array.isArray(song.lyricsEnglish) &&
-    song.lyricsTelugu.length > 0 &&
-    song.lyricsEnglish.length > 0
+    ((typeof song.lyricsTelugu === "string" && song.lyricsTelugu.trim().length > 0) || (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) &&
+    ((typeof song.lyricsEnglish === "string" && song.lyricsEnglish.trim().length > 0) || (Array.isArray(song.lyricsEnglish) && song.lyricsEnglish.length > 0))
   );
 
   const rawVideoUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
@@ -336,7 +397,7 @@ function SongPageContent({ params }) {
             <span>Back</span>
           </button>
 
-          <ProtectedAction action={() => router.push(`/song/${encodeURIComponent(song.id)}?view=lyrics`)}>
+          <ProtectedAction action={() => router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`)}>
             <button
               className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm"
             >
@@ -398,7 +459,6 @@ function SongPageContent({ params }) {
           <LanguageSegmented
             selected={selectedLanguage}
             onChange={setSelectedLanguage}
-            hasDual={true}
           />
         </div>
 
@@ -439,9 +499,9 @@ function SongPageContent({ params }) {
             <h1 className={`text-title text-base md:text-lg font-bold truncate ${song.teluguTitle ? "font-telugu" : ""}`}>
               {song.teluguTitle || song.title}
             </h1>
-            {(song.titleEnglish || song.title) && (
+            {song.artist && (
               <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
-                {song.titleEnglish || song.title}
+                {song.artist}
               </p>
             )}
           </div>
@@ -449,15 +509,47 @@ function SongPageContent({ params }) {
 
         {/* Right Side: Action Icons Group */}
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
-          {/* 1. Add to Playlist Icon with Dropdown */}
-          <div className="relative" ref={playlistDropdownRef}>
+          {/* 1. Play/Pause Button */}
+          <ProtectedAction action={handlePlayClick}>
             <button
-              onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-              className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-              title="Add to playlist"
+              onClick={handlePlayClick}
+              className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
+              title={isThisPlaying ? "Pause" : "Play"}
             >
-              <Plus className="w-4 h-4" />
+              {isThisPlaying ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              )}
             </button>
+          </ProtectedAction>
+
+          {/* 2. Favorite Button */}
+          <ProtectedAction action={() => toggleFavorite(song.id)}>
+            <button
+              onClick={() => toggleFavorite(song.id)}
+              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
+                isFavorited
+                  ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                  : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
+              }`}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
+            </button>
+          </ProtectedAction>
+
+          {/* 3. Add to Playlist Icon with Dropdown */}
+          <div className="relative" ref={playlistDropdownRef}>
+            <ProtectedAction action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}>
+              <button
+                onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                title="Add to playlist"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </ProtectedAction>
             {showPlaylistDropdown && (
               <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
                 <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
@@ -499,7 +591,21 @@ function SongPageContent({ params }) {
             )}
           </div>
 
-          {/* 3. Share Icon with Platform Choices Dropdown */}
+          {/* 4. Watch Video Button */}
+          {rawVideoUrl && embedUrl && (
+            <Link
+              href={`/song/${encodeURIComponent(song.slug || song.id)}?view=video`}
+              onClick={() => {
+                if (currentSong?.id !== song.id) playSong(song);
+              }}
+              className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
+              title="Watch Video"
+            >
+              <Video className="w-4 h-4 text-red-400" />
+            </Link>
+          )}
+
+          {/* 5. Share Icon with Platform Choices Dropdown */}
           <div className="relative" ref={shareDropdownRef}>
             <button
               onClick={() => setShowShareDropdown(!showShareDropdown)}
@@ -569,7 +675,7 @@ function SongPageContent({ params }) {
             )}
           </div>
 
-          {/* 4. Copy Icon (Copies full lyrics text) */}
+          {/* 6. Copy Icon (Copies full lyrics text) */}
           <button
             onClick={handleCopyLyrics}
             className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
@@ -581,18 +687,7 @@ function SongPageContent({ params }) {
       </div>
 
       <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
-        {/* Song Hero Banner */}
-        <SongHero
-          song={song}
-          currentSong={currentSong}
-          isPlaying={isPlaying}
-          playSong={playSong}
-          isFavorited={isFavorited}
-          toggleFavorite={() => toggleFavorite(song.id)}
-          playlists={playlists}
-          addSongToPlaylist={addSongToPlaylist}
-          removeSongFromPlaylist={removeSongFromPlaylist}
-        />
+
 
         {/* Lyrics Section */}
         <div className="space-y-4 pt-2 flex-1 flex flex-col">
@@ -603,7 +698,6 @@ function SongPageContent({ params }) {
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
-              hasDual={true}
             />
           </div>
 

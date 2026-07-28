@@ -594,7 +594,7 @@ export default function SongsSection({
                               ? "border-[#D4A32A]/40 bg-[#D4A32A]/5"
                               : "border-line/40 bg-card-hover/20 hover:bg-card-hover/40 hover:border-line-muted"
                           }`}
-                          onClick={() => router.push(`/song/${encodeURIComponent(song.id)}`)}
+                          onClick={() => router.push(`/song/${encodeURIComponent(song.slug || song.id)}`)}
                         >
                           {/* Left: Toggle Favorite */}
                           <button

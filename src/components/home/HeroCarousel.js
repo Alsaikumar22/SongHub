@@ -278,7 +278,7 @@ export default function HeroCarousel() {
           </ProtectedAction>
 
           {/* Lyrics Link */}
-          <ProtectedAction action={() => router.push(`/song/${current.id}`)}>
+          <ProtectedAction action={() => router.push(`/song/${current.slug || current.id}`)}>
             <button
               className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
             >

@@ -80,7 +80,7 @@ export default function PlayerBar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
 
-  const isLyricsPage = isClient && currentSong && pathname === `/song/${currentSong.id}` && searchParams?.get("view") === "lyrics";
+  const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
 
   useEffect(() => {
     setTimeout(() => {
@@ -205,7 +205,7 @@ export default function PlayerBar() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/song/${encodeURIComponent(currentSong.id)}?view=video`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
                   }}
                   className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
                   aria-label="Watch Video"
@@ -250,7 +250,7 @@ export default function PlayerBar() {
             {currentSong ? (
               <>
                 <Link
-                  href={`/song/${currentSong.id}`}
+                  href={`/song/${currentSong.slug || currentSong.id}`}
                   className="group relative block overflow-hidden rounded-md border border-line flex-shrink-0 cursor-pointer"
                 >
                   <SongArtwork
@@ -264,7 +264,7 @@ export default function PlayerBar() {
                 </Link>
                 <div className="overflow-hidden min-w-0">
                   <Link
-                    href={`/song/${currentSong.id}`}
+                    href={`/song/${currentSong.slug || currentSong.id}`}
                     className={`font-medium text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer ${
                       currentSong.teluguTitle ? "font-telugu" : ""
                     }`}
@@ -414,7 +414,7 @@ export default function PlayerBar() {
           <div className="flex items-center gap-2 w-[30%] justify-end min-w-0">
             {currentSong?.id && (
               <button
-                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.id)}?view=video`)}
+                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`)}
                 className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
                 title="Watch Video"
               >
@@ -425,7 +425,7 @@ export default function PlayerBar() {
             {currentSong ? (
               isLyricsPage ? (
                 <Link
-                  href={`/song/${currentSong.id}`}
+                  href={`/song/${currentSong.slug || currentSong.id}`}
                   className={`p-1.5 rounded-full transition-all cursor-pointer ${
                     isLyricsPage
                       ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
@@ -436,7 +436,7 @@ export default function PlayerBar() {
                   <MicIcon className="w-4 h-4" />
                 </Link>
               ) : (
-                <ProtectedAction action={() => router.push(`/song/${currentSong.id}?view=lyrics`)}>
+                <ProtectedAction action={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}>
                   <button
                     className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
                     title="View Lyrics"
@@ -522,7 +522,7 @@ export default function PlayerBar() {
             <ProtectedAction action={() => {
               setIsExpanded(false);
               if (currentSong) {
-                router.push(`/song/${currentSong.id}?view=lyrics`);
+                router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
               }
             }}>
               <button

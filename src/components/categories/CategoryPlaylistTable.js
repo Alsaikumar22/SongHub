@@ -47,11 +47,11 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
   };
 
-  const handleShare = (e, songId) => {
+  const handleShare = (e, song) => {
     e.stopPropagation();
-    setSharedSongId(songId);
+    setSharedSongId(song.id);
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/song/${songId}`);
+      navigator.clipboard.writeText(`${window.location.origin}/song/${song.slug || song.id}`);
     }
     setTimeout(() => setSharedSongId(null), 2000);
   };
@@ -211,7 +211,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleShare(e, song.id);
+                            handleShare(e, song);
                             setActiveMenuSongId(null);
                           }}
                           className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2 ${
