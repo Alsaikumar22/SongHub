@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 
-export function LanguageSegmented({ selected, onChange }) {
+export function LanguageSegmented({ selected, onChange, hasDual }) {
   const langs = [];
   langs.push({ id: "telugu", label: "తెలుగు" });
   langs.push({ id: "english", label: "English" });
-export function LanguageSegmented({ selected, onChange }) {
-  const langs = [];
-  langs.push({ id: "telugu", label: "తెలుగు" });
-  langs.push({ id: "english", label: "English" });
+  if (hasDual) {
+    langs.push({ id: "dual", label: "Dual" });
+  }
 
   return (
     <div className="flex h-9 md:h-11 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm w-fit">
@@ -50,19 +49,6 @@ export default function SongLyrics({
   const containerRef = useRef(null);
   const lineRefs = useRef({});
 
-  const hasDual = !!(
-    song &&
-    (song.lyricsTelugu || song.lyricsEnglish || song.lyrics)
-  );
-
-  // Extract stanzas for Telugu and English
-  const stanzasTelugu = useMemo(() => {
-    let raw = Array.isArray(song?.lyricsTelugu) ? song.lyricsTelugu.join("\n") : (song?.lyricsTelugu || "");
-    if (!raw && typeof song?.lyrics === "string") {
-      raw = song.lyrics;
-    } else if (!raw && Array.isArray(song?.lyrics) && song.lyrics.length > 0) {
-      const matched = song.lyrics.find((l) => l.language === "te" || l.isDefault) || song.lyrics[0];
-      raw = matched?.content || matched?.text || "";
   // Extract stanzas for Telugu and English
   const stanzasTelugu = useMemo(() => {
     let raw = Array.isArray(song?.lyricsTelugu) ? song.lyricsTelugu.join("\n") : (song?.lyricsTelugu || "");
@@ -93,65 +79,12 @@ export default function SongLyrics({
     if (!raw || typeof raw !== "string") return [];
     return raw
       .split(/\n\s*\n+/)
-    if (!raw || typeof raw !== "string") return [];
-    return raw
-      .split(/\n\s*\n+/)
       .map((block) =>
         block
           .split("\n")
           .map((l) => l.replace(/\[\d{2}:\d{2}\]/g, "").trim())
           .filter(Boolean)
       )
-      .filter((b) => b.length > 0);
-  }, [song]);
-
-  const stanzasEnglish = useMemo(() => {
-    let raw = Array.isArray(song?.lyricsEnglish) ? song.lyricsEnglish.join("\n") : (song?.lyricsEnglish || "");
-    if (!raw && Array.isArray(song?.lyrics) && song.lyrics.length > 0) {
-      const matched = song.lyrics.find((l) => l.language === "en");
-      raw = matched?.content || matched?.text || "";
-    }
-    if (!raw || typeof raw !== "string") return [];
-    return raw
-      .split(/\n\s*\n+/)
-      .map((block) =>
-        block
-          .split("\n")
-          .map((l) => l.replace(/\[\d{2}:\d{2}\]/g, "").trim())
-          .filter(Boolean)
-      )
-      .filter((b) => b.length > 0);
-  }, [song]);
-
-  useEffect(() => {
-    if (song) {
-      const hasTelugu = !!(
-        song.lyricsTelugu ||
-        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te" || l.isDefault))
-      );
-      setInternalLanguage(hasTelugu ? "telugu" : "english");
-    }
-  }, [song]);
-
-  const stanzas = useMemo(() => {
-    if (selectedLanguage === "english") {
-      return stanzasEnglish.length > 0 ? stanzasEnglish : stanzasTelugu;
-    }
-    return stanzasTelugu;
-  }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
-
-  const dualStanzas = useMemo(() => {
-    if (selectedLanguage !== "dual") return [];
-    const maxStanzas = Math.max(stanzasTelugu.length, stanzasEnglish.length);
-    const combined = [];
-    for (let i = 0; i < maxStanzas; i++) {
-      combined.push({
-        telugu: stanzasTelugu[i] || [],
-        english: stanzasEnglish[i] || [],
-      });
-    }
-    return combined;
-  }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
       .filter((b) => b.length > 0);
   }, [song]);
 
@@ -186,6 +119,7 @@ export default function SongLyrics({
   }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
 
   const flatLines = useMemo(() => stanzas.flat(), [stanzas]);
+  const hasDual = stanzasTelugu.length > 0 && stanzasEnglish.length > 0;
 
   useEffect(() => {
     setTimeout(() => {
@@ -218,11 +152,9 @@ export default function SongLyrics({
       elements.forEach((el) => observer.unobserve(el));
     };
   }, [selectedLanguage, stanzas, dualStanzas]);
-  }, [selectedLanguage, stanzas, dualStanzas]);
 
   // Compute font size scale from step (-2 to +4, default 0 = 1.0x)
   const sizeScale = 1 + fontSizeStep * 0.1;
-
   let currentFlatIndex = 0;
 
   if (isImmersive) {
@@ -231,8 +163,6 @@ export default function SongLyrics({
         ref={containerRef}
         className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 scroll-smooth no-scrollbar select-text bg-card"
         style={{ scrollbarWidth: "none", fontSize: `${fontSizeMultiplier * 100}%` }}
-        className="w-full flex-1 overflow-y-auto px-4 sm:px-8 md:px-16 py-4 sm:py-8 scroll-smooth no-scrollbar select-text"
-        style={{ scrollbarWidth: "none" }}
       >
         <div className="max-w-5xl mx-auto pb-32">
           {selectedLanguage === "dual" ? (
@@ -284,56 +214,6 @@ export default function SongLyrics({
                   {stanzaLines.map((line) => {
                     const lineIdx = currentFlatIndex++;
                     const isActive = activeLineIndex === lineIdx;
-        <div className="max-w-5xl mx-auto pb-24 sm:pb-32">
-          {selectedLanguage === "dual" ? (
-            /* Widescreen 2-Column Side-by-Side Grid, falling back to stack on Mobile */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
-              {/* Left Column: Telugu */}
-              <div className="space-y-10 text-center">
-                <h4 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em] mb-6 border-b border-line pb-2 max-w-xs mx-auto">
-                  తెలుగు లిరిక్స్
-                </h4>
-                {stanzasTelugu.map((stanzaLines, sIdx) => (
-                  <div key={`te-stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                    {stanzaLines.map((line, lIdx) => (
-                      <p
-                        key={`te-line-${sIdx}-${lIdx}`}
-                        className="text-center text-base sm:text-xl md:text-2xl font-extrabold tracking-tight leading-relaxed text-title font-telugu select-text"
-                      >
-                        <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
-                      </p>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              {/* Right Column: English */}
-              <div className="space-y-10 text-center border-t border-line/20 pt-8 md:border-t-0 md:pt-0 md:border-l md:border-line/20 md:pl-16">
-                <h4 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em] mb-6 border-b border-line pb-2 max-w-xs mx-auto">
-                  English / Romanized
-                </h4>
-                {stanzasEnglish.map((stanzaLines, sIdx) => (
-                  <div key={`en-stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                    {stanzaLines.map((line, lIdx) => (
-                      <p
-                        key={`en-line-${sIdx}-${lIdx}`}
-                        className="text-center text-sm sm:text-base md:text-lg font-bold tracking-wide leading-relaxed text-muted select-text"
-                      >
-                        <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
-                      </p>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Single Language Mode */
-            <div className="max-w-2xl mx-auto text-center space-y-10">
-              {stanzas.map((stanzaLines, sIdx) => (
-                <div key={`stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                  {stanzaLines.map((line) => {
-                    const lineIdx = currentFlatIndex++;
-                    const isActive = activeLineIndex === lineIdx;
 
                     return (
                       <div
@@ -366,39 +246,7 @@ export default function SongLyrics({
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
             </div>
           )}
-                    return (
-                      <div
-                        key={`line-${lineIdx}`}
-                        ref={(el) => {
-                          lineRefs.current[lineIdx] = el;
-                        }}
-                        data-line-index={lineIdx}
-                        className="py-1 transition-all duration-300"
-                      >
-                        <p
-                          className={`text-center text-base sm:text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight leading-relaxed transition-all duration-300 ${
-                            isActive
-                              ? "text-title scale-[1.02] font-black"
-                              : "text-copy font-bold hover:text-title cursor-pointer"
-                          } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
-                        >
-                          <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          )}
 
-          {selectedLanguage === "dual" && stanzasTelugu.length === 0 && stanzasEnglish.length === 0 && (
-            <div className="py-24 text-center">
-              <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
-            </div>
-          )}
-
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
           {selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-24 text-center">
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
@@ -416,40 +264,6 @@ export default function SongLyrics({
         className="relative max-h-[60vh] overflow-y-auto px-4 sm:px-8 py-6 space-y-8 scroll-smooth no-scrollbar"
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
-        <div className="max-w-2xl mx-auto space-y-8">
-          {selectedLanguage === "dual" ? (
-            dualStanzas.map((stanza, sIdx) => (
-              <div key={`dual-stanza-${sIdx}`} className="space-y-4 py-3.5 border-b border-line/10 last:border-0">
-                <div className="space-y-2">
-                  {stanza.telugu.map((line, lIdx) => (
-                    <p
-                      key={`te-${sIdx}-${lIdx}`}
-                      className="text-center text-[1em] sm:text-[1.125em] md:text-[1.25em] font-bold leading-relaxed text-title font-telugu"
-                    >
-                      {line}
-                    </p>
-                  ))}
-                </div>
-                {stanza.english.length > 0 && (
-                  <div className="space-y-1.5 pt-2 opacity-80 border-t border-dashed border-line/15">
-                    {stanza.english.map((line, lIdx) => (
-                      <p
-                        key={`en-${sIdx}-${lIdx}`}
-                        className="text-center text-[0.75em] sm:text-[0.875em] md:text-[1em] font-semibold leading-relaxed text-muted"
-                      >
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            stanzas.map((stanzaLines, sIdx) => (
-              <div key={`stanza-${sIdx}`} className="space-y-2.5 sm:space-y-3">
-                {stanzaLines.map((line) => {
-                  const lineIdx = currentFlatIndex++;
-                  const isActive = activeLineIndex === lineIdx;
         <div className="max-w-2xl mx-auto space-y-8">
           {selectedLanguage === "dual" ? (
             dualStanzas.map((stanza, sIdx) => (
@@ -515,38 +329,7 @@ export default function SongLyrics({
               <p className="text-sm text-muted">Lyrics not available for this track.</p>
             </div>
           )}
-                  return (
-                    <div
-                      key={`line-${lineIdx}`}
-                      ref={(el) => {
-                        lineRefs.current[lineIdx] = el;
-                      }}
-                      data-line-index={lineIdx}
-                      className="py-0.5 transition-all duration-300"
-                    >
-                      <p
-                        className={`text-center text-base sm:text-lg md:text-xl font-bold leading-relaxed transition-all duration-300 ${
-                          isActive
-                            ? "text-title scale-[1.01] font-black"
-                            : "text-copy font-bold hover:text-title cursor-pointer"
-                        } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
-                      >
-                        {line}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            ))
-          )}
 
-          {selectedLanguage === "dual" && dualStanzas.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="text-sm text-muted">Lyrics not available for this track.</p>
-            </div>
-          )}
-
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
           {selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-sm text-muted">Lyrics not available for this track.</p>

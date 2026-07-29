@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
-import ProtectedAction from "@/components/auth/ProtectedAction";
 import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
 import YouTubeIcon from "@/components/ui/YouTubeIcon";
@@ -104,7 +103,6 @@ export default function PlayerBar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
 
-  const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
   const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
 
   useEffect(() => {
@@ -471,28 +469,6 @@ export default function PlayerBar() {
             )}
 
             {currentSong ? (
-              isLyricsPage ? (
-                <Link
-                  href={`/song/${currentSong.slug || currentSong.id}`}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                    isLyricsPage
-                      ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
-                      : "text-muted hover:text-copy hover:bg-card-hover"
-                  }`}
-                  title="Close Lyrics"
-                >
-                  <MicIcon className="w-4 h-4" />
-                </Link>
-              ) : (
-                <ProtectedAction action={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}>
-                  <button
-                    className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
-                    title="View Lyrics"
-                  >
-                    <MicIcon className="w-4 h-4" />
-                  </button>
-                </ProtectedAction>
-              )
               isLyricsPage ? (
                 <Link
                   href={`/song/${currentSong.slug || currentSong.id}`}
