@@ -40,6 +40,7 @@ export default function HeroCarousel() {
 
     return {
       id: song.id,
+      slug: song.slug,
       originalSong: song,
       title: song.teluguTitle || song.title,
       englishTitle: song.teluguTitle ? song.title : null,
@@ -135,7 +136,7 @@ export default function HeroCarousel() {
         />
       </AnimatePresence>
 
-      {/* 2. HIGH DEFINITION FULL-BLEED COVER ARTWORK ON THE RIGHT */}
+      {/* 2. HIGH DEFINITION COVER ARTWORK — contained as a right-side banner within the card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={`bg-cover-${current.id}`}
@@ -143,23 +144,23 @@ export default function HeroCarousel() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
-          className="absolute inset-y-0 right-0 w-full bg-cover bg-center pointer-events-none"
+          className="absolute inset-0 w-full bg-cover bg-center pointer-events-none"
           style={current.bgUrl ? { backgroundImage: `url(${current.bgUrl})` } : undefined}
         />
       </AnimatePresence>
 
-      {/* 3. GRADIENT OVERLAYS */}
+      {/* 3. GRADIENT OVERLAYS — strong left-side opacity so text stays readable */}
       <div
         className={`absolute inset-0 pointer-events-none transition-all duration-300 ${
           current.bgUrl
-            ? "bg-gradient-to-r from-card/50 via-card/20 to-transparent"
+            ? "bg-gradient-to-r from-card via-card via-45% to-transparent"
             : "bg-gradient-to-r from-card via-card/85 via-45% to-transparent"
         }`}
       />
       <div
         className={`absolute inset-0 md:hidden pointer-events-none ${
           current.bgUrl
-            ? "bg-gradient-to-t from-card/50 via-card/20 to-transparent"
+            ? "bg-gradient-to-r from-card via-card via-55% to-transparent"
             : "bg-gradient-to-t from-card via-card/50 via-30% to-transparent"
         }`}
       />
@@ -223,36 +224,34 @@ export default function HeroCarousel() {
               className="space-y-3"
             >
               {/* Main Song Title */}
-              {!current.bgUrl && (
-                <div className="py-1 pb-1 min-w-0">
-                  <h1
-                    className={`text-title text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.3] drop-shadow-lg ${
-                      current.isTelugu ? "font-telugu" : ""
-                    }`}
-                  >
-                    {current.title}
-                  </h1>
-                </div>
-              )}
+              <div className="py-1 pb-1 min-w-0">
+                <h1
+                  className={`text-title text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.3] ${
+                    current.bgUrl
+                      ? "drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] text-white"
+                      : "drop-shadow-lg"
+                  } ${current.isTelugu ? "font-telugu" : ""}`}
+                >
+                  {current.title}
+                </h1>
+              </div>
 
               {/* Metadata Chips */}
-              {!current.bgUrl && (
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted font-medium">
-                  {/* Artist Chip */}
-                  <div className="flex items-center gap-1.5 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line shadow-sm">
-                    <Music className="w-3 h-3 text-amber-500 shrink-0" />
-                    <span className="text-title font-semibold truncate max-w-[160px] sm:max-w-[220px] text-[11px] sm:text-xs">
-                      By {current.artist}
-                    </span>
-                  </div>
-
-                  {/* Duration Chip */}
-                  <div className="flex items-center gap-1 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line text-[11px] sm:text-xs font-semibold text-muted shadow-sm">
-                    <Clock className="w-3 h-3 text-dim" />
-                    <span>{current.duration}</span>
-                  </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted font-medium">
+                {/* Artist Chip */}
+                <div className="flex items-center gap-1.5 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line shadow-sm">
+                  <Music className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span className="text-title font-semibold truncate max-w-[160px] sm:max-w-[220px] text-[11px] sm:text-xs">
+                    By {current.artist}
+                  </span>
                 </div>
-              )}
+
+                {/* Duration Chip */}
+                <div className="flex items-center gap-1 bg-card/85 backdrop-blur-xl px-2.5 py-1 rounded-full border border-line text-[11px] sm:text-xs font-semibold text-muted shadow-sm">
+                  <Clock className="w-3 h-3 text-dim" />
+                  <span>{current.duration}</span>
+                </div>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -287,7 +286,7 @@ export default function HeroCarousel() {
           </ProtectedAction>
 
           {/* Lyrics Link */}
-          <ProtectedAction action={() => router.push(`/song/${current.slug || current.id}`)}>
+          <ProtectedAction action={() => router.push(`/song/${encodeURIComponent(current.slug || current.id)}?view=lyrics`)}>
             <button
               className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
             >

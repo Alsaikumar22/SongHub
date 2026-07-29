@@ -342,12 +342,6 @@ function HomeContent() {
         {/* 1. BROWSE TAB */}
         {activeTab === "discover" && (
           <div className="space-y-6">
-            {!selectedLetter && showFullHome && (
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">Good day</span>
-                <h1 className="text-2xl font-black text-title tracking-tight">Explore Music</h1>
-              </div>
-            )}
             
             {!selectedLetter && showFullHome && <HeroCarousel />}
             {!selectedLetter && <VerseOfTheWeek />}
@@ -365,7 +359,14 @@ function HomeContent() {
           </div>
         )}
 
-        {/* 2. SEARCH / CATEGORIES TAB */}
+        {/* 2. CATEGORIES TAB */}
+        {activeTab === "categories" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <CategoryExplorer />
+          </div>
+        )}
+
+        {/* 3. SEARCH TAB */}
         {activeTab === "search" && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {!searchParams?.get("category") && (
@@ -543,7 +544,7 @@ function HomeContent() {
           </div>
         )}
 
-        {/* 3. FAVORITES TAB */}
+        {/* 4. FAVORITES TAB */}
         {activeTab === "favorites" && (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Visual Hero Banner */}
@@ -624,7 +625,7 @@ function HomeContent() {
           </div>
         )}
 
-        {/* 4. PLAYLISTS TAB */}
+        {/* 5. PLAYLISTS TAB */}
         {activeTab === "playlist" && (
           <div className="space-y-6 animate-in fade-in duration-300">
             

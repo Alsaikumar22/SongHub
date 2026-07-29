@@ -9,26 +9,29 @@ export default function VerseOfTheWeek() {
   const { verse, reference, referenceTelugu, loading } = useDailyVerse();
   const [copied, setCopied] = useState(false);
 
-  if (loading || !verse) {
-    return <VerseSkeleton />;
-  }
-
   const handleShare = useCallback(async () => {
-    const shareText = `${verse.textEnglish}
+    const currentVerse = verse;
+    if (!currentVerse) return;
+
+    const verseUrl = "https://youworship.world";
+
+    const shareText = `${currentVerse.textEnglish}
 
 — ${reference}
 
-${verse.textTelugu}
+${currentVerse.textTelugu}
 — ${referenceTelugu}
 
+${verseUrl}
 YouWorship — Daily Bible Verse`;
 
     // Try native Web Share API first (mobile & modern desktop)
-    if (navigator.share) {
+    if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
           title: `YouWorship - ${reference}`,
           text: shareText,
+          url: verseUrl,
         });
         return;
       } catch (err) {
@@ -41,13 +44,29 @@ YouWorship — Daily Bible Verse`;
 
     // Fallback: copy to clipboard
     try {
-      await navigator.clipboard.writeText(shareText);
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+      } else {
+        // Older fallback for browsers without Clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = shareText;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.debug("Clipboard API error:", err);
     }
   }, [verse, reference, referenceTelugu]);
+
+  if (loading || !verse) {
+    return <VerseSkeleton />;
+  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">

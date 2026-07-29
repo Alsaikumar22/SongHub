@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
   const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
@@ -47,12 +48,32 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
   };
 
-  const handleShare = (e, song) => {
+  const handleShare = async (e, song) => {
     e.stopPropagation();
+    const shareUrl = getShareableSongUrl(song);
+
+    // Try native share first
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: `${song.teluguTitle || song.title} | YouWorship`,
+          text: `Listen to "${song.teluguTitle || song.title}" by ${song.artist || "Unknown Artist"} on YouWorship.`,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.debug("Web Share API error:", err);
+        }
+      }
+    }
+
+    // Fallback: copy to clipboard
     setSharedSongId(song.id);
-    if (typeof window !== "undefined") {
-      const encodedSlug = encodeURIComponent(song.slug || song.id);
-      navigator.clipboard.writeText(`${window.location.origin}/song/${encodedSlug}`);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
     }
     setTimeout(() => setSharedSongId(null), 2000);
   };

@@ -64,11 +64,11 @@ export default function LogoutConfirm({ onClose }) {
 
           {/* Heading */}
           <h2 className="text-lg font-bold text-white mb-2">
-            Logout?
+            Sign Out?
           </h2>
 
           <p className="text-sm text-[#a7a7a7] mb-8 leading-relaxed">
-            Are you sure you want to sign out?
+            Are you sure you want to sign out of YouWorship?
           </p>
 
           {/* Buttons */}
@@ -88,7 +88,7 @@ export default function LogoutConfirm({ onClose }) {
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : null}
-              <span>{loading ? "Signing out..." : "Logout"}</span>
+              <span>{loading ? "Signing out..." : "Sign Out"}</span>
             </button>
           </div>
         </div>

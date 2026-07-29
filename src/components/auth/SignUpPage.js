@@ -6,13 +6,13 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
 /**
- * SignUpPage — Spotify-inspired signup form with YouWorship gold branding.
- * Supports email signup and OAuth providers (Google, Facebook, Apple).
+ * SignUpPage — Passwordless signup form with YouWorship gold branding.
+ * User enters email → Firebase sends sign-in link → Success screen.
+ * No password field anywhere.
  */
 export default function SignUpPage({
   onContinueWithEmail,
   onSwitchToLogin,
-  onPasswordLogin,
   onClose,
   onSuccess,
 }) {
@@ -48,38 +48,6 @@ export default function SignUpPage({
     }
   };
 
-  const handleFacebookSignIn = async () => {
-    setOauthLoading("facebook");
-    try {
-      // Facebook sign-in would go here
-      console.log("Facebook sign-in");
-    } catch (err) {
-      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
-        console.warn("Facebook sign-in popup closed by user or cancelled request.");
-      } else {
-        console.error("Facebook sign-in error:", err);
-      }
-    } finally {
-      setOauthLoading(null);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setOauthLoading("apple");
-    try {
-      // Apple sign-in would go here
-      console.log("Apple sign-in");
-    } catch (err) {
-      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
-        console.warn("Apple sign-in popup closed by user or cancelled request.");
-      } else {
-        console.error("Apple sign-in error:", err);
-      }
-    } finally {
-      setOauthLoading(null);
-    }
-  };
-
   return (
     <div className="p-8 md:p-10 w-full max-w-md mx-auto">
       {/* Logo */}
@@ -101,12 +69,12 @@ export default function SignUpPage({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="text-2xl md:text-3xl font-black text-white text-center tracking-tight mb-1"
+        className="text-2xl md:text-3xl font-black text-white text-center tracking-tight mb-8"
       >
-        Create your YouWorship account
+        Create your account
       </motion.h1>
 
-      {/* Email Form */}
+      {/* Email Form — passwordless: just email + continue */}
       <motion.form
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -140,6 +108,10 @@ export default function SignUpPage({
           <span>Continue</span>
         </button>
       </motion.form>
+
+      <p className="text-xs text-[#727272] text-center mt-3">
+        We&apos;ll send a secure sign-in link to your email. No password needed.
+      </p>
 
       {/* Divider */}
       <motion.div
@@ -176,36 +148,6 @@ export default function SignUpPage({
             </svg>
           )}
           <span>Continue with Google</span>
-        </button>
-
-        <button
-          onClick={handleFacebookSignIn}
-          disabled={oauthLoading !== null}
-          className="w-full py-3 rounded-full border border-[rgba(255,255,255,0.15)] bg-transparent hover:bg-[rgba(255,255,255,0.05)] text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
-        >
-          {oauthLoading === "facebook" ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/>
-            </svg>
-          )}
-          <span>Continue with Facebook</span>
-        </button>
-
-        <button
-          onClick={handleAppleSignIn}
-          disabled={oauthLoading !== null}
-          className="w-full py-3 rounded-full border border-[rgba(255,255,255,0.15)] bg-transparent hover:bg-[rgba(255,255,255,0.05)] text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
-        >
-          {oauthLoading === "apple" ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="white">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-            </svg>
-          )}
-          <span>Continue with Apple</span>
         </button>
       </motion.div>
 
