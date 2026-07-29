@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
 import { useSearch } from "@/context/search-context";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import SongsSection from "@/components/home/SongsSection";
 import HeroCarousel from "@/components/home/HeroCarousel";
 import VerseOfTheWeek from "@/components/home/VerseOfTheWeek";
@@ -66,6 +67,22 @@ function HomeContent() {
   } = useAudio();
 
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
+
+  const commitMobileSearch = useCallback((value) => {
+    setSearchQuery(value);
+    if (value) setShowFullResults(true);
+  }, [setSearchQuery, setShowFullResults]);
+
+  const {
+    inputValue: mobileInputValue,
+    handleChange: handleMobileSearchChange,
+    flush: flushMobileSearch,
+    clear: clearMobileSearch,
+  } = useDebouncedSearch({
+    initialValue: searchQuery,
+    onCommit: commitMobileSearch,
+    debounceMs: 250,
+  });
 
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
@@ -364,11 +381,10 @@ function HomeContent() {
                       <input
                         type="text"
                         placeholder="What do you want to listen to?"
-                        value={searchQuery}
+                        value={mobileInputValue}
                         onFocus={() => setIsSearchFocused(true)}
                         onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setShowFullResults(true);
+                          handleMobileSearchChange(e);
                         }}
                         className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
                       />
@@ -383,18 +399,16 @@ function HomeContent() {
                         type="text"
                         autoFocus
                         placeholder="Search songs, artists, genres..."
-                        value={searchQuery}
+                        value={mobileInputValue}
                         onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setShowFullResults(true);
+                          handleMobileSearchChange(e);
                         }}
                         className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
                       />
                       {searchQuery && (
                         <button
                           onClick={() => {
-                            setSearchQuery("");
-                            setShowFullResults(false);
+                            clearMobileSearch();
                           }}
                           className="p-1 hover:bg-card-hover rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-title cursor-pointer transition-colors duration-150"
                         >
@@ -405,8 +419,7 @@ function HomeContent() {
                     <button
                       onClick={() => {
                         setIsSearchFocused(false);
-                        setSearchQuery("");
-                        setShowFullResults(false);
+                        clearMobileSearch();
                       }}
                       className="text-xs font-bold text-title hover:text-dim active:scale-95 transition-all duration-150 pr-1"
                     >

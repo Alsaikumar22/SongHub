@@ -4,21 +4,19 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import SignUpPage from "./SignUpPage";
 import LoginPage from "./LoginPage";
 import PasswordLogin from "./PasswordLogin";
 import EmailSentPage from "./EmailSentPage";
 
 const STEPS = {
-  SIGNUP: "signup",
   LOGIN: "login",
   EMAIL_SENT: "email_sent",
   PASSWORD: "password",
 };
 
 /**
- * AuthModal — Full-screen auth flow (Spotify-inspired, YouWorship branded).
- * Handles sign up, login (email link + password), and password login flows.
+ * AuthModal — Full-screen login flow (Spotify-inspired, YouWorship branded).
+ * Handles login (email link + password) and password login flows.
  * Uses Firebase Email Link (passwordless) authentication as the primary method.
  *
  * Props:
@@ -26,11 +24,10 @@ const STEPS = {
  *   onSuccess: () => void  — called after successful auth
  *   returnAction: boolean  — whether user was redirected from a protected action
  */
-export default function AuthModal({ onClose, onSuccess, returnAction = false, initialStep = "signup" }) {
+export default function AuthModal({ onClose, onSuccess, returnAction = false, initialStep = "login" }) {
   const { isAuthenticated, loading, sendEmailLink } = useAuth();
-  const [step, setStep] = useState(initialStep === "login" ? STEPS.LOGIN : STEPS.SIGNUP);
+  const [step, setStep] = useState(STEPS.LOGIN);
   const [email, setEmail] = useState("");
-  const [flowType, setFlowType] = useState(initialStep === "login" ? "login" : "signup"); // "signup" | "login"
   const [resendLoading, setResendLoading] = useState(false);
   const [emailLinkError, setEmailLinkError] = useState(null);
 
@@ -74,17 +71,7 @@ export default function AuthModal({ onClose, onSuccess, returnAction = false, in
 
   const handleUseAnotherEmail = () => {
     setEmailLinkError(null);
-    setStep(flowType === "signup" ? STEPS.SIGNUP : STEPS.LOGIN);
-  };
-
-  const handleSwitchToLogin = () => {
-    setFlowType("login");
     setStep(STEPS.LOGIN);
-  };
-
-  const handleSwitchToSignup = () => {
-    setFlowType("signup");
-    setStep(STEPS.SIGNUP);
   };
 
   const handlePasswordLogin = () => {
@@ -129,24 +116,6 @@ export default function AuthModal({ onClose, onSuccess, returnAction = false, in
             </motion.div>
           )}
           <AnimatePresence mode="wait">
-            {step === STEPS.SIGNUP && (
-              <motion.div
-                key="signup"
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.25 }}
-              >
-                <SignUpPage
-                  onContinueWithEmail={handleContinueWithEmail}
-                  onSwitchToLogin={handleSwitchToLogin}
-                  onPasswordLogin={handlePasswordLogin}
-                  onClose={onClose}
-                  onSuccess={onSuccess}
-                />
-              </motion.div>
-            )}
-
             {step === STEPS.LOGIN && (
               <motion.div
                 key="login"
@@ -157,7 +126,6 @@ export default function AuthModal({ onClose, onSuccess, returnAction = false, in
               >
                 <LoginPage
                   onContinueWithEmail={handleContinueWithEmail}
-                  onSwitchToSignup={handleSwitchToSignup}
                   onPasswordLogin={handlePasswordLogin}
                   onClose={onClose}
                   onSuccess={onSuccess}
@@ -188,7 +156,7 @@ export default function AuthModal({ onClose, onSuccess, returnAction = false, in
                   email={email}
                   onBack={() => {
                     setEmailLinkError(null);
-                    setStep(flowType === "signup" ? STEPS.SIGNUP : STEPS.LOGIN);
+                    setStep(STEPS.LOGIN);
                   }}
                   onResend={handleResendEmailLink}
                   onUseAnotherEmail={handleUseAnotherEmail}
@@ -207,7 +175,6 @@ export default function AuthModal({ onClose, onSuccess, returnAction = false, in
               >
                 <PasswordLogin
                   onBack={handleBackToLogin}
-                  onSwitchToSignup={handleSwitchToSignup}
                   onSuccess={onSuccess}
                   onClose={onClose}
                 />

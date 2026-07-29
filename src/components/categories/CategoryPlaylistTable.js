@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import ProtectedAction from "@/components/auth/ProtectedAction";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
   const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
@@ -48,10 +49,14 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   };
 
   const handleShare = (e, song) => {
+  const handleShare = (e, song) => {
     e.stopPropagation();
+    setSharedSongId(song.id);
     setSharedSongId(song.id);
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(`${window.location.origin}/song/${song.slug || song.id}`);
+      const encodedSlug = encodeURIComponent(song.slug || song.id);
+      navigator.clipboard.writeText(`${window.location.origin}/song/${encodedSlug}`);
     }
     setTimeout(() => setSharedSongId(null), 2000);
   };
@@ -89,12 +94,21 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
           const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
           const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
+          const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
+          const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
 
           // Mock date added based on releaseYear or ID
           const year = song.releaseYear || 2024;
           const dateAdded = `Jan 15, ${year}`;
 
           return (
+            <ProtectedAction key={song.id} action={() => {
+              if (isCurrent) {
+                togglePlay();
+              } else {
+                playSong(song);
+              }
+            }}>
             <ProtectedAction key={song.id} action={() => {
               if (isCurrent) {
                 togglePlay();
@@ -212,6 +226,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             handleShare(e, song);
+                            handleShare(e, song);
                             setActiveMenuSongId(null);
                           }}
                           className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2 ${
@@ -238,6 +253,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 </div>
               </div>
             </motion.div>
+            </ProtectedAction>
             </ProtectedAction>
           );
         })}

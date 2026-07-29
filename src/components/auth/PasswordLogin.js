@@ -11,7 +11,6 @@ import { useAuth } from "@/context/auth-context";
  */
 export default function PasswordLogin({
   onBack,
-  onSwitchToSignup,
   onSuccess,
   onClose,
 }) {
@@ -234,15 +233,6 @@ export default function PasswordLogin({
         >
           ← Back to login
         </button>
-        <p className="text-sm text-[#a7a7a7]">
-          Don&apos;t have an account?{" "}
-          <button
-            onClick={onSwitchToSignup}
-            className="text-white font-semibold hover:underline cursor-pointer"
-          >
-            Create one
-          </button>
-        </p>
       </motion.div>
     </div>
   );

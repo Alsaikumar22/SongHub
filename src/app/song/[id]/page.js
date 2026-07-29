@@ -15,7 +15,7 @@ import {
   Play,
   Pause,
   Heart,
-  Maximize2
+  Maximize2,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
@@ -33,7 +33,8 @@ function formatVideoEmbedUrl(url) {
   if (trimmed.includes("youtube.com/embed/")) return trimmed;
   if (trimmed.includes("youtube.com/watch")) {
     const match = trimmed.match(/[?&]v=([^&]+)/);
-    if (match && match[1]) return `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+    if (match && match[1])
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
   }
   if (trimmed.includes("youtu.be/")) {
     const parts = trimmed.split("youtu.be/");
@@ -53,12 +54,12 @@ function YouTubeVideoPlayer({ embedUrl, title, isPlaying }) {
     if (isPlaying) {
       iframeRef.current.contentWindow?.postMessage(
         JSON.stringify({ event: "command", func: "playVideo", args: "" }),
-        "*"
+        "*",
       );
     } else {
       iframeRef.current.contentWindow?.postMessage(
         JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
-        "*"
+        "*",
       );
     }
   }, [isPlaying]);
@@ -92,10 +93,13 @@ function SongPageContent({ params }) {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreenLyrics(document.fullscreenElement === lyricsContainerRef.current);
+      setIsFullscreenLyrics(
+        document.fullscreenElement === lyricsContainerRef.current,
+      );
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const toggleFullscreenLyrics = () => {
@@ -121,6 +125,7 @@ function SongPageContent({ params }) {
   const isLight = theme === "light";
   const {
     songs,
+    songsLoading,
     currentSong,
     isPlaying,
     playSong,
@@ -129,7 +134,7 @@ function SongPageContent({ params }) {
     playlists,
     addSongToPlaylist,
     removeSongFromPlaylist,
-    setActiveTab
+    setActiveTab,
   } = useAudio();
 
   const { setSearchQuery, setShowFullResults } = useSearch();
@@ -151,10 +156,16 @@ function SongPageContent({ params }) {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (playlistDropdownRef.current && !playlistDropdownRef.current.contains(e.target)) {
+      if (
+        playlistDropdownRef.current &&
+        !playlistDropdownRef.current.contains(e.target)
+      ) {
         setShowPlaylistDropdown(false);
       }
-      if (shareDropdownRef.current && !shareDropdownRef.current.contains(e.target)) {
+      if (
+        shareDropdownRef.current &&
+        !shareDropdownRef.current.contains(e.target)
+      ) {
         setShowShareDropdown(false);
       }
     };
@@ -162,8 +173,11 @@ function SongPageContent({ params }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const songTitle = song ? (song.teluguTitle || song.title) : "";
-  const songSubtitle = song && (song.titleEnglish || song.title) !== songTitle ? ` (${song.titleEnglish || song.title})` : "";
+  const songTitle = song ? song.teluguTitle || song.title : "";
+  const songSubtitle =
+    song && (song.titleEnglish || song.title) !== songTitle
+      ? ` (${song.titleEnglish || song.title})`
+      : "";
 
   const getShareUrl = (source) => {
     if (typeof window === "undefined") return "";
@@ -175,20 +189,29 @@ function SongPageContent({ params }) {
   const handleShareWhatsApp = () => {
     const url = getShareUrl("whatsapp");
     const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(
+      `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
+      "_blank",
+    );
     setShowShareDropdown(false);
   };
 
   const handleShareTwitter = () => {
     const url = getShareUrl("twitter");
     const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+      "_blank",
+    );
     setShowShareDropdown(false);
   };
 
   const handleShareFacebook = () => {
     const url = getShareUrl("facebook");
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      "_blank",
+    );
     setShowShareDropdown(false);
   };
 
@@ -226,7 +249,9 @@ function SongPageContent({ params }) {
     if (!song) return "";
     if (lang === "english") {
       if (song.lyricsEnglish) {
-        return Array.isArray(song.lyricsEnglish) ? song.lyricsEnglish.join("\n") : song.lyricsEnglish;
+        return Array.isArray(song.lyricsEnglish)
+          ? song.lyricsEnglish.join("\n")
+          : song.lyricsEnglish;
       }
       if (Array.isArray(song.lyrics)) {
         const matched = song.lyrics.find((l) => l.language === "en");
@@ -235,7 +260,9 @@ function SongPageContent({ params }) {
       return "";
     } else {
       if (song.lyricsTelugu) {
-        return Array.isArray(song.lyricsTelugu) ? song.lyricsTelugu.join("\n") : song.lyricsTelugu;
+        return Array.isArray(song.lyricsTelugu)
+          ? song.lyricsTelugu.join("\n")
+          : song.lyricsTelugu;
       }
       if (Array.isArray(song.lyrics)) {
         const matched = song.lyrics.find((l) => l.language === "te");
@@ -263,8 +290,14 @@ function SongPageContent({ params }) {
         const englishLyrics = getRawLyrics("english");
 
         if (teluguLyrics && englishLyrics && teluguLyrics !== englishLyrics) {
-          const teluguLines = teluguLyrics.split("\n").map(l => l.trim()).filter(Boolean);
-          const englishLines = englishLyrics.split("\n").map(l => l.trim()).filter(Boolean);
+          const teluguLines = teluguLyrics
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const englishLines = englishLyrics
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
           const combined = [];
           const maxLen = Math.max(teluguLines.length, englishLines.length);
           for (let i = 0; i < maxLen; i++) {
@@ -281,7 +314,9 @@ function SongPageContent({ params }) {
       }
 
       navigator.clipboard.writeText(header + lyricsText);
-      setToastMessage(`Lyrics (${selectedLanguage === "dual" ? "bilingual" : selectedLanguage}) copied!`);
+      setToastMessage(
+        `Lyrics (${selectedLanguage === "dual" ? "bilingual" : selectedLanguage}) copied!`,
+      );
       setTimeout(() => setToastMessage(""), 2000);
     }
   };
@@ -316,29 +351,33 @@ function SongPageContent({ params }) {
           decodeURIComponent(sSlugNFC) === targetNFC
         );
       }) ||
-      (currentSong && (
-        (currentSong.id || "").normalize("NFC") === targetNFC ||
+      (currentSong &&
+      ((currentSong.id || "").normalize("NFC") === targetNFC ||
         (currentSong.id || "").normalize("NFC") === rawNFC ||
         (currentSong.slug || "").normalize("NFC") === targetNFC ||
-        (currentSong.slug || "").normalize("NFC") === rawNFC
-      ) ? currentSong : null);
+        (currentSong.slug || "").normalize("NFC") === rawNFC)
+        ? currentSong
+        : null);
 
     if (foundSong) {
-      setSong(foundSong);
+      queueMicrotask(() => setSong(foundSong));
       return;
     }
 
     if (fetchingRef.current) return;
     fetchingRef.current = true;
 
-    songService.getSongById(decodedId)
+    songService
+      .getSongById(decodedId)
       .then((fetchedSong) => {
         if (fetchedSong) {
           setSong(fetchedSong);
           fetchingRef.current = false;
         } else {
           // Fallback to Next.js API route if not found directly
-          fetch(`/api/songs/${encodeURIComponent(decodedId)}`, { cache: "no-store" })
+          fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
+            cache: "no-store",
+          })
             .then((res) => res.json())
             .then((data) => {
               if (data.song) setSong(data.song);
@@ -353,14 +392,19 @@ function SongPageContent({ params }) {
       .catch((err) => {
         console.error("Failed to fetch song directly from Firestore:", err);
         // Fallback to API route on error
-        fetch(`/api/songs/${encodeURIComponent(decodedId)}`, { cache: "no-store" })
+        fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
+          cache: "no-store",
+        })
           .then((res) => res.json())
           .then((data) => {
             if (data.song) setSong(data.song);
             fetchingRef.current = false;
           })
           .catch((fetchErr) => {
-            console.error("API fallback fetch failed on direct error:", fetchErr);
+            console.error(
+              "API fallback fetch failed on direct error:",
+              fetchErr,
+            );
             fetchingRef.current = false;
           });
       });
@@ -375,8 +419,11 @@ function SongPageContent({ params }) {
   useEffect(() => {
     if (song) {
       const hasTelugu = !!(
-        ((typeof song.lyricsTelugu === "string" && song.lyricsTelugu.trim().length > 0) || (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) ||
-        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te"))
+        (typeof song.lyricsTelugu === "string" &&
+          song.lyricsTelugu.trim().length > 0) ||
+        (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0) ||
+        (Array.isArray(song.lyrics) &&
+          song.lyrics.some((l) => l.language === "te"))
       );
       setSelectedLanguage(hasTelugu ? "telugu" : "english");
     }
@@ -390,10 +437,14 @@ function SongPageContent({ params }) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
         <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-white">Finding song...</h2>
-        <Link href="/" className="mt-4 text-sm text-title hover:underline">
-          Return to home
-        </Link>
+        <h2 className="text-xl font-bold text-white">
+          {songsLoading ? "Loading song..." : "Song not found"}
+        </h2>
+        {!songsLoading && (
+          <Link href="/" className="mt-4 text-sm text-title hover:underline">
+            Return to home
+          </Link>
+        )}
       </div>
     );
   }
@@ -401,11 +452,16 @@ function SongPageContent({ params }) {
   const isFavorited = favorites.includes(song.id);
   const hasDualLyrics = !!(
     song &&
-    ((typeof song.lyricsTelugu === "string" && song.lyricsTelugu.trim().length > 0) || (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) &&
-    ((typeof song.lyricsEnglish === "string" && song.lyricsEnglish.trim().length > 0) || (Array.isArray(song.lyricsEnglish) && song.lyricsEnglish.length > 0))
+    ((typeof song.lyricsTelugu === "string" &&
+      song.lyricsTelugu.trim().length > 0) ||
+      (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) &&
+    ((typeof song.lyricsEnglish === "string" &&
+      song.lyricsEnglish.trim().length > 0) ||
+      (Array.isArray(song.lyricsEnglish) && song.lyricsEnglish.length > 0))
   );
 
-  const rawVideoUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
+  const rawVideoUrl =
+    song.media?.video || song.videoUrl || song.youtubeUrl || "";
   const embedUrl = formatVideoEmbedUrl(rawVideoUrl);
   const { r, g, b } = gradientColor;
 
@@ -415,7 +471,7 @@ function SongPageContent({ params }) {
       <div
         className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
         style={{
-          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.05) 45%, var(--canvas) 100%)`,
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)},0.05) 45%, var(--canvas) 100%)`,
         }}
       >
         {/* Minimal back link */}
@@ -429,10 +485,14 @@ function SongPageContent({ params }) {
             <span>Back</span>
           </button>
 
-          <ProtectedAction action={() => router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`)}>
-            <button
-              className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm"
-            >
+          <ProtectedAction
+            action={() =>
+              router.push(
+                `/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`,
+              )
+            }
+          >
+            <button className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm">
               <FileText className="w-3.5 h-3.5 text-title" />
               <span>View Lyrics</span>
             </button>
@@ -449,7 +509,9 @@ function SongPageContent({ params }) {
                 isPlaying={isPlaying}
               />
               <div className="text-center">
-                <h2 className={`text-xl md:text-2xl font-bold text-title ${song.teluguTitle ? "font-telugu" : ""}`}>
+                <h2
+                  className={`text-xl md:text-2xl font-bold text-title ${song.teluguTitle ? "font-telugu" : ""}`}
+                >
                   {song.teluguTitle || song.title}
                 </h2>
                 <p className="text-xs text-muted mt-1">{song.artist}</p>
@@ -458,10 +520,14 @@ function SongPageContent({ params }) {
           ) : (
             <div className="flex flex-col items-center justify-center text-center px-8 py-16">
               <div className="w-20 h-20 rounded-full bg-card border border-line flex items-center justify-center mb-5 shadow-sm">
-                <Video className="w-9 h-9 text-muted" />
+                <YouTubeIcon className="w-9 h-9 text-muted" />
               </div>
-              <h4 className="text-lg font-bold text-muted mb-2">No Video Available</h4>
-              <p className="text-sm text-muted max-w-sm">A video for this track has not been added yet.</p>
+              <h4 className="text-lg font-bold text-muted mb-2">
+                No Video Available
+              </h4>
+              <p className="text-sm text-muted max-w-sm">
+                A video for this track has not been added yet.
+              </p>
             </div>
           )}
         </div>
@@ -475,17 +541,16 @@ function SongPageContent({ params }) {
       <div
         className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
         style={{
-          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r-30)},${Math.max(0, g-30)},${Math.max(0, b-30)},0.05) 45%, var(--canvas) 100%)`,
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)},0.05) 45%, var(--canvas) 100%)`,
         }}
       >
         <div className="p-6 flex items-center justify-between z-40">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
-            title="Back"
+            className="p-1.5 md:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+            title="Go back"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
 
           <LanguageSegmented
@@ -500,6 +565,7 @@ function SongPageContent({ params }) {
             isImmersive={true}
             selectedLanguage={selectedLanguage}
             setSelectedLanguage={setSelectedLanguage}
+            fontSizeStep={fontSizeStep}
           />
         </div>
       </div>
@@ -528,7 +594,9 @@ function SongPageContent({ params }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex flex-col leading-tight min-w-0">
-            <h1 className={`text-title text-base md:text-lg font-bold truncate ${song.teluguTitle ? "font-telugu" : ""}`}>
+            <h1
+              className={`text-title text-base md:text-lg font-bold truncate ${song.teluguTitle ? "font-telugu" : ""}`}
+            >
               {song.teluguTitle || song.title}
             </h1>
             {song.artist && (
@@ -567,13 +635,17 @@ function SongPageContent({ params }) {
               }`}
               title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
-              <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
+              <Heart
+                className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`}
+              />
             </button>
           </ProtectedAction>
 
           {/* 3. Add to Playlist Icon with Dropdown */}
           <div className="relative" ref={playlistDropdownRef}>
-            <ProtectedAction action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}>
+            <ProtectedAction
+              action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+            >
               <button
                 onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
                 className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
@@ -657,8 +729,11 @@ function SongPageContent({ params }) {
                   onClick={handleShareWhatsApp}
                   className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
                 >
-                  <svg className="w-4 h-4 text-[#25D366] fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.424 5.429 0 12.022 0a12.025 12.025 0 0 1 12 12.022c0 6.603-5.427 12-12.022 12-1.996-.002-3.956-.5-5.713-1.448L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.424 9.863-9.864.003-5.44-4.421-9.868-9.863-9.868-5.437 0-9.868 4.428-9.87 9.87-.001 1.747.457 3.447 1.332 4.966L1.93 20.854l4.717-1.24z"/>
+                  <svg
+                    className="w-4 h-4 text-[#25D366] fill-current shrink-0"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.424 5.429 0 12.022 0a12.025 12.025 0 0 1 12 12.022c0 6.603-5.427 12-12.022 12-1.996-.002-3.956-.5-5.713-1.448L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.424 9.863-9.864.003-5.44-4.421-9.868-9.863-9.868-5.437 0-9.868 4.428-9.87 9.87-.001 1.747.457 3.447 1.332 4.966L1.93 20.854l4.717-1.24z" />
                   </svg>
                   <span className="font-semibold text-title">WhatsApp</span>
                 </button>
@@ -668,8 +743,11 @@ function SongPageContent({ params }) {
                   onClick={handleShareFacebook}
                   className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
                 >
-                  <svg className="w-4 h-4 text-[#1877F2] fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  <svg
+                    className="w-4 h-4 text-[#1877F2] fill-current shrink-0"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                   <span className="font-semibold text-title">Facebook</span>
                 </button>
@@ -679,8 +757,11 @@ function SongPageContent({ params }) {
                   onClick={handleShareTwitter}
                   className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
                 >
-                  <svg className="w-4 h-4 text-title fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  <svg
+                    className="w-4 h-4 text-title fill-current shrink-0"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
                   <span className="font-semibold text-title">X / Twitter</span>
                 </button>
@@ -701,7 +782,9 @@ function SongPageContent({ params }) {
                   title="Share to other installed apps"
                 >
                   <Share2 className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">Other Apps...</span>
+                  <span className="font-semibold text-title">
+                    Other Apps...
+                  </span>
                 </button>
               </div>
             )}
@@ -719,8 +802,6 @@ function SongPageContent({ params }) {
       </div>
 
       <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
-
-
         {/* Lyrics Section */}
         <div className="space-y-4 pt-2 flex-1 flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -732,7 +813,7 @@ function SongPageContent({ params }) {
                 selected={selectedLanguage}
                 onChange={setSelectedLanguage}
               />
-              
+
               {/* Size & Full Screen Controls */}
               <div className="flex items-center bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm h-9 md:h-11 overflow-hidden shrink-0">
                 {/* A- (Decrease Font Size) */}

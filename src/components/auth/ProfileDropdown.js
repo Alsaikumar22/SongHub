@@ -3,11 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User,
   Heart,
   ListMusic,
-  FolderHeart,
-  Settings,
   Shield,
   LogOut,
   ChevronDown,
@@ -19,8 +16,7 @@ import { useRouter } from "next/navigation";
 /**
  * ProfileDropdown — User avatar button with dropdown menu.
  * Shows avatar image or initials fallback.
- * Menu items: My Profile, Favorites, Playlists, Collections, Settings,
- * Admin Dashboard, Logout.
+ * Menu items: Favorites, Playlists, Admin Dashboard, Logout.
  */
 export default function ProfileDropdown() {
   const { user, isAuthenticated, signOut } = useAuth();
@@ -52,7 +48,6 @@ export default function ProfileDropdown() {
   if (!isAuthenticated || !user) return null;
 
   const menuItems = [
-    { icon: <User className="w-4 h-4" />, label: "My Profile", onClick: () => { setIsOpen(false); } },
     { icon: <Heart className="w-4 h-4" />, label: "Favorites", onClick: () => {
       setIsOpen(false);
       setActiveTab("favorites");
@@ -66,12 +61,6 @@ export default function ProfileDropdown() {
       setActivePlaylistId(null);
       setViewedSongId(null);
       router.push("/");
-    }},
-    { icon: <FolderHeart className="w-4 h-4" />, label: "Collections", onClick: () => {
-      setIsOpen(false);
-    }},
-    { icon: <Settings className="w-4 h-4" />, label: "Settings", onClick: () => {
-      setIsOpen(false);
     }},
   ];
 

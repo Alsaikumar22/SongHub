@@ -27,8 +27,8 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           iconSize="w-8 h-8"
         />
 
-        {/* Overlay: centered play/pause visible on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+        {/* Overlay: centered play/pause — always visible on mobile, hover on desktop */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
           <div
             className={`transform scale-90 group-hover:scale-100 transition-transform duration-200 pointer-events-auto rounded-full bg-white text-black flex items-center justify-center shadow-xl ${
               isSmall ? "w-9 h-9" : "w-11 h-11"
