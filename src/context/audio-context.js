@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./auth-context";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/config";
@@ -30,6 +31,15 @@ function getDisplayArtist(song) {
   }
 
   return "Unknown Artist";
+}
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function shuffleArray(array) {
@@ -72,12 +82,75 @@ export const AudioProvider = ({ children }) => {
   const [isShuffled, setIsShuffled] = useState(false);
   const [queue, setQueue] = useState([]);
   const [originalQueue, setOriginalQueue] = useState([]);
+  const [originalQueue, setOriginalQueue] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [viewedSongId, setViewedSongId] = useState(null);
   const [activeTab, setActiveTab] = useState("discover");
   const [activePlaylistId, setActivePlaylistId] = useState(null);
+  const [showFullHome, setShowFullHome] = useState(true);
+  const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
+
+  const isLoopingRef = useRef(isLooping);
+  const isShuffledRef = useRef(isShuffled);
+  const queueRef = useRef(queue);
+  const currentSongRef = useRef(currentSong);
+
+  useEffect(() => {
+    isLoopingRef.current = isLooping;
+  }, [isLooping]);
+
+  useEffect(() => {
+    isShuffledRef.current = isShuffled;
+  }, [isShuffled]);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    currentSongRef.current = currentSong;
+  }, [currentSong]);
+
+  const getCurrentContextSongs = (currentPlayingSong) => {
+    let contextSongs = songs;
+    if (activeTab === "favorites") {
+      contextSongs = songs.filter(s => favorites.includes(s.id));
+    } else if (activeTab === "playlist" && activePlaylistId) {
+      const pl = playlists.find(p => p.id === activePlaylistId);
+      if (pl) {
+        contextSongs = songs.filter(s => pl.songIds.includes(s.id));
+      } else {
+        contextSongs = [];
+      }
+    } else if (activeTab === "recently-played") {
+      contextSongs = recentlyPlayed.map(id => songs.find(s => s.id === id)).filter(Boolean);
+    }
+
+    // Ensure the playing song is part of the queue
+    if (currentPlayingSong && !contextSongs.some(s => s.id === currentPlayingSong.id)) {
+      return songs;
+    }
+    return contextSongs;
+  };
+
+  const handleSetIsShuffled = (shuffledVal) => {
+    setIsShuffled(shuffledVal);
+    if (shuffledVal) {
+      const remaining = originalQueue.filter(s => s.id !== currentSong?.id);
+      const shuffled = currentSong 
+        ? [currentSong, ...shuffleArray(remaining)] 
+        : shuffleArray(originalQueue);
+      setQueue(shuffled);
+    } else {
+      setQueue(originalQueue);
+    }
+  };
+
+  const handleNextSong = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (currentQueue.length === 0) return;
   const [showFullHome, setShowFullHome] = useState(true);
 
   const isLoopingRef = useRef(isLooping);
@@ -144,15 +217,23 @@ export const AudioProvider = ({ children }) => {
     if (currentSongRef.current) {
       const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
       if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
+    if (currentSongRef.current) {
+      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
         nextIndex = currentIndex + 1;
       }
     }
 
     setCurrentSong(currentQueue[nextIndex]);
+    setCurrentSong(currentQueue[nextIndex]);
     setIsPlaying(true);
     setProgress(0);
   }, []);
+  }, []);
 
+  const handlePrevSong = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (currentQueue.length === 0) return;
   const handlePrevSong = useCallback(() => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) return;
@@ -166,12 +247,22 @@ export const AudioProvider = ({ children }) => {
         } else {
           prevIndex = currentQueue.length - 1; // loop back to end
         }
+    if (currentSongRef.current) {
+      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      if (currentIndex !== -1) {
+        if (currentIndex > 0) {
+          prevIndex = currentIndex - 1;
+        } else {
+          prevIndex = currentQueue.length - 1; // loop back to end
+        }
       }
     }
 
     setCurrentSong(currentQueue[prevIndex]);
+    setCurrentSong(currentQueue[prevIndex]);
     setIsPlaying(true);
     setProgress(0);
+  }, []);
   }, []);
 
   const audioRef = useRef(null);
@@ -205,6 +296,7 @@ export const AudioProvider = ({ children }) => {
     setSongsLoading(true);
     
     fetch("/api/songs", { cache: "no-store" })
+    fetch("/api/songs", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
@@ -216,6 +308,7 @@ export const AudioProvider = ({ children }) => {
           : [];
         setSongs(fetchedSongs);
         setQueue(fetchedSongs);
+        setOriginalQueue(fetchedSongs);
         setOriginalQueue(fetchedSongs);
         setSongsLoading(false);
         console.log(`✓ Loaded ${fetchedSongs.length} songs from API`);
@@ -236,11 +329,19 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isLooping]);
 
+  // Sync native looping property of the HTML5 Audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
+
   // Initialize browser-dependent values
   useEffect(() => {
     // 1. Initialize HTML Audio Element
     audioRef.current = new Audio();
     audioRef.current.volume = volume;
+    audioRef.current.loop = isLoopingRef.current;
     audioRef.current.loop = isLoopingRef.current;
 
     // 2. Load lists from localStorage (fallback for non-auth users)
@@ -293,6 +394,7 @@ export const AudioProvider = ({ children }) => {
 
     const handleEnded = () => {
       // Handles auto-play next
+      if (isLoopingRef.current) {
       if (isLoopingRef.current) {
         audio.currentTime = 0;
         audio.play().catch(err => console.log("Playback error: ", err));
@@ -488,6 +590,7 @@ export const AudioProvider = ({ children }) => {
               if (!isMounted) return;
               if (event.data === 0) {
                 if (isLoopingRef.current) {
+                if (isLoopingRef.current) {
                   if (typeof player?.seekTo === "function") try { player.seekTo(0); } catch (e) {}
                   if (typeof player?.playVideo === "function") try { player.playVideo(); } catch (e) {}
                 } else {
@@ -562,6 +665,41 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isPlaying]);
 
+  // Handle YouTube iframe sizing and styling for Mini Player mode
+  useEffect(() => {
+    const player = youtubePlayerRef.current;
+    if (!player) return;
+    try {
+      const iframe = player.getIframe();
+      if (!iframe) return;
+
+      if (isMiniPlayerActive) {
+        iframe.style.display = "block";
+        iframe.style.position = "fixed";
+        iframe.style.bottom = "100px";
+        iframe.style.right = "24px";
+        iframe.style.width = "320px";
+        iframe.style.height = "180px";
+        iframe.style.zIndex = "9999";
+        iframe.style.borderRadius = "12px";
+        iframe.style.border = "2px solid rgba(255, 255, 255, 0.15)";
+        iframe.style.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
+        if (typeof player.setSize === "function") {
+          player.setSize(320, 180);
+        }
+      } else {
+        iframe.style.display = "none";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        if (typeof player.setSize === "function") {
+          player.setSize(1, 1);
+        }
+      }
+    } catch (e) {
+      console.warn("Mini player effect sizing error:", e);
+    }
+  }, [isMiniPlayerActive, currentSong?.id]);
+
 
 
   const playSong = (song) => {
@@ -582,6 +720,18 @@ export const AudioProvider = ({ children }) => {
       setCurrentSong(song);
       setIsPlaying(true);
       setProgress(0);
+
+      // Set queue and originalQueue for this context
+      const contextSongs = getCurrentContextSongs(song);
+      setOriginalQueue(contextSongs);
+
+      if (isShuffled) {
+        const remaining = contextSongs.filter(s => s.id !== song.id);
+        const shuffled = [song, ...shuffleArray(remaining)];
+        setQueue(shuffled);
+      } else {
+        setQueue(contextSongs);
+      }
 
       // Set queue and originalQueue for this context
       const contextSongs = getCurrentContextSongs(song);
@@ -765,6 +915,7 @@ export const AudioProvider = ({ children }) => {
         toggleMute,
         setIsLooping,
         setIsShuffled: handleSetIsShuffled,
+        setIsShuffled: handleSetIsShuffled,
         toggleFavorite,
         createPlaylist,
         deletePlaylist,
@@ -775,6 +926,11 @@ export const AudioProvider = ({ children }) => {
         activeTab,
         setActiveTab,
         activePlaylistId,
+        setActivePlaylistId,
+        showFullHome,
+        setShowFullHome,
+        isMiniPlayerActive,
+        setIsMiniPlayerActive
         setActivePlaylistId,
         showFullHome,
         setShowFullHome

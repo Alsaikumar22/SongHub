@@ -30,9 +30,9 @@ const ntr = NTR({
 });
 
 export const metadata = {
-  title: "YouWorship",
+  title: "youworship",
   description:
-    "Discover Christian worship lyrics — search, share, and sing along with YouWorship",
+    "A sleek and clean minimalist music player built with Next.js and TailwindCSS",
   icons: {
     icon: "/youlogo.png",
   },
