@@ -99,7 +99,7 @@ export default function MobileNav({ setShowTalkToUs, setShowAboutModal }) {
     <>
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-line z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         {/* ─── Tab Buttons ─── */}
-        <div className="flex items-center justify-around px-2 pt-1 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex items-center justify-around px-2 pt-0 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
           {tabs.map((tab) => {
             const isActive = !isOnSongPage && (
               activeTab === tab.id ||
