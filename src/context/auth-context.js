@@ -17,7 +17,6 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink as firebaseSignInWithEmailLink,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { fetchUserData, saveUserLoginData } from "@/lib/firestore-service";
 
@@ -230,16 +229,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signUpWithPassword = async (email, password) => {
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      return { success: true, user: result.user };
-    } catch (error) {
-      console.error("Sign up error:", error);
-      return { success: false, error };
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -263,7 +252,6 @@ export function AuthProvider({ children }) {
     sendEmailLink,
     signInWithEmailLink,
     signInWithPassword,
-    signUpWithPassword,
     getFriendlyErrorMessage,
     signOut: handleSignOut,
   };

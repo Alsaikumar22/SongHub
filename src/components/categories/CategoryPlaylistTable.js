@@ -51,7 +51,8 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
     e.stopPropagation();
     setSharedSongId(song.id);
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/song/${song.slug || song.id}`);
+      const encodedSlug = encodeURIComponent(song.slug || song.id);
+      navigator.clipboard.writeText(`${window.location.origin}/song/${encodedSlug}`);
     }
     setTimeout(() => setSharedSongId(null), 2000);
   };

@@ -24,14 +24,14 @@ export default function SongCard({ song, onPlay }) {
           iconSize="w-8 h-8"
         />
 
-        {/* Floating Play Button */}
+        {/* Floating Play Button — always visible on mobile, hover on desktop */}
         {onPlay && (
           <button
             onClick={(e) => {
               e.preventDefault();
               onPlay(song);
             }}
-            className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer z-10"
+            className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl md:opacity-0 md:group-hover:opacity-100 md:group-hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer z-10"
             title={`Play ${song.title}`}
           >
             <Play className="w-4 h-4 fill-current ml-0.5" />

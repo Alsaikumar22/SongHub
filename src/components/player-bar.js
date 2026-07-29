@@ -7,6 +7,7 @@ import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
+import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import {
   Play,
   Pause,
@@ -21,7 +22,6 @@ import {
   ListMusic,
   ChevronDown,
   Music,
-  Video,
   X
 } from "lucide-react";
 
@@ -205,13 +205,13 @@ export default function PlayerBar() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                   }}
                   className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
-                  aria-label="Watch Video"
-                  title="Watch Video"
+                  aria-label="View Lyrics"
+                  title="View Lyrics"
                 >
-                  <Video className="w-4.5 h-4.5 text-red-400" />
+                  <MicIcon className="w-4.5 h-4.5" />
                 </button>
               )}
               <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
@@ -418,7 +418,7 @@ export default function PlayerBar() {
                 className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
                 title="Watch Video"
               >
-                <Video className="w-4 h-4 text-red-400" />
+                <YouTubeIcon className="w-4 h-4 text-[#FF0000]" />
               </button>
             )}
 
@@ -519,19 +519,20 @@ export default function PlayerBar() {
                 {pathname === "/" ? "Home Catalog" : "Details Page"}
               </span>
             </div>
-            <ProtectedAction action={() => {
-              setIsExpanded(false);
-              if (currentSong) {
-                router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
-              }
-            }}>
+            {currentSong?.media?.video || currentSong?.videoUrl || currentSong?.youtubeUrl ? (
               <button
+                onClick={() => {
+                  setIsExpanded(false);
+                  router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
+                }}
                 className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
-                title="View lyrics"
+                title="Watch Video"
               >
-                <MicIcon className="w-5.5 h-5.5" />
+                <YouTubeIcon className="w-5.5 h-5.5 text-[#FF0000]" />
               </button>
-            </ProtectedAction>
+            ) : (
+              <div className="w-10 h-10" />
+            )}
           </div>
 
           {/* Album Artwork Section */}

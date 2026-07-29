@@ -31,10 +31,10 @@ export default function TalkToUsDrawer({
   const [reqEmail, setReqEmail] = useState("");
 
   // Feedback form state
-  const [fbCategory, setFbCategory] = useState("General"); // "General", "Idea", "Bug", "Praise"
+  const [fbCategory, setFbCategory] = useState("Contact Us");
   const [fbName, setFbName] = useState("");
   const [fbEmail, setFbEmail] = useState("");
-  const [fbRating, setFbRating] = useState(5);
+  const [fbRating, setFbRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
 
   // Reset and sync state when drawer closes/opens
@@ -50,7 +50,7 @@ export default function TalkToUsDrawer({
       setReqEmail("");
       setFbName("");
       setFbEmail("");
-      setFbRating(5);
+      setFbRating(0);
       setHoveredRating(0);
     }
   }, [isOpen, initialTab, initialCategory]);
@@ -279,29 +279,6 @@ export default function TalkToUsDrawer({
                     ) : (
                       /* Feedback Form */
                       <form onSubmit={handleFeedbackSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-dim uppercase tracking-wider block">
-                            What's on your mind?
-                          </label>
-                          <div className="grid grid-cols-2 gap-2 select-none">
-                            {["Account & Login", "Feature Request", "Contact Us", "Praise"].map((cat) => (
-                              <button
-                                key={cat}
-                                type="button"
-                                onClick={() => setFbCategory(cat)}
-                                className={`py-2 px-3 border rounded-xl text-xs font-semibold transition-all cursor-pointer truncate ${
-                                  fbCategory === cat
-                                    ? "border-[#D4A32A] text-[#D4A32A] bg-[#D4A32A]/5"
-                                    : "border-line/60 text-muted hover:text-copy hover:border-line"
-                                }`}
-                                title={cat}
-                              >
-                                {cat}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-dim uppercase tracking-wider block">
                             Name

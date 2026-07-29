@@ -522,7 +522,7 @@ export default function SongsSection({
                     {/* Left overlay arrow — centered vertically on md cover art (top-[96px]) */}
                     <button
                       onClick={() => scrollRow(letter, "left")}
-                      className={`absolute left-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
+                      className={`flex absolute left-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer md:opacity-0 md:group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl ${
                         scrollStates[letter]?.left ? "md:flex" : "md:hidden"
                       } animate-in fade-in zoom-in`}
                       title="Scroll Left"
@@ -552,7 +552,7 @@ export default function SongsSection({
                     {/* Right overlay arrow — centered vertically on md cover art (top-[96px]) */}
                     <button
                       onClick={() => scrollRow(letter, "right")}
-                      className={`absolute right-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer opacity-0 group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl hidden ${
+                      className={`flex absolute right-2 top-[96px] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-card/90 hover:bg-card-hover backdrop-blur-sm hover:scale-105 items-center justify-center text-title cursor-pointer md:opacity-0 md:group-hover/row:opacity-100 transition-all duration-200 border border-line shadow-xl ${
                         scrollStates[letter]?.right !== false
                           ? "md:flex"
                           : "md:hidden"

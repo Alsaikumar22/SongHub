@@ -3,10 +3,10 @@
 import React, { use, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import {
   ArrowLeft,
   Music,
-  Video,
   FileText,
   Plus,
   Share2,
@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
-import { useSearch } from "@/context/search-context";
 
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
 import { extractDominantColor } from "@/utils/extract-color";
@@ -85,10 +84,11 @@ function SongPageContent({ params }) {
   const searchParams = useSearchParams();
   const viewMode = searchParams.get("view"); // "video" | "lyrics" | null
 
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const isLight = theme === "light";
   const {
     songs,
+    songsLoading,
     currentSong,
     isPlaying,
     playSong,
@@ -96,11 +96,8 @@ function SongPageContent({ params }) {
     toggleFavorite,
     playlists,
     addSongToPlaylist,
-    removeSongFromPlaylist,
-    setActiveTab
+    removeSongFromPlaylist
   } = useAudio();
-
-  const { setSearchQuery, setShowFullResults } = useSearch();
 
   const [song, setSong] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("telugu");
@@ -114,6 +111,7 @@ function SongPageContent({ params }) {
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [showShareDropdown, setShowShareDropdown] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [fontSizeStep, setFontSizeStep] = useState(0);
   const playlistDropdownRef = useRef(null);
   const shareDropdownRef = useRef(null);
 
@@ -134,59 +132,64 @@ function SongPageContent({ params }) {
   const songSubtitle = song && (song.titleEnglish || song.title) !== songTitle ? ` (${song.titleEnglish || song.title})` : "";
 
   const getShareUrl = (source) => {
-    if (typeof window === "undefined") return "";
-    const url = new URL(window.location.href);
+    // Always use the production site URL for share links so platforms like
+    // WhatsApp receive a publicly-accessible link (not localhost).
+    const siteBase = process.env.NEXT_PUBLIC_SITE_URL;
+    const base = siteBase
+      ? siteBase.replace(/\/$/, "") // strip trailing slash
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "";
+    // Build the canonical path from the current window location's pathname
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    const url = new URL(`${base}${path}`);
     url.searchParams.set("utm_source", source);
-    return decodeURIComponent(url.toString());
+    return url.toString();
   };
 
+  // Decode the URL so non-ASCII characters (Telugu, etc.) appear as readable text.
+  // Modern messaging apps (WhatsApp, Twitter, etc.) detect Unicode URLs as clickable.
+  // decodeURI preserves reserved chars (? = & / #) while decoding non-ASCII sequences.
+  const getDisplayUrl = (source) => decodeURI(getShareUrl(source));
+
   const handleShareWhatsApp = () => {
-    const url = getShareUrl("whatsapp");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+    // Use decoded URL so Telugu characters appear readable in the message.
+    // WhatsApp detects https:// links as clickable regardless of Unicode characters.
+    const url = getDisplayUrl("whatsapp");
+    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle}\n\n${url}`;
+    window.open(
+      `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
+      "_blank"
+    );
     setShowShareDropdown(false);
   };
 
   const handleShareTwitter = () => {
-    const url = getShareUrl("twitter");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+    // Use decoded URL so Telugu characters appear readable in the tweet.
+    const url = getDisplayUrl("twitter");
+    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle}\n\n${url}`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+      "_blank"
+    );
     setShowShareDropdown(false);
   };
 
   const handleShareFacebook = () => {
     const url = getShareUrl("facebook");
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      "_blank"
+    );
     setShowShareDropdown(false);
   };
 
+  // Copy Link: just the clean readable URL, like Spotify does
   const handleShareCopy = () => {
-    const url = getShareUrl("copy");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    navigator.clipboard.writeText(text);
-    setToastMessage("Lyrics link copied!");
+    const displayUrl = getDisplayUrl("copy");
+    navigator.clipboard.writeText(displayUrl);
+    setToastMessage("Link copied!");
     setTimeout(() => setToastMessage(""), 2000);
-    setShowShareDropdown(false);
-  };
-
-  const handleSystemShare = async () => {
-    const url = getShareUrl("system");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle}`;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title: `YouWorship Lyrics: ${songTitle}`,
-          text: text,
-          url: url,
-        });
-      } catch (err) {
-        console.log("System share failed or cancelled:", err);
-      }
-    } else {
-      navigator.clipboard.writeText(`${text} - ${url}`);
-      setToastMessage("Lyrics link copied!");
-      setTimeout(() => setToastMessage(""), 2000);
-    }
     setShowShareDropdown(false);
   };
 
@@ -211,46 +214,6 @@ function SongPageContent({ params }) {
       }
       if (typeof song.lyrics === "string") return song.lyrics;
       return "";
-    }
-  };
-
-  const handleCopyLyrics = () => {
-    if (typeof window !== "undefined") {
-      let lyricsText = "";
-      let header = "";
-
-      if (selectedLanguage === "telugu") {
-        lyricsText = getRawLyrics("telugu");
-        header = `YouWorship Lyrics: ${song.teluguTitle || song.title} (Telugu)\n\n`;
-      } else if (selectedLanguage === "english") {
-        lyricsText = getRawLyrics("english");
-        header = `YouWorship Lyrics: ${song.titleEnglish || song.title} (English)\n\n`;
-      } else {
-        // Dual view
-        const teluguLyrics = getRawLyrics("telugu");
-        const englishLyrics = getRawLyrics("english");
-
-        if (teluguLyrics && englishLyrics && teluguLyrics !== englishLyrics) {
-          const teluguLines = teluguLyrics.split("\n").map(l => l.trim()).filter(Boolean);
-          const englishLines = englishLyrics.split("\n").map(l => l.trim()).filter(Boolean);
-          const combined = [];
-          const maxLen = Math.max(teluguLines.length, englishLines.length);
-          for (let i = 0; i < maxLen; i++) {
-            if (teluguLines[i]) combined.push(teluguLines[i]);
-            if (englishLines[i]) combined.push(englishLines[i]);
-            if (teluguLines[i] || englishLines[i]) combined.push("");
-          }
-          lyricsText = combined.join("\n");
-          header = `YouWorship Lyrics: ${song.teluguTitle || song.title} - ${song.titleEnglish || song.title} (Bilingual)\n\n`;
-        } else {
-          lyricsText = teluguLyrics || englishLyrics;
-          header = `YouWorship Lyrics: ${song.teluguTitle || song.title}\n\n`;
-        }
-      }
-
-      navigator.clipboard.writeText(header + lyricsText);
-      setToastMessage(`Lyrics (${selectedLanguage === "dual" ? "bilingual" : selectedLanguage}) copied!`);
-      setTimeout(() => setToastMessage(""), 2000);
     }
   };
 
@@ -292,9 +255,14 @@ function SongPageContent({ params }) {
       ) ? currentSong : null);
 
     if (foundSong) {
-      setSong(foundSong);
+      queueMicrotask(() => setSong(foundSong));
       return;
     }
+
+    // Wait for the global songs list to finish loading before hitting Firestore.
+    // This prevents the race condition where: songs=[] → fetchingRef=true → songs load
+    // but the re-run is blocked and the song is never found.
+    if (songsLoading) return;
 
     if (fetchingRef.current) return;
     fetchingRef.current = true;
@@ -332,7 +300,7 @@ function SongPageContent({ params }) {
             fetchingRef.current = false;
           });
       });
-  }, [id, songs, currentSong]);
+  }, [id, songs, songsLoading, currentSong]);
 
   useEffect(() => {
     if (song?.coverUrl) {
@@ -346,7 +314,8 @@ function SongPageContent({ params }) {
         ((typeof song.lyricsTelugu === "string" && song.lyricsTelugu.trim().length > 0) || (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) ||
         (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te"))
       );
-      setSelectedLanguage(hasTelugu ? "telugu" : "english");
+      const targetLang = hasTelugu ? "telugu" : "english";
+      queueMicrotask(() => setSelectedLanguage(targetLang));
     }
   }, [song]);
 
@@ -358,10 +327,14 @@ function SongPageContent({ params }) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
         <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-white">Finding song...</h2>
-        <Link href="/" className="mt-4 text-sm text-title hover:underline">
-          Return to home
-        </Link>
+        <h2 className="text-xl font-bold text-white">
+          {songsLoading ? "Loading song..." : "Song not found"}
+        </h2>
+        {!songsLoading && (
+          <Link href="/" className="mt-4 text-sm text-title hover:underline">
+            Return to home
+          </Link>
+        )}
       </div>
     );
   }
@@ -426,7 +399,7 @@ function SongPageContent({ params }) {
           ) : (
             <div className="flex flex-col items-center justify-center text-center px-8 py-16">
               <div className="w-20 h-20 rounded-full bg-card border border-line flex items-center justify-center mb-5 shadow-sm">
-                <Video className="w-9 h-9 text-muted" />
+                <YouTubeIcon className="w-9 h-9 text-muted" />
               </div>
               <h4 className="text-lg font-bold text-muted mb-2">No Video Available</h4>
               <p className="text-sm text-muted max-w-sm">A video for this track has not been added yet.</p>
@@ -449,17 +422,41 @@ function SongPageContent({ params }) {
         <div className="p-6 flex items-center justify-between z-40">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
-            title="Back"
+            className="p-1.5 md:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+            title="Go back"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <LanguageSegmented
-            selected={selectedLanguage}
-            onChange={setSelectedLanguage}
-          />
+          <div className="flex items-center gap-3">
+            {/* Font Size Controls */}
+            <div className="flex items-center gap-0.5 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm">
+              <button
+                onClick={() => setFontSizeStep(Math.max(-2, fontSizeStep - 1))}
+                disabled={fontSizeStep <= -2}
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-black text-muted hover:text-title hover:bg-card-hover/60 transition-all disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+                title="Decrease font size"
+              >
+                A−
+              </button>
+              <span className="w-5 text-center text-[9px] font-bold text-muted/60 tabular-nums select-none">
+                {fontSizeStep > 0 ? `+${fontSizeStep}` : fontSizeStep || "0"}
+              </span>
+              <button
+                onClick={() => setFontSizeStep(Math.min(4, fontSizeStep + 1))}
+                disabled={fontSizeStep >= 4}
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-black text-muted hover:text-title hover:bg-card-hover/60 transition-all disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+                title="Increase font size"
+              >
+                A+
+              </button>
+            </div>
+
+            <LanguageSegmented
+              selected={selectedLanguage}
+              onChange={setSelectedLanguage}
+            />
+          </div>
         </div>
 
         <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
@@ -468,6 +465,7 @@ function SongPageContent({ params }) {
             isImmersive={true}
             selectedLanguage={selectedLanguage}
             setSelectedLanguage={setSelectedLanguage}
+            fontSizeStep={fontSizeStep}
           />
         </div>
       </div>
@@ -485,22 +483,23 @@ function SongPageContent({ params }) {
       }}
     >
       {/* Sticky Action Header Bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between px-6 md:px-8 py-3 bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm">
-        {/* Left Side: Back button + Titles */}
-        <div className="flex items-center gap-3.5 min-w-0">
+      <div className="sticky top-0 z-30 flex items-center justify-between px-3 md:px-8 py-2.5 md:py-3 bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm gap-1.5">
+        {/* Left Side: Back button + Titles (show on all screens) */}
+        <div className="flex items-center gap-2 md:gap-3.5 min-w-0 flex-1">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+            className="p-1.5 md:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
             title="Go back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="flex flex-col leading-tight min-w-0">
-            <h1 className={`text-title text-base md:text-lg font-bold truncate ${song.teluguTitle ? "font-telugu" : ""}`}>
+          {/* Title — visible on all screens now, truncated */}
+          <div className="flex flex-col leading-tight min-w-0 flex-1">
+            <h1 className={`text-title text-sm md:text-lg font-bold truncate max-w-[160px] md:max-w-none ${song.teluguTitle ? "font-telugu" : ""}`}>
               {song.teluguTitle || song.title}
             </h1>
             {song.artist && (
-              <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
+              <p className="hidden md:block text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
                 {song.artist}
               </p>
             )}
@@ -508,46 +507,46 @@ function SongPageContent({ params }) {
         </div>
 
         {/* Right Side: Action Icons Group */}
-        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
-          {/* 1. Play/Pause Button */}
+        <div className="flex items-center gap-0.5 md:gap-2 flex-shrink-0 select-none">
+          {/* Play/Pause */}
           <ProtectedAction action={handlePlayClick}>
             <button
               onClick={handlePlayClick}
-              className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
+              className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
               title={isThisPlaying ? "Pause" : "Play"}
             >
               {isThisPlaying ? (
-                <Pause className="w-4 h-4 fill-current" />
+                <Pause className="w-3 h-3 md:w-4 md:h-4 fill-current" />
               ) : (
-                <Play className="w-4 h-4 fill-current ml-0.5" />
+                <Play className="w-3 h-3 md:w-4 md:h-4 fill-current ml-0.5" />
               )}
             </button>
           </ProtectedAction>
 
-          {/* 2. Favorite Button */}
+          {/* Favorite */}
           <ProtectedAction action={() => toggleFavorite(song.id)}>
             <button
               onClick={() => toggleFavorite(song.id)}
-              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
+              className={`w-7 h-7 md:w-9 md:h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
                 isFavorited
                   ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
                   : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
               }`}
               title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
-              <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
+              <Heart className={`w-3 h-3 md:w-4 md:h-4 ${isFavorited ? "fill-current" : ""}`} />
             </button>
           </ProtectedAction>
 
-          {/* 3. Add to Playlist Icon with Dropdown */}
+          {/* Add to Playlist */}
           <div className="relative" ref={playlistDropdownRef}>
             <ProtectedAction action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}>
               <button
                 onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
                 title="Add to playlist"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3 h-3 md:w-4 md:h-4" />
               </button>
             </ProtectedAction>
             {showPlaylistDropdown && (
@@ -591,28 +590,28 @@ function SongPageContent({ params }) {
             )}
           </div>
 
-          {/* 4. Watch Video Button */}
+          {/* Watch Video Button */}
           {rawVideoUrl && embedUrl && (
             <Link
               href={`/song/${encodeURIComponent(song.slug || song.id)}?view=video`}
               onClick={() => {
                 if (currentSong?.id !== song.id) playSong(song);
               }}
-              className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
+              className="w-7 h-7 md:w-9 md:h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
               title="Watch Video"
             >
-              <Video className="w-4 h-4 text-red-400" />
+              <YouTubeIcon className="w-3 h-3 md:w-4 md:h-4 text-[#FF0000]" />
             </Link>
           )}
 
-          {/* 5. Share Icon with Platform Choices Dropdown */}
+          {/* Share Icon with Platform Choices Dropdown */}
           <div className="relative" ref={shareDropdownRef}>
             <button
               onClick={() => setShowShareDropdown(!showShareDropdown)}
-              className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+              className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
               title="Share lyrics link"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
 
             {showShareDropdown && (
@@ -662,53 +661,38 @@ function SongPageContent({ params }) {
                   <span className="font-semibold text-title">Copy Link</span>
                 </button>
 
-                {/* Other Apps (System Share) */}
-                <button
-                  onClick={handleSystemShare}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
-                  title="Share to other installed apps"
-                >
-                  <Share2 className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">Other Apps...</span>
-                </button>
+
               </div>
             )}
           </div>
 
-          {/* 6. Copy Icon (Copies full lyrics text) */}
-          <button
-            onClick={handleCopyLyrics}
-            className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-            title="Copy lyrics to clipboard"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
+
         </div>
       </div>
 
-      <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
 
 
-        {/* Lyrics Section */}
-        <div className="space-y-4 pt-2 flex-1 flex flex-col">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
-              Lyrics
-            </h3>
-            <LanguageSegmented
-              selected={selectedLanguage}
-              onChange={setSelectedLanguage}
-            />
-          </div>
+      <div className="w-full px-3 md:px-8 pb-4 md:pb-16 pt-0 md:pt-1 flex-1 flex flex-col">
 
-          <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden border border-line bg-card shadow-sm">
-            <SongLyrics
-              song={song}
-              isImmersive={true}
-              selectedLanguage={selectedLanguage}
-              setSelectedLanguage={setSelectedLanguage}
-            />
-          </div>
+        {/* Language Selector — pinned at top on mobile, side-by-side on desktop */}
+        <div className="flex items-center justify-between px-1 py-2 md:py-3 md:px-0">
+          <h3 className="hidden md:block text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
+            Lyrics
+          </h3>
+          <LanguageSegmented
+            selected={selectedLanguage}
+            onChange={setSelectedLanguage}
+          />
+        </div>
+
+        {/* Full-width lyrics — no border/box on mobile (isImmersive handles it) */}
+        <div className="relative flex-1 min-h-0">
+          <SongLyrics
+            song={song}
+            isImmersive={true}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+          />
         </div>
       </div>
 

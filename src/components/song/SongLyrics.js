@@ -35,6 +35,7 @@ export default function SongLyrics({
   isImmersive = false,
   selectedLanguage: propLanguage,
   setSelectedLanguage: propSetLanguage,
+  fontSizeStep = 0,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
 
@@ -152,16 +153,19 @@ export default function SongLyrics({
     };
   }, [selectedLanguage, stanzas, dualStanzas]);
 
+  // Compute font size scale from step (-2 to +4, default 0 = 1.0x)
+  const sizeScale = 1 + fontSizeStep * 0.1;
+
   let currentFlatIndex = 0;
 
   if (isImmersive) {
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 scroll-smooth no-scrollbar select-text bg-card"
+        className="w-full flex-1 overflow-y-auto px-4 sm:px-8 md:px-16 py-4 sm:py-8 scroll-smooth no-scrollbar select-text"
         style={{ scrollbarWidth: "none" }}
       >
-        <div className="max-w-5xl mx-auto pb-32">
+        <div className="max-w-5xl mx-auto pb-24 sm:pb-32">
           {selectedLanguage === "dual" ? (
             /* Widescreen 2-Column Side-by-Side Grid, falling back to stack on Mobile */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
@@ -175,9 +179,9 @@ export default function SongLyrics({
                     {stanzaLines.map((line, lIdx) => (
                       <p
                         key={`te-line-${sIdx}-${lIdx}`}
-                        className="text-center text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight leading-relaxed text-title font-telugu select-text"
+                        className="text-center text-base sm:text-xl md:text-2xl font-extrabold tracking-tight leading-relaxed text-title font-telugu select-text"
                       >
-                        {line}
+                        <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
                       </p>
                     ))}
                   </div>
@@ -194,9 +198,9 @@ export default function SongLyrics({
                     {stanzaLines.map((line, lIdx) => (
                       <p
                         key={`en-line-${sIdx}-${lIdx}`}
-                        className="text-center text-lg sm:text-xl md:text-2xl font-bold tracking-wide leading-relaxed text-muted select-text"
+                        className="text-center text-sm sm:text-base md:text-lg font-bold tracking-wide leading-relaxed text-muted select-text"
                       >
-                        {line}
+                        <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
                       </p>
                     ))}
                   </div>
@@ -222,13 +226,13 @@ export default function SongLyrics({
                         className="py-1 transition-all duration-300"
                       >
                         <p
-                          className={`text-center text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight leading-relaxed transition-all duration-300 ${
+                          className={`text-center text-base sm:text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight leading-relaxed transition-all duration-300 ${
                             isActive
                               ? "text-title scale-[1.02] font-black"
                               : "text-copy font-bold hover:text-title cursor-pointer"
                           } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
                         >
-                          {line}
+                          <span style={{ fontSize: `${sizeScale}em` }}>{line}</span>
                         </p>
                       </div>
                     );

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import {
   Loader2,
   Plus,
@@ -14,7 +15,6 @@ import {
   AlertCircle,
   Shield,
   Image,
-  Video,
   Headphones,
   Tags,
   Globe,
@@ -639,7 +639,7 @@ export default function AdminPage() {
                       <input type="url" value={form.mediaAudio} onChange={(e) => updateField("mediaAudio", e.target.value)} placeholder="https://example.com/song.mp3" className="w-full px-4 py-3 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-white/70 mb-1.5"><Video className="w-3 h-3 inline mr-1 text-[#D4A32A]" />Video URL</label>
+                      <label className="block text-xs font-semibold text-white/70 mb-1.5"><YouTubeIcon className="w-3 h-3 inline mr-1 text-[#D4A32A]" />Video URL</label>
                       <input type="url" value={form.mediaVideo} onChange={(e) => updateField("mediaVideo", e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full px-4 py-3 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
                     </div>
                   </div>

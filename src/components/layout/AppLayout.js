@@ -25,15 +25,13 @@ import {
   Info,
   Trash2,
   MessageSquare,
-  Shield,
-  Sparkles,
   HelpCircle,
   ChevronDown
 } from "lucide-react";
 
 export default function AppLayout({ children }) {
   const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState("signup");
+  const [authMode, setAuthMode] = useState("login");
   const {
     songs,
     currentSong,
@@ -61,7 +59,7 @@ export default function AppLayout({ children }) {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [showTalkToUs, setShowTalkToUs] = useState(false);
   const [talkToUsTab, setTalkToUsTab] = useState("request");
-  const [talkToUsCategory, setTalkToUsCategory] = useState("Account & Login");
+  const [talkToUsCategory, setTalkToUsCategory] = useState("Contact Us");
   const [queriesExpanded, setQueriesExpanded] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -312,30 +310,6 @@ export default function AppLayout({ children }) {
             {queriesExpanded && !sidebarCollapsed && (
               <div className="pl-4 pr-1 py-1 space-y-0.5 border-l border-line/25 ml-5.5 animate-in slide-in-from-top-2 duration-150">
                 <SidebarNavItem
-                  icon={<Shield className="w-4 h-4 text-indigo-400 shrink-0" />}
-                  label="Account & Login Issues"
-                  collapsed={false}
-                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Account & Login"}
-                  onClick={() => {
-                    setTalkToUsTab("feedback");
-                    setTalkToUsCategory("Account & Login");
-                    setShowTalkToUs(true);
-                  }}
-                  isSubItem={true}
-                />
-                <SidebarNavItem
-                  icon={<Sparkles className="w-4 h-4 text-[#D4A32A] shrink-0" />}
-                  label="Feature Requests"
-                  collapsed={false}
-                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Feature Request"}
-                  onClick={() => {
-                    setTalkToUsTab("feedback");
-                    setTalkToUsCategory("Feature Request");
-                    setShowTalkToUs(true);
-                  }}
-                  isSubItem={true}
-                />
-                <SidebarNavItem
                   icon={<MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />}
                   label="Contact Us"
                   collapsed={false}
@@ -487,7 +461,8 @@ export default function AppLayout({ children }) {
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav
-        setShowAuth={setShowAuth}
+        setShowTalkToUs={setShowTalkToUs}
+        setShowAboutModal={setShowAboutModal}
       />
 
       {/* CREATE PLAYLIST MODAL */}
@@ -612,10 +587,10 @@ export default function AppLayout({ children }) {
         </div>
       )}
 
-      {/* Floating "Talk to us" circular button on the right side */}
+      {/* Floating "Talk to us" circular button — repositioned on mobile to clear the player bar */}
       <button
         onClick={() => setShowTalkToUs(true)}
-        className="fixed right-6 bottom-24 z-40 w-12.5 h-12.5 bg-[#D4A32A] hover:bg-[#c49527] text-black shadow-[0_4px_25px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group"
+        className="fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 w-11 h-11 lg:w-12.5 lg:h-12.5 bg-[#D4A32A] hover:bg-[#c49527] text-black shadow-[0_4px_25px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group"
         title="Talk to us"
         aria-label="Open Talk to us drawer"
       >

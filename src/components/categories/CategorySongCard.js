@@ -34,7 +34,8 @@ export default function CategorySongCard({ song, language, onClick }) {
     e.stopPropagation();
     setIsShared(true);
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/song/${song.slug || song.id}`);
+      const encodedSlug = encodeURIComponent(song.slug || song.id);
+      navigator.clipboard.writeText(`${window.location.origin}/song/${encodedSlug}`);
     }
     setTimeout(() => setIsShared(false), 2000);
   };
@@ -70,9 +71,9 @@ export default function CategorySongCard({ song, language, onClick }) {
           transition={{ duration: 0.4 }}
         />
 
-        {/* Hover overlay with Play button */}
+        {/* Hover overlay with Play button — always visible on mobile, hover on desktop */}
         <ProtectedAction action={handlePlayClick}>
-          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/45 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
             <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
               <Play className="w-5 h-5 fill-current ml-0.5" />
             </div>
@@ -106,7 +107,7 @@ export default function CategorySongCard({ song, language, onClick }) {
       <div className="flex items-center justify-between pt-2.5 border-t border-line">
         <span className="text-[10px] font-bold text-muted">{song.duration}</span>
         
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={handleFavoriteClick}
             className={`p-1 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-muted hover:text-title"}`}
