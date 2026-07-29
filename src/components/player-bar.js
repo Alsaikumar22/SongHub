@@ -176,8 +176,8 @@ export default function PlayerBar() {
       {/* ─── MOBILE MINI PLAYER — fixed above MobileNav ─── */}
       {currentSong && !isExpanded && (
         <div
-          className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none pb-2"
-          style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px))` }}
+          className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none"
+          style={{ bottom: `calc(52px + env(safe-area-inset-bottom, 0px))` }}
         >
           {/* Seek Bar */}
           <div
