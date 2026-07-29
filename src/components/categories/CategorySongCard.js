@@ -12,22 +12,12 @@ import {
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
-import ProtectedAction from "@/components/auth/ProtectedAction";
+import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategorySongCard({ song, language, onClick }) {
   const { toggleFavorite, favorites, currentSong, isPlaying, playSong } =
     useAudio();
-  const { toggleFavorite, favorites, currentSong, isPlaying, playSong } =
-    useAudio();
   const [isShared, setIsShared] = useState(false);
-
-  const handlePlayClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      playSong(song);
-    }
-  };
 
   const handlePlayClick = () => {
     if (onClick) {
@@ -49,31 +39,38 @@ export default function CategorySongCard({ song, language, onClick }) {
     language === "telugu"
       ? song.titleEnglish || null
       : song.teluguTitle || null;
-  const displayTitle =
-    language === "telugu" && song.teluguTitle
-      ? song.teluguTitle
-      : song.titleEnglish || song.title;
-  const subtitle =
-    language === "telugu"
-      ? song.titleEnglish || null
-      : song.teluguTitle || null;
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
     toggleFavorite(song.id);
   };
 
-  const handleShareClick = (e) => {
+  const handleShareClick = async (e) => {
     e.stopPropagation();
+    const shareUrl = getShareableSongUrl(song);
+
+    // Try native share first
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: `${song.teluguTitle || song.title} | YouWorship`,
+          text: `Listen to "${song.teluguTitle || song.title}" by ${song.artist || "Unknown Artist"} on YouWorship.`,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.debug("Web Share API error:", err);
+        }
+      }
+    }
+
+    // Fallback: copy to clipboard
     setIsShared(true);
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(
-        `${window.location.origin}/song/${song.slug || song.id}`,
-      );
-      const encodedSlug = encodeURIComponent(song.slug || song.id);
-      navigator.clipboard.writeText(
-        `${window.location.origin}/song/${encodedSlug}`,
-      );
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
     }
     setTimeout(() => setIsShared(false), 2000);
   };

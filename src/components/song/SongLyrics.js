@@ -2,13 +2,10 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 
-export function LanguageSegmented({ selected, onChange, hasDual }) {
+export function LanguageSegmented({ selected, onChange }) {
   const langs = [];
   langs.push({ id: "telugu", label: "తెలుగు" });
   langs.push({ id: "english", label: "English" });
-  if (hasDual) {
-    langs.push({ id: "dual", label: "Dual" });
-  }
 
   return (
     <div className="flex h-9 md:h-11 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm w-fit">
@@ -39,7 +36,6 @@ export default function SongLyrics({
   selectedLanguage: propLanguage,
   setSelectedLanguage: propSetLanguage,
   fontSizeMultiplier = 1.0,
-  fontSizeStep = 0,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
 
@@ -119,7 +115,6 @@ export default function SongLyrics({
   }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
 
   const flatLines = useMemo(() => stanzas.flat(), [stanzas]);
-  const hasDual = stanzasTelugu.length > 0 && stanzasEnglish.length > 0;
 
   useEffect(() => {
     setTimeout(() => {
@@ -152,17 +147,14 @@ export default function SongLyrics({
       elements.forEach((el) => observer.unobserve(el));
     };
   }, [selectedLanguage, stanzas, dualStanzas]);
-
-  // Compute font size scale from step (-2 to +4, default 0 = 1.0x)
-  const sizeScale = 1 + fontSizeStep * 0.1;
   let currentFlatIndex = 0;
 
   if (isImmersive) {
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 scroll-smooth no-scrollbar select-text bg-card"
-        style={{ scrollbarWidth: "none", fontSize: `${fontSizeMultiplier * 100}%` }}
+        className="w-full flex-1 overflow-hidden px-6 sm:px-12 md:px-16 py-12 select-text bg-card"
+        style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-5xl mx-auto pb-32">
           {selectedLanguage === "dual" ? (
@@ -261,7 +253,7 @@ export default function SongLyrics({
     <div className="relative">
       <div
         ref={containerRef}
-        className="relative max-h-[60vh] overflow-y-auto px-4 sm:px-8 py-6 space-y-8 scroll-smooth no-scrollbar"
+        className="relative px-4 sm:px-8 py-6 space-y-8"
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-2xl mx-auto space-y-8">
@@ -354,7 +346,6 @@ export default function SongLyrics({
         <LanguageSegmented
           selected={selectedLanguage}
           onChange={setSelectedLanguage}
-          hasDual={hasDual}
         />
       </div>
       {lyricsContent}

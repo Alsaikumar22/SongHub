@@ -158,7 +158,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
           <span className="text-sm md:text-[19px] font-black tracking-[0.01em] text-title whitespace-nowrap">
             You Worship
           </span>
-          <span className="mt-1 hidden text-[11px] font-bold tracking-[0.16em] text-amber-400 sm:block">
+          <span className="mt-1 text-[11px] font-bold tracking-[0.16em] text-amber-400">
             🎸Anywhere🎸
           </span>
         </div>

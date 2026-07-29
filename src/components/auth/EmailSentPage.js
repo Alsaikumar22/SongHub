@@ -2,32 +2,71 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Mail, ArrowLeft, ExternalLink } from "lucide-react";
+import { CheckCircle2, Mail, ExternalLink } from "lucide-react";
 
 /**
  * EmailSentPage — "Check your email" screen shown after Firebase sendSignInLinkToEmail().
+ * Supports both sign-up and login contexts with appropriate messaging.
  * Spotify-inspired design with YouWorship gold branding.
  *
- * Shows:
- *   - Success check icon with animation
- *   - Masked email address
- *   - Email illustration
- *   - "Open Gmail" button (opens mailto / gmail)
- *   - "Use another email" link
- *   - 60-second resend cooldown
+ * Props:
+ *   context: "signup" | "login" — determines the heading and description text
+ *   email: string — the email address the link was sent to
+ *   onResend: () => void
+ *   onUseAnotherEmail: () => void
+ *   resendLoading: boolean
  */
 export default function EmailSentPage({
   email,
-  onBack,
+  context = "login",
   onResend,
   onUseAnotherEmail,
   resendLoading = false,
 }) {
-  const [timer, setTimer] = useState(60);
+  const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
+  // Copy based on context (signup vs login)
+  const copy = context === "signup"
+    ? {
+        heading: "Verification link sent!",
+        title: "🎉 Link on its way!",
+        description: (
+          <>
+            We&apos;ve sent a secure sign-in link to{" "}
+            <span className="text-white font-semibold">{maskEmail(email)}</span>.
+          </>
+        ),
+        subtext: (
+          <>
+            Please open your inbox and click the verification link to continue.
+            <br />
+            If you don&apos;t see the email, check your Spam or Junk folder.
+          </>
+        ),
+        resendLabel: "Resend Link",
+      }
+    : {
+        heading: "Login link sent!",
+        title: "📧 Check your inbox",
+        description: (
+          <>
+            We&apos;ve sent a secure sign-in link to{" "}
+            <span className="text-white font-semibold">{maskEmail(email)}</span>.
+          </>
+        ),
+        subtext: (
+          <>
+            Please open your inbox and click the link to sign in.
+            <br />
+            If the email doesn&apos;t appear within a minute, check your Spam folder.
+          </>
+        ),
+        resendLabel: "Resend Link",
+      };
+
   // Mask email like Spotify does: praveen***23@gmail.com
-  const maskEmail = (email) => {
+  function maskEmail(email) {
     if (!email) return "";
     const [local, domain] = email.split("@");
     if (!domain) return email;
@@ -37,9 +76,9 @@ export default function EmailSentPage({
       Math.max(3, local.length - visibleStart.length - visibleEnd.length)
     );
     return `${visibleStart}${stars}${visibleEnd}@${domain}`;
-  };
+  }
 
-  // Timer countdown for resend
+  // Timer countdown for resend (30 seconds)
   useEffect(() => {
     if (timer <= 0) {
       setCanResend(true);
@@ -53,7 +92,7 @@ export default function EmailSentPage({
 
   const handleResend = () => {
     if (!canResend || resendLoading) return;
-    setTimer(60);
+    setTimer(30);
     setCanResend(false);
     onResend?.();
   };
@@ -108,7 +147,7 @@ export default function EmailSentPage({
         transition={{ delay: 0.2 }}
         className="text-xl md:text-2xl font-black text-white text-center tracking-tight mb-2"
       >
-        Check your email
+        {copy.heading}
       </motion.h1>
 
       {/* Description */}
@@ -116,19 +155,18 @@ export default function EmailSentPage({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.25 }}
-        className="text-sm text-[#a7a7a7] text-center leading-relaxed mb-2"
+        className="text-sm text-[#a7a7a7] text-center leading-relaxed mb-1"
       >
-        We sent a magic link to{" "}
-        <span className="text-white font-semibold">{maskEmail(email)}</span>
+        {copy.description}
       </motion.p>
 
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="text-xs text-[#727272] text-center mb-8"
+        className="text-xs text-[#727272] text-center leading-relaxed mb-8"
       >
-        Click the link in the email to sign in instantly. No password needed.
+        {copy.subtext}
       </motion.p>
 
       {/* Open Gmail Button */}
@@ -158,7 +196,7 @@ export default function EmailSentPage({
               onClick={handleResend}
               className="text-sm text-[#D4A32A] font-semibold hover:underline cursor-pointer"
             >
-              Resend email
+              {copy.resendLabel}
             </button>
           ) : (
             <p className="text-sm text-[#727272] font-mono">
@@ -179,15 +217,7 @@ export default function EmailSentPage({
           onClick={onUseAnotherEmail}
           className="w-full text-center text-sm text-[#a7a7a7] hover:text-white font-semibold transition-colors cursor-pointer"
         >
-          Use a different email
-        </button>
-
-        <button
-          onClick={onBack}
-          className="w-full text-center text-sm text-[#727272] hover:text-[#a7a7a7] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back</span>
+          Change Email
         </button>
       </motion.div>
     </div>

@@ -2,7 +2,7 @@
 
 import React, { use, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Music,
@@ -16,16 +16,24 @@ import {
   Pause,
   Heart,
   Maximize2,
+  Minimize2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useTheme } from "@/context/theme-context";
 import { useSearch } from "@/context/search-context";
+import { useAuth } from "@/context/auth-context";
 
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
 import { extractDominantColor } from "@/utils/extract-color";
 import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import { songService } from "@/services/songService";
+import {
+  getShareableSongUrl,
+  getShareableSongText,
+  getShareableSongTitle,
+} from "@/utils/share";
 
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -84,12 +92,17 @@ function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const viewMode = searchParams.get("view"); // "video" | "lyrics" | null
+
+  // Read view mode from URL synchronously on every render.
+  // Avoids useSearchParams() which can crash during client-side navigation in Next.js 16.
+  // Safe because SongPageContent only renders on the client (use(params) suspends during SSR).
+  const viewMode = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("view") || null
+    : null; // "video" | "lyrics" | null
 
   const lyricsContainerRef = useRef(null);
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
-  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1.1);
+  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(0.6);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -120,6 +133,16 @@ function SongPageContent({ params }) {
   const decreaseFontSize = () => {
     setFontSizeMultiplier((prev) => Math.max(prev - 0.15, 0.7));
   };
+
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // Auth guard: if user is not authenticated, redirect to signup
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.replace(`/?auth=signup&redirect=${encodeURIComponent(currentPath)}`);
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
@@ -179,70 +202,59 @@ function SongPageContent({ params }) {
       ? ` (${song.titleEnglish || song.title})`
       : "";
 
-  const getShareUrl = (source) => {
-    if (typeof window === "undefined") return "";
-    const url = new URL(window.location.href);
-    url.searchParams.set("utm_source", source);
-    return decodeURIComponent(url.toString());
-  };
+  // canonical URL is generated on-the-fly by handleShare / handleCopyLink
 
-  const handleShareWhatsApp = () => {
-    const url = getShareUrl("whatsapp");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(
-      `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
-      "_blank",
-    );
+  const handleShare = async () => {
     setShowShareDropdown(false);
-  };
+    const shareUrl = getShareableSongUrl(song);
+    const shareText = getShareableSongText(song);
+    const shareTitle = getShareableSongTitle(song);
 
-  const handleShareTwitter = () => {
-    const url = getShareUrl("twitter");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
-      "_blank",
-    );
-    setShowShareDropdown(false);
-  };
-
-  const handleShareFacebook = () => {
-    const url = getShareUrl("facebook");
-    window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-      "_blank",
-    );
-    setShowShareDropdown(false);
-  };
-
-  const handleShareCopy = () => {
-    const url = getShareUrl("copy");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle} - ${url}`;
-    navigator.clipboard.writeText(text);
-    setToastMessage("Lyrics link copied!");
-    setTimeout(() => setToastMessage(""), 2000);
-    setShowShareDropdown(false);
-  };
-
-  const handleSystemShare = async () => {
-    const url = getShareUrl("system");
-    const text = `YouWorship Lyrics: ${songTitle}${songSubtitle}`;
+    // Try native Web Share API first (mobile & modern desktop)
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: `YouWorship Lyrics: ${songTitle}`,
-          text: text,
-          url: url,
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
         });
+        return; // Success — done
       } catch (err) {
-        console.log("System share failed or cancelled:", err);
+        // User cancelled or share failed — fall through to clipboard
+        if (err.name !== "AbortError") {
+          console.debug("Web Share API error:", err);
+        }
       }
-    } else {
-      navigator.clipboard.writeText(`${text} - ${url}`);
-      setToastMessage("Lyrics link copied!");
-      setTimeout(() => setToastMessage(""), 2000);
     }
-    setShowShareDropdown(false);
+
+    // Fallback: copy clean URL to clipboard
+    await handleCopyLink(shareUrl);
+  };
+
+  const handleCopyLink = async (url) => {
+    const linkToCopy = url || getShareableSongUrl(song);
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(linkToCopy);
+      } else {
+        // Older fallback for browsers without Clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = linkToCopy;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setToastMessage("Link copied!");
+      setShowShareDropdown(false);
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
+      // Last resort: show the URL so user can manually copy
+      setToastMessage("Could not copy. Select and copy the link from the address bar.");
+    }
+    setTimeout(() => setToastMessage(""), 2500);
   };
 
   const getRawLyrics = (lang) => {
@@ -273,8 +285,8 @@ function SongPageContent({ params }) {
     }
   };
 
-  const handleCopyLyrics = () => {
-    if (typeof window !== "undefined") {
+  const handleCopyLyrics = async () => {
+    if (typeof window !== "undefined" && typeof navigator !== "undefined") {
       let lyricsText = "";
       let header = "";
 
@@ -313,7 +325,11 @@ function SongPageContent({ params }) {
         }
       }
 
-      navigator.clipboard.writeText(header + lyricsText);
+      try {
+        await navigator.clipboard.writeText(header + lyricsText);
+      } catch (e) {
+        // Clipboard write failed silently
+      }
       setToastMessage(
         `Lyrics (${selectedLanguage === "dual" ? "bilingual" : selectedLanguage}) copied!`,
       );
@@ -553,10 +569,30 @@ function SongPageContent({ params }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
 
-          <LanguageSegmented
-            selected={selectedLanguage}
-            onChange={setSelectedLanguage}
-          />
+          <div className="flex items-center gap-2">
+            {/* Font Size Controls */}
+            <div className="flex items-center bg-card-hover/80 backdrop-blur-sm border border-line/40 rounded-full p-0.5 shadow-sm h-8 md:h-9 overflow-hidden shrink-0">
+              <button
+                onClick={decreaseFontSize}
+                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-[11px]"
+                title="Decrease Font Size"
+              >
+                A
+              </button>
+              <button
+                onClick={increaseFontSize}
+                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-sm md:text-base"
+                title="Increase Font Size"
+              >
+                A
+              </button>
+            </div>
+
+            <LanguageSegmented
+              selected={selectedLanguage}
+              onChange={setSelectedLanguage}
+            />
+          </div>
         </div>
 
         <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
@@ -565,7 +601,7 @@ function SongPageContent({ params }) {
             isImmersive={true}
             selectedLanguage={selectedLanguage}
             setSelectedLanguage={setSelectedLanguage}
-            fontSizeStep={fontSizeStep}
+            fontSizeMultiplier={fontSizeMultiplier}
           />
         </div>
       </div>
@@ -709,82 +745,43 @@ function SongPageContent({ params }) {
             </Link>
           )}
 
-          {/* 5. Share Icon with Platform Choices Dropdown */}
+          {/* 5. Share Button — uses native share sheet or copies link */}
           <div className="relative" ref={shareDropdownRef}>
             <button
-              onClick={() => setShowShareDropdown(!showShareDropdown)}
+              onClick={() => {
+                // On mobile, try native share directly without showing dropdown
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  handleShare();
+                } else {
+                  setShowShareDropdown(!showShareDropdown);
+                }
+              }}
               className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-              title="Share lyrics link"
+              title="Share song"
             >
               <Share2 className="w-4 h-4" />
             </button>
 
             {showShareDropdown && (
-              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-64 overflow-y-auto font-sans animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 font-sans animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                  Share via
+                  Share
                 </div>
-                {/* WhatsApp */}
+                {/* Share via native sheet */}
                 <button
-                  onClick={handleShareWhatsApp}
+                  onClick={handleShare}
                   className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
-                >
-                  <svg
-                    className="w-4 h-4 text-[#25D366] fill-current shrink-0"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.424 5.429 0 12.022 0a12.025 12.025 0 0 1 12 12.022c0 6.603-5.427 12-12.022 12-1.996-.002-3.956-.5-5.713-1.448L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.424 9.863-9.864.003-5.44-4.421-9.868-9.863-9.868-5.437 0-9.868 4.428-9.87 9.87-.001 1.747.457 3.447 1.332 4.966L1.93 20.854l4.717-1.24z" />
-                  </svg>
-                  <span className="font-semibold text-title">WhatsApp</span>
-                </button>
-
-                {/* Facebook */}
-                <button
-                  onClick={handleShareFacebook}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
-                >
-                  <svg
-                    className="w-4 h-4 text-[#1877F2] fill-current shrink-0"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  <span className="font-semibold text-title">Facebook</span>
-                </button>
-
-                {/* X / Twitter */}
-                <button
-                  onClick={handleShareTwitter}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
-                >
-                  <svg
-                    className="w-4 h-4 text-title fill-current shrink-0"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                  <span className="font-semibold text-title">X / Twitter</span>
-                </button>
-
-                {/* Copy Link */}
-                <button
-                  onClick={handleShareCopy}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 mt-1 cursor-pointer"
-                >
-                  <Copy className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">Copy Link</span>
-                </button>
-
-                {/* Other Apps (System Share) */}
-                <button
-                  onClick={handleSystemShare}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
-                  title="Share to other installed apps"
                 >
                   <Share2 className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">
-                    Other Apps...
-                  </span>
+                  <span className="font-semibold text-title">Share</span>
+                </button>
+                {/* Copy Link */}
+                <button
+                  onClick={() => handleCopyLink()}
+                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
+                >
+                  <LinkIcon className="w-4 h-4 text-muted shrink-0" />
+                  <span className="font-semibold text-title">Copy Link</span>
                 </button>
               </div>
             )}
@@ -855,6 +852,16 @@ function SongPageContent({ params }) {
               isFullscreenLyrics ? "p-6 md:p-12 bg-card" : ""
             }`}
           >
+            {isFullscreenLyrics && (
+              <button
+                onClick={toggleFullscreenLyrics}
+                className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-card/90 backdrop-blur-md border border-line/60 hover:bg-card-hover text-dim hover:text-title text-[11px] font-bold rounded-full px-3 py-1.5 shadow-lg transition-all cursor-pointer active:scale-95"
+                title="Exit Fullscreen"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exit Fullscreen</span>
+              </button>
+            )}
             <SongLyrics
               song={song}
               isImmersive={true}

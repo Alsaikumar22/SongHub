@@ -6,12 +6,13 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
 /**
- * LoginPage — Spotify-inspired login form with YouWorship gold branding.
- * Supports email link (passwordless) login and OAuth providers.
+ * LoginPage — Passwordless login form with YouWorship gold branding.
+ * User enters email → Firebase sends sign-in link → Success screen.
+ * No password field anywhere in the flow.
  */
 export default function LoginPage({
   onContinueWithEmail,
-  onPasswordLogin,
+  onSwitchToSignup,
   onClose,
   onSuccess,
 }) {
@@ -47,8 +48,6 @@ export default function LoginPage({
     }
   };
 
-
-
   return (
     <div className="p-8 md:p-10 w-full max-w-md mx-auto">
       {/* Logo */}
@@ -75,7 +74,7 @@ export default function LoginPage({
         Welcome Back
       </motion.h1>
 
-      {/* Email Form */}
+      {/* Email Form — passwordless: just email + continue */}
       <motion.form
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -109,6 +108,10 @@ export default function LoginPage({
           <span>Continue</span>
         </button>
       </motion.form>
+
+      <p className="text-xs text-[#727272] text-center mt-3">
+        We&apos;ll send a secure sign-in link to your email. No password needed.
+      </p>
 
       {/* Divider */}
       <motion.div
@@ -146,17 +149,9 @@ export default function LoginPage({
           )}
           <span>Continue with Google</span>
         </button>
-
-        {/* Password Login Link */}
-        <button
-          onClick={onPasswordLogin}
-          className="w-full py-2 text-sm text-[#a7a7a7] hover:text-white font-semibold transition-colors cursor-pointer"
-        >
-          Log in with password
-        </button>
       </motion.div>
 
-      {/* Bottom hint */}
+      {/* Bottom switch */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -164,7 +159,13 @@ export default function LoginPage({
         className="mt-8 text-center"
       >
         <p className="text-sm text-[#a7a7a7]">
-          Welcome back to YouWorship 🎵
+          Don&apos;t have an account?{" "}
+          <button
+            onClick={onSwitchToSignup}
+            className="text-white font-semibold hover:underline cursor-pointer"
+          >
+            Sign Up
+          </button>
         </p>
       </motion.div>
     </div>

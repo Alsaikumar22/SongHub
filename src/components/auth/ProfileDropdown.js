@@ -169,7 +169,6 @@ export default function ProfileDropdown() {
           )}
         </AnimatePresence>
       </div>
-
     </>
   );
 }

@@ -14,7 +14,6 @@ import {
   onAuthStateChanged,
   getRedirectResult,
   sendSignInLinkToEmail,
-  isSignInWithEmailLink,
   signInWithEmailLink as firebaseSignInWithEmailLink,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -82,30 +81,9 @@ export function AuthProvider({ children }) {
       if (!cancelled) setLoading(false);
     });
 
-    // 3. Handle email link sign-in
-    if (typeof window !== "undefined" && isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem("emailForSignIn");
-      if (!email) {
-        email = window.prompt("Please provide your email for confirmation");
-      }
-      if (email) {
-        firebaseSignInWithEmailLink(auth, email, window.location.href)
-          .then((result) => {
-            window.localStorage.removeItem("emailForSignIn");
-            setUser(result.user);
-            saveUserLoginData(result.user.uid, {
-              provider: "email",
-              email: result.user.email,
-              displayName: result.user.displayName,
-              photoURL: result.user.photoURL,
-              lastLogin: new Date().toISOString(),
-            });
-          })
-          .catch((error) => {
-            console.error("Email link sign-in error:", error);
-          });
-      }
-    }
+    // 3. Email link sign-in is now handled by the dedicated /auth/verify page.
+    // The context no longer processes email links to avoid duplicate handling
+    // and to provide a proper UI (no window.prompt).
 
     return () => {
       cancelled = true;
@@ -246,6 +224,20 @@ export function AuthProvider({ children }) {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
+      // Clear all cached user data from localStorage on logout
+      const keysToRemove = [
+        "emailForSignIn",
+        "songhub_favorites",
+        "songhub_playlists",
+        "songhub_recently",
+      ];
+      keysToRemove.forEach((key) => {
+        try {
+          window.localStorage.removeItem(key);
+        } catch (e) {
+          // Ignore if localStorage is not available
+        }
+      });
     } catch (error) {
       console.error("Sign-out error:", error);
     }

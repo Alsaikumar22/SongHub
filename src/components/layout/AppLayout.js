@@ -55,7 +55,34 @@ export default function AppLayout({ children }) {
 
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading, setReturnPath, returnPath } = useAuth();
+
+  // After auth resolves (splash screen no longer showing), redirect to stored returnPath
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && returnPath) {
+      const path = returnPath;
+      setReturnPath(null);
+      router.push(path);
+    }
+  }, [authLoading, isAuthenticated, returnPath, router, setReturnPath]);
+
+  // Detect ?auth= URL param (from shared song links) and open auth modal
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const authParam = params.get("auth");
+    if (authParam && !isAuthenticated) {
+      setAuthMode(authParam); // "login" or "signup"
+      setShowAuth(true);
+      // Store redirect path if present
+      const redirectParam = params.get("redirect");
+      if (redirectParam) {
+        setReturnPath(decodeURIComponent(redirectParam));
+      }
+      // Clean URL without triggering a re-render loop
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [pathname]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
@@ -108,6 +135,49 @@ export default function AppLayout({ children }) {
     };
   }, [togglePlay]);
 
+  // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
+  if (authLoading) {
+    return (
+      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans items-center justify-center">
+        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
+          {/* Logo */}
+          <img
+            src="/youlogo.png"
+            alt="YouWorship"
+            className="w-20 h-20 object-contain"
+          />
+          {/* App Name */}
+          <h1 className="text-2xl font-black text-title tracking-tight">
+            YouWorship
+          </h1>
+          {/* Loading Spinner */}
+          <div className="w-6 h-6 border-2 border-[#D4A32A]/30 border-t-[#D4A32A] rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── AUTH GATE: if not authenticated, force auth modal (not closable) ───
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
+        <AuthModal
+          initialStep="login"
+          closable={false}
+          onSuccess={() => {
+            // After auth success, redirect to stored return path if set
+            if (returnPath) {
+              setTimeout(() => {
+                router.push(returnPath);
+                setReturnPath(null);
+              }, 100);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
       <Header
@@ -127,11 +197,9 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={isDiscover && activeTab === "discover"}
               onClick={() => {
-                setActiveTab("discover");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
-                setShowFullHome(false);
-                router.push("/");
+                router.push("/?tab=discover");
               }}
             />
             <SidebarNavItem
@@ -143,7 +211,6 @@ export default function AppLayout({ children }) {
                 if (currentSong) {
                   router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                 } else {
-                  setActiveTab("discover");
                   setActivePlaylistId(null);
                   setViewedSongId(null);
                   router.push("/");
@@ -156,11 +223,9 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={isDiscover && activeTab === "categories"}
               onClick={() => {
-                setActiveTab("categories");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
-                setShowFullHome(false);
-                router.push("/");
+                router.push("/?tab=categories");
               }}
             />
           </div>
@@ -196,7 +261,6 @@ export default function AppLayout({ children }) {
                 <div className="group relative">
                   <button
                     onClick={() => {
-                      setActiveTab("favorites");
                       setActivePlaylistId(null);
                       setViewedSongId(null);
                       router.push("/?tab=favorites");
@@ -487,7 +551,6 @@ export default function AppLayout({ children }) {
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav
-        setShowAuth={setShowAuth}
         setShowTalkToUs={setShowTalkToUs}
         setShowAboutModal={setShowAboutModal}
       />
@@ -545,8 +608,20 @@ export default function AppLayout({ children }) {
       {showAuth && (
         <AuthModal
           initialStep={authMode}
-          onClose={() => setShowAuth(false)}
-          onSuccess={() => setShowAuth(false)}
+          onClose={() => {
+            setShowAuth(false);
+            setReturnPath(null);
+          }}
+          onSuccess={() => {
+            setShowAuth(false);
+            // Redirect to stored return path after successful auth
+            if (returnPath) {
+              setTimeout(() => {
+                router.push(returnPath);
+                setReturnPath(null);
+              }, 100);
+            }
+          }}
         />
       )}
 
@@ -614,10 +689,10 @@ export default function AppLayout({ children }) {
         </div>
       )}
 
-      {/* Floating "Talk to us" circular button */}
+      {/* Floating "Talk to us" circular button — hidden on mobile */}
       <button
         onClick={() => setShowTalkToUs(true)}
-        className="fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 w-12.5 h-12.5 lg:w-14 lg:h-14 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-black shadow-[0_8px_32px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-[0_12px_40px_rgba(212,163,42,0.5)] active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group border border-white/20"
+        className="hidden lg:flex fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 w-12.5 h-12.5 lg:w-14 lg:h-14 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-black shadow-[0_8px_32px_rgba(212,163,42,0.35)] rounded-full items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-[0_12px_40px_rgba(212,163,42,0.5)] active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group border border-white/20"
         title="Talk to us"
         aria-label="Open Talk to us drawer"
       >
