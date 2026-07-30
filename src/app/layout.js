@@ -5,6 +5,7 @@ import { SearchProvider } from "@/context/search-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { AuthProvider } from "@/context/auth-context";
 import AppLayout from "@/components/layout/AppLayout";
+import { GoogleAnalytics } from "@/lib/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="text-title font-sans select-none">
+        <GoogleAnalytics />
         <ThemeProvider>
           <AuthProvider>
             <AudioProvider>
