@@ -33,7 +33,7 @@ import {
 
 export default function AppLayout({ children }) {
   const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState("signup");
   const {
     songs,
     currentSong,
@@ -177,10 +177,12 @@ export default function AppLayout({ children }) {
           const sidebar = flexContainer?.querySelector('aside');
           if (sidebar?.contains(e.target)) {
             // Sidebar navigation — show auth but let event propagate
+            setAuthMode("signup");
             setShowAuth(true);
             return;
           }
           e.stopPropagation();
+          setAuthMode("signup");
           setShowAuth(true);
         } : undefined}
       >
@@ -554,6 +556,9 @@ export default function AppLayout({ children }) {
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav
+        isAuthenticated={isAuthenticated}
+        setShowAuth={setShowAuth}
+        setAuthMode={setAuthMode}
         setShowTalkToUs={setShowTalkToUs}
         setShowAboutModal={setShowAboutModal}
       />
