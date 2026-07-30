@@ -251,10 +251,10 @@ function HomeContent() {
       {/* ──────────────────────────────────────────────────────── */}
       {/* ─── DESKTOP VIEW ─── */}
       {/* ──────────────────────────────────────────────────────── */}
-      <div className="hidden lg:block space-y-8 p-4">
+      <div className="hidden lg:block p-4">
         {/* VIEW HEADER */}
         {activeTab && activeTab !== "discover" && activeTab !== "categories" && !selectedLetter && (
-          <div>
+          <div className="mb-8">
             {activeTab === "favorites" && (
               <div>
                 <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
@@ -288,27 +288,38 @@ function HomeContent() {
           </div>
         )}
 
-        {/* Hero Carousel (Only when showFullHome is true) */}
+        {/* Hero Carousel (full width, above) */}
         {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
-          <HeroCarousel />
+          <div className="mb-8">
+            <HeroCarousel />
+          </div>
         )}
 
-        {/* Box 2 — Verse (Browse tab only) */}
+        {/* Verse of the Day */}
         {activeTab === "discover" && !(searchQuery && showFullResults) && !selectedLetter && (
-          <VerseOfTheWeek />
+          <div className="mb-8">
+            <VerseOfTheWeek />
+          </div>
         )}
 
-        {/* Recently Played (Only when showFullHome is true) */}
+        {/* Recently Played */}
         {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
-          <RecentlyPlayed />
+          <div className="mb-8">
+            <RecentlyPlayed />
+          </div>
         )}
 
-        {/* Category Explorer View (Desktop) */}
+        {/* Category Explorer View */}
         {activeTab === "categories" && !(searchQuery && showFullResults) && (
           <CategoryExplorer />
         )}
 
-        {/* Songs List Section */}
+        {/* Category Explorer View */}
+        {activeTab === "categories" && !(searchQuery && showFullResults) && (
+          <CategoryExplorer />
+        )}
+
+        {/* Songs Section or Search Results */}
         {activeTab !== "categories" && (
           searchQuery && showFullResults ? (
             <div className="flex-1 flex flex-col min-h-0">
