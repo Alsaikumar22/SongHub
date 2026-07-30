@@ -8,6 +8,7 @@ import ProtectedAction from "@/components/auth/ProtectedAction";
 import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
 import YouTubeIcon from "@/components/ui/YouTubeIcon";
+import { getShareableSongUrl, getShareableSongText, getShareableSongTitle } from "@/utils/share";
 import {
   Play,
   Pause,
@@ -18,6 +19,8 @@ import {
   Volume2,
   VolumeX,
   Heart,
+  Share2,
+  Check,
   Maximize2,
   ListMusic,
   ChevronDown,
@@ -102,6 +105,7 @@ export default function PlayerBar() {
   const [isClient, setIsClient] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
+  const [toastMessage, setToastMessage] = useState("");
 
   const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
 
@@ -239,7 +243,6 @@ export default function PlayerBar() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
                     router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                   }}
                   className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
@@ -593,33 +596,55 @@ export default function PlayerBar() {
                 {pathname === "/" ? "Home Catalog" : "Details Page"}
               </span>
             </div>
-            <ProtectedAction action={() => {
-              setIsExpanded(false);
-              if (currentSong) {
-                router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
-              }
-            }}>
-              <button
-                className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
-                title="View lyrics"
-              >
-                <MicIcon className="w-5.5 h-5.5" />
-              </button>
-            </ProtectedAction>
-            {currentSong?.media?.video || currentSong?.videoUrl || currentSong?.youtubeUrl ? (
+            <div className="flex items-center gap-1">
+              {/* Share Button */}
               <button
                 onClick={() => {
-                  setIsExpanded(false);
-                  router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
+                  const shareUrl = getShareableSongUrl(currentSong);
+                  const shareText = getShareableSongText(currentSong);
+                  const shareTitle = getShareableSongTitle(currentSong);
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => {});
+                  } else {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                      setToastMessage("Link copied!");
+                      setTimeout(() => setToastMessage(""), 2000);
+                    }).catch(() => {});
+                  }
                 }}
-                className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
-                title="Watch Video"
+                className="p-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                title="Share song"
               >
-                <YouTubeIcon className="w-5.5 h-5.5 text-[#FF0000]" />
+                <Share2 className="w-5.5 h-5.5" />
               </button>
-            ) : (
-              <div className="w-10 h-10" />
-            )}
+              <ProtectedAction action={() => {
+                setIsExpanded(false);
+                if (currentSong) {
+                  router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
+                }
+              }}>
+                <button
+                  className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                  title="View lyrics"
+                >
+                  <MicIcon className="w-5.5 h-5.5" />
+                </button>
+              </ProtectedAction>
+              {currentSong?.media?.video || currentSong?.videoUrl || currentSong?.youtubeUrl ? (
+                <button
+                  onClick={() => {
+                    setIsExpanded(false);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
+                  }}
+                  className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                  title="Watch Video"
+                >
+                  <YouTubeIcon className="w-5.5 h-5.5 text-[#FF0000]" />
+                </button>
+              ) : (
+                <div className="w-10 h-10" />
+              )}
+            </div>
           </div>
 
           {/* Album Artwork Section */}
@@ -767,6 +792,14 @@ export default function PlayerBar() {
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Share/Copy Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-[#D4A32A] text-black px-4 py-2.5 rounded-xl text-xs font-black shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3">
+          <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
