@@ -157,26 +157,10 @@ export default function AppLayout({ children }) {
     );
   }
 
-  // ─── AUTH GATE: if not authenticated, force auth modal (not closable) ───
-  if (!isAuthenticated) {
-    return (
-      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
-        <AuthModal
-          initialStep="login"
-          closable={false}
-          onSuccess={() => {
-            // After auth success, redirect to stored return path if set
-            if (returnPath) {
-              setTimeout(() => {
-                router.push(returnPath);
-                setReturnPath(null);
-              }, 100);
-            }
-          }}
-        />
-      </div>
-    );
-  }
+  // ─── AUTH GATE: for non-authenticated users, show content but block interaction ───
+  // The home page content is fully visible. An invisible overlay catches all clicks
+  // and triggers the auth modal. This prevents ProtectedAction double-modals and
+  // gives the user a clean "browse first, then authenticate" experience.
 
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
@@ -184,7 +168,22 @@ export default function AppLayout({ children }) {
         setShowAuth={setShowAuth}
         setAuthMode={setAuthMode}
       />
-      <div className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0">
+      <div
+        className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
+        onClickCapture={!isAuthenticated && !showAuth ? (e) => {
+          // Sidebar clicks: allow navigation to work (no stopPropagation)
+          // Content clicks: stop propagation to prevent ProtectedAction double-modals
+          const flexContainer = e.currentTarget;
+          const sidebar = flexContainer?.querySelector('aside');
+          if (sidebar?.contains(e.target)) {
+            // Sidebar navigation — show auth but let event propagate
+            setShowAuth(true);
+            return;
+          }
+          e.stopPropagation();
+          setShowAuth(true);
+        } : undefined}
+      >
         {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
@@ -197,8 +196,10 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={isDiscover && activeTab === "discover"}
               onClick={() => {
+                setActiveTab("discover");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
+                setShowFullHome(false);
                 router.push("/?tab=discover");
               }}
             />
@@ -441,7 +442,9 @@ export default function AppLayout({ children }) {
         </aside>
 
         {/* MAIN PANEL CONTENT */}
-        <main className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0">
+        <main 
+          className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0"
+        >
           {children}
         </main>
 
@@ -604,17 +607,18 @@ export default function AppLayout({ children }) {
         </div>
       )}
 
-      {/* AUTH MODAL — rendered at top level to avoid stacking context issues */}
-      {showAuth && (
+      {/* AUTH MODAL — rendered as overlay on top of page content when triggered */}
+      {showAuth && !isAuthenticated && (
         <AuthModal
           initialStep={authMode}
+          closable={true}
           onClose={() => {
             setShowAuth(false);
             setReturnPath(null);
           }}
           onSuccess={() => {
             setShowAuth(false);
-            // Redirect to stored return path after successful auth
+            // After auth success, redirect to stored return path if set
             if (returnPath) {
               setTimeout(() => {
                 router.push(returnPath);
