@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, Mail, ArrowLeft } from "lucide-react";
+import Image from "next/image";
 import {
   auth,
 } from "@/lib/firebase";
@@ -136,7 +137,7 @@ export default function VerifyPage() {
         >
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src="/youlogo.png" alt="YouWorship" className="w-14 h-14 object-contain" />
+            <Image src="/youlogo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
           </div>
 
           {/* Mail Icon */}
@@ -200,10 +201,13 @@ export default function VerifyPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-center mb-6"
           >
-            <img
+            <Image
               src="/youlogo.png"
               alt="You Worship"
+              width={64}
+              height={64}
               className="w-16 h-16 object-contain"
+              priority
             />
           </motion.div>
 
@@ -270,7 +274,7 @@ export default function VerifyPage() {
       >
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <img src="/youlogo.png" alt="YouWorship" className="w-14 h-14 object-contain" />
+          <Image src="/youlogo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
         </div>
 
         <motion.div

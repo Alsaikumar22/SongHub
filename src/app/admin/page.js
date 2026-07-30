@@ -30,6 +30,7 @@ import {
   ListMusic,
   RefreshCw,
 } from "lucide-react";
+import NextImage from "next/image";
 
 // ─── Constants ─────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -702,7 +703,7 @@ export default function AdminPage() {
                     {/* Thumbnail */}
                     <div className="w-10 h-10 rounded-lg bg-[#111] border border-[rgba(255,255,255,0.06)] overflow-hidden shrink-0 flex items-center justify-center">
                       {song.media?.image ? (
-                        <img src={song.media.image} alt={song.title} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+                        <NextImage src={song.media.image} alt={song.title} width={40} height={40} className="w-full h-full object-cover" />
                       ) : (
                         <Music className="w-4 h-4 text-[#727272]" />
                       )}

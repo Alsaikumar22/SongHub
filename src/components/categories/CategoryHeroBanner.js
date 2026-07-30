@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 const CATEGORY_DESCRIPTIONS = {
   "morning-worship":
@@ -89,10 +90,13 @@ export default function CategoryHeroBanner({ category, language, songCount }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
       >
-        <img
+        <ImageWithFallback
           src={category.bgImage}
           alt={name}
+          width={192}
+          height={192}
           className="w-full h-full object-cover"
+          sizes="192px"
         />
       </motion.div>
 

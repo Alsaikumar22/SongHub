@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useAudio } from "@/context/audio-context";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 export default function CategoryCard({ category, language, onClick }) {
   const { songs } = useAudio();
@@ -48,13 +49,20 @@ export default function CategoryCard({ category, language, onClick }) {
     >
       {/* Background Image Container */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <motion.img
-          src={category.bgImage}
-          alt={category.motif}
-          className="w-full h-full object-cover"
+        <motion.div
           whileHover={{ scale: 1.1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-        />
+          className="w-full h-full"
+        >
+          <ImageWithFallback
+            src={category.bgImage}
+            alt={category.motif}
+            width={800}
+            height={600}
+            className="w-full h-full object-cover"
+            sizes="(max-width: 768px) 100vw, 33vw"
+          />
+        </motion.div>
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#070707]/95 via-[#070707]/40 to-transparent transition-all duration-300 group-hover:from-[#070707]/98 group-hover:via-[#070707]/50" />
       </div>

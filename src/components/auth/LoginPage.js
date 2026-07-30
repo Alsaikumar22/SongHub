@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import Image from "next/image";
 
 /**
  * LoginPage — Passwordless login form with YouWorship gold branding.
@@ -57,10 +58,13 @@ export default function LoginPage({
         transition={{ delay: 0.05 }}
         className="flex justify-center mb-6"
       >
-        <img
+        <Image
           src="/youlogo.png"
           alt="YouWorship"
+          width={56}
+          height={56}
           className="w-14 h-14 object-contain"
+          priority
         />
       </motion.div>
 

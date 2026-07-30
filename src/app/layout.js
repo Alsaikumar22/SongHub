@@ -10,11 +10,15 @@ import { GoogleAnalytics } from "@/lib/analytics";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const lato = Lato({
@@ -22,12 +26,16 @@ const lato = Lato({
   subsets: ["latin"],
   weight: ["100", "300", "400", "700", "900"],
   style: ["normal", "italic"],
+  display: "swap",
+  preload: true,
 });
 
 const ntr = NTR({
   variable: "--font-ntr",
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
+  preload: true,
 });
 
 export const metadata = {

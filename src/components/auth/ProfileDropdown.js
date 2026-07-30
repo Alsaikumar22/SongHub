@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { useAudio } from "@/context/audio-context";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 /**
  * ProfileDropdown — User avatar button with dropdown menu.
@@ -78,11 +79,14 @@ export default function ProfileDropdown() {
           aria-expanded={isOpen}
         >
           {user.photoURL ? (
-            <img
+            <Image
               src={user.photoURL}
               alt={user.displayName || "User"}
+              width={24}
+              height={24}
               className="w-6 h-6 rounded-full object-cover"
               referrerPolicy="no-referrer"
+              sizes="24px"
             />
           ) : (
             <div className="w-6 h-6 rounded-full bg-[#D4A32A]/20 flex items-center justify-center">

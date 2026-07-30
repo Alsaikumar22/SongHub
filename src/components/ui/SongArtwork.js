@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Music } from "lucide-react";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 const gradients = [
   "from-amber-800 to-amber-950",
@@ -35,11 +36,13 @@ export default function SongArtwork({ song, className = "w-full h-full object-co
   }
 
   return (
-    <img
+    <ImageWithFallback
       src={song.coverUrl}
       alt={song.teluguTitle || song.title}
+      width={160}
+      height={160}
       className={className}
-      onError={() => setHasError(true)}
+      sizes="(max-width: 768px) 100vw, 160px"
     />
   );
 }

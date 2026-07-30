@@ -9,6 +9,7 @@ import PlayerBar from "@/components/player-bar";
 import AuthModal from "@/components/auth/AuthModal";
 import TalkToUsDrawer from "./TalkToUsDrawer";
 import { useAuth } from "@/context/auth-context";
+import Image from "next/image";
 import SongArtwork from "@/components/ui/SongArtwork";
 import {
   Music,
@@ -28,7 +29,7 @@ import {
   Shield,
   Sparkles,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
 
 export default function AppLayout({ children }) {
@@ -50,12 +51,17 @@ export default function AppLayout({ children }) {
     activePlaylistId,
     setActivePlaylistId,
     setViewedSongId,
-    setShowFullHome
+    setShowFullHome,
   } = useAudio();
 
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading, setReturnPath, returnPath } = useAuth();
+  const {
+    isAuthenticated,
+    loading: authLoading,
+    setReturnPath,
+    returnPath,
+  } = useAuth();
 
   // After auth resolves (splash screen no longer showing), redirect to stored returnPath
   useEffect(() => {
@@ -141,10 +147,13 @@ export default function AppLayout({ children }) {
       <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans items-center justify-center">
         <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
           {/* Logo */}
-          <img
+          <Image
             src="/youlogo.png"
             alt="YouWorship"
+            width={80}
+            height={80}
             className="w-20 h-20 object-contain"
+            priority
           />
           {/* App Name */}
           <h1 className="text-2xl font-black text-title tracking-tight">
@@ -164,27 +173,28 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
-      <Header
-        setShowAuth={setShowAuth}
-        setAuthMode={setAuthMode}
-      />
+      <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
       <div
         className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
-        onClickCapture={!isAuthenticated && !showAuth ? (e) => {
-          // Sidebar clicks: allow navigation to work (no stopPropagation)
-          // Content clicks: stop propagation to prevent ProtectedAction double-modals
-          const flexContainer = e.currentTarget;
-          const sidebar = flexContainer?.querySelector('aside');
-          if (sidebar?.contains(e.target)) {
-            // Sidebar navigation — show auth but let event propagate
-            setAuthMode("signup");
-            setShowAuth(true);
-            return;
-          }
-          e.stopPropagation();
-          setAuthMode("signup");
-          setShowAuth(true);
-        } : undefined}
+        onClickCapture={
+          !isAuthenticated && !showAuth
+            ? (e) => {
+                // Sidebar clicks: allow navigation to work (no stopPropagation)
+                // Content clicks: stop propagation to prevent ProtectedAction double-modals
+                const flexContainer = e.currentTarget;
+                const sidebar = flexContainer?.querySelector("aside");
+                if (sidebar?.contains(e.target)) {
+                  // Sidebar navigation — show auth but let event propagate
+                  setAuthMode("signup");
+                  setShowAuth(true);
+                  return;
+                }
+                e.stopPropagation();
+                setAuthMode("signup");
+                setShowAuth(true);
+              }
+            : undefined
+        }
       >
         {/* SIDEBAR — production-grade navigation */}
         <aside
@@ -212,7 +222,9 @@ export default function AppLayout({ children }) {
               active={false}
               onClick={() => {
                 if (currentSong) {
-                  router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
+                  router.push(
+                    `/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`,
+                  );
                 } else {
                   setActivePlaylistId(null);
                   setViewedSongId(null);
@@ -239,7 +251,9 @@ export default function AppLayout({ children }) {
           {/* ─── Your Library Section ─── */}
           <div className="flex-1 flex flex-col overflow-hidden px-3 pt-2 pb-1">
             {/* Library Header */}
-            <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}>
+            <div
+              className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}
+            >
               {!sidebarCollapsed && (
                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
                   Your Library
@@ -269,20 +283,28 @@ export default function AppLayout({ children }) {
                       router.push("/?tab=favorites");
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
-                      isDiscover && activeTab === "favorites" ? "bg-card-hover" : "hover:bg-card-hover"
+                      isDiscover && activeTab === "favorites"
+                        ? "bg-card-hover"
+                        : "hover:bg-card-hover"
                     }`}
                   >
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-300 flex items-center justify-center shrink-0 shadow-sm">
                       <Heart className="w-4.5 h-4.5 text-title fill-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-copy block truncate">Collection</span>
-                      <span className="text-xs text-muted block truncate">{favorites.length} songs</span>
+                      <span className="text-sm font-medium text-copy block truncate">
+                        Collection
+                      </span>
+                      <span className="text-xs text-muted block truncate">
+                        {favorites.length} songs
+                      </span>
                     </div>
                   </button>
                   {favorites.length > 0 && (
                     <button
-                      onClick={() => favorites.forEach(id => toggleFavorite(id))}
+                      onClick={() =>
+                        favorites.forEach((id) => toggleFavorite(id))
+                      }
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted hover:text-red-400 hover:bg-card-hover opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       title="Clear all favorites"
                     >
@@ -303,7 +325,9 @@ export default function AppLayout({ children }) {
             )}
 
             {/* Playlist items */}
-            <div className={`flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-0.5 px-1 py-0.5`}>
+            <div
+              className={`flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-0.5 px-1 py-0.5`}
+            >
               {playlists.length === 0 && !sidebarCollapsed && (
                 <div className="px-2 py-6 text-center">
                   <p className="text-xs text-muted">No playlists yet</p>
@@ -320,7 +344,11 @@ export default function AppLayout({ children }) {
                     title={list.name}
                     subtitle={`${list.songIds.length} songs`}
                     collapsed={sidebarCollapsed}
-                    active={isDiscover && activeTab === "playlist" && activePlaylistId === list.id}
+                    active={
+                      isDiscover &&
+                      activeTab === "playlist" &&
+                      activePlaylistId === list.id
+                    }
                     onClick={() => {
                       setActiveTab("playlist");
                       setActivePlaylistId(list.id);
@@ -383,7 +411,11 @@ export default function AppLayout({ children }) {
                   icon={<Shield className="w-4 h-4 text-indigo-400 shrink-0" />}
                   label="Account & Login Issues"
                   collapsed={false}
-                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Account & Login"}
+                  active={
+                    showTalkToUs &&
+                    talkToUsTab === "feedback" &&
+                    talkToUsCategory === "Account & Login"
+                  }
                   onClick={() => {
                     setTalkToUsTab("feedback");
                     setTalkToUsCategory("Account & Login");
@@ -392,10 +424,16 @@ export default function AppLayout({ children }) {
                   isSubItem={true}
                 />
                 <SidebarNavItem
-                  icon={<Sparkles className="w-4 h-4 text-[#D4A32A] shrink-0" />}
+                  icon={
+                    <Sparkles className="w-4 h-4 text-[#D4A32A] shrink-0" />
+                  }
                   label="Feature Requests"
                   collapsed={false}
-                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Feature Request"}
+                  active={
+                    showTalkToUs &&
+                    talkToUsTab === "feedback" &&
+                    talkToUsCategory === "Feature Request"
+                  }
                   onClick={() => {
                     setTalkToUsTab("feedback");
                     setTalkToUsCategory("Feature Request");
@@ -404,10 +442,16 @@ export default function AppLayout({ children }) {
                   isSubItem={true}
                 />
                 <SidebarNavItem
-                  icon={<MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />}
+                  icon={
+                    <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                  }
                   label="Contact Us"
                   collapsed={false}
-                  active={showTalkToUs && talkToUsTab === "feedback" && talkToUsCategory === "Contact Us"}
+                  active={
+                    showTalkToUs &&
+                    talkToUsTab === "feedback" &&
+                    talkToUsCategory === "Contact Us"
+                  }
                   onClick={() => {
                     setTalkToUsTab("feedback");
                     setTalkToUsCategory("Contact Us");
@@ -428,7 +472,9 @@ export default function AppLayout({ children }) {
           </div>
 
           {/* ─── Bottom Collapse Toggle ─── */}
-          <div className={`px-3 pb-3 pt-1 ${sidebarCollapsed ? "flex justify-center" : "flex justify-end"}`}>
+          <div
+            className={`px-3 pb-3 pt-1 ${sidebarCollapsed ? "flex justify-center" : "flex justify-end"}`}
+          >
             <button
               onClick={() => setSidebarCollapsed((v) => !v)}
               className="p-1.5 hover:bg-card-hover rounded-full text-dim hover:text-copy transition-colors cursor-pointer"
@@ -444,9 +490,7 @@ export default function AppLayout({ children }) {
         </aside>
 
         {/* MAIN PANEL CONTENT */}
-        <main 
-          className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0"
-        >
+        <main className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0">
           {children}
         </main>
 
@@ -515,7 +559,8 @@ export default function AppLayout({ children }) {
               <div className="flex flex-col space-y-2.5 pt-1">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[10px] font-bold text-dim uppercase tracking-wider">
-                    Up Next ({songs.filter((s) => s.id !== currentSong?.id).length})
+                    Up Next (
+                    {songs.filter((s) => s.id !== currentSong?.id).length})
                   </h3>
                 </div>
                 <div className="space-y-1.5 pr-1">
@@ -637,10 +682,10 @@ export default function AppLayout({ children }) {
       {/* ABOUT MODAL */}
       {showAboutModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-line rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-line-muted">
+          <div className="bg-card border border-line rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line-muted">
               <span className="font-semibold text-title text-sm">
-                About
+                About YouWorship
               </span>
               <button
                 onClick={() => setShowAboutModal(false)}
@@ -649,46 +694,75 @@ export default function AppLayout({ children }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
-              <div className="flex items-center gap-4 pb-3 border-b border-line">
-                <img
+            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* Logo & Brand */}
+              <div className="flex items-center gap-4 pb-4 border-b border-line/50">
+                <Image
                   src="/youlogo.png"
                   alt="You Worship"
-                  className="w-14 h-14 object-contain"
+                  width={56}
+                  height={56}
+                  className="w-14 h-14 object-contain shrink-0"
                 />
                 <div>
-                  <h2 className="text-lg font-bold text-title">You Worship</h2>
+                  <h2 className="text-lg font-bold text-title">YouWorship</h2>
                   <p className="text-xs text-muted">🎸Anywhere🎸</p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs text-muted leading-relaxed">
-                  A worship song collection app designed to help you explore, search, and
-                  immerse yourself in devotional music. Featuring a curated library of songs
-                  with lyrics in Telugu and English, video playback, and personalized playlists.
+              {/* Mission Statement */}
+              <div className="space-y-3 text-sm text-muted leading-relaxed">
+                <p>
+                  <strong className="text-title">YouWorship</strong> is a
+                  Christ-centered worship platform from the creators of{" "}
+                  <a
+                    href="https://trueharvest.world"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#D4A32A] hover:text-[#c49527] underline underline-offset-2 transition-colors font-semibold"
+                  >
+                    TrueHarvest (trueharvest.world)
+                  </a>
+                  .
+                </p>
+
+                <p>
+                  While <strong className="text-title">TrueHarvest</strong> is
+                  dedicated to helping believers grow through God&apos;s Word,{" "}
+                  <strong className="text-title">
+                    <a
+                      href="https://youworship.world"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-title hover:text-[#D4A32A] underline underline-offset-2 transition-colors"
+                    >
+                      YouWorship
+                    </a>{" "}
+                    (youworship.world)
+                  </strong>{" "}
+                  exists to help believers respond to His Word through worship.
+                </p>
+
+                <div className="bg-canvas border-l-2 border-[#D4A32A] rounded-r-lg px-4 py-3 my-4">
+                  <p className="text-sm italic text-muted leading-relaxed">
+                    &ldquo;We believe every worship song is more than a melody —
+                    every lyric carries a message that speaks to the heart.
+                    Before you lead others in worship, let the words first
+                    prepare your own heart and draw you closer to Christ.&rdquo;
+                  </p>
+                </div>
+
+                <p className="font-semibold text-title text-center pt-1">
+                  May every song you sing bring glory to God and lead many into
+                  His presence.
                 </p>
               </div>
 
-              <div className="bg-card-hover rounded-lg p-3 border border-line space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Song Collection</span>
-                  <span className="text-title font-semibold">{songs.length} tracks</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Categories</span>
-                  <span className="text-title font-semibold">Multiple genres</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Languages</span>
-                  <span className="text-title font-semibold">Telugu, English</span>
-                </div>
-              </div>
-
+              {/* Close Button */}
               <div className="flex justify-center pt-1">
                 <button
                   onClick={() => setShowAboutModal(false)}
-                  className="px-6 py-2 bg-card-hover border border-line rounded-lg text-xs font-semibold text-copy hover:bg-line transition-all active:scale-95"
+                  className="px-6 py-2 bg-card-hover border border-line rounded-lg text-xs font-semibold text-copy hover:bg-line transition-all active:scale-95 cursor-pointer"
                 >
                   Close
                 </button>
@@ -723,7 +797,14 @@ export default function AppLayout({ children }) {
   );
 }
 
-function SidebarNavItem({ icon, label, collapsed, active, onClick, isSubItem = false }) {
+function SidebarNavItem({
+  icon,
+  label,
+  collapsed,
+  active,
+  onClick,
+  isSubItem = false,
+}) {
   return (
     <button
       onClick={onClick}
@@ -738,7 +819,9 @@ function SidebarNavItem({ icon, label, collapsed, active, onClick, isSubItem = f
     >
       {icon}
       {!collapsed && (
-        <span className={`truncate ${active ? "text-title" : "text-muted group-hover:text-title"}`}>
+        <span
+          className={`truncate ${active ? "text-title" : "text-muted group-hover:text-title"}`}
+        >
           {label}
         </span>
       )}
@@ -763,12 +846,12 @@ function LibraryItem({ icon, title, subtitle, collapsed, active, onClick }) {
       {icon}
       {!collapsed && (
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <span className={`text-sm font-medium truncate ${active ? "text-title" : "text-copy"}`}>
+          <span
+            className={`text-sm font-medium truncate ${active ? "text-title" : "text-copy"}`}
+          >
             {title}
           </span>
-          <span className="text-[11px] text-muted truncate">
-            {subtitle}
-          </span>
+          <span className="text-[11px] text-muted truncate">{subtitle}</span>
         </div>
       )}
       {collapsed && (
