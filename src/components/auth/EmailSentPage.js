@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Mail, ExternalLink } from "lucide-react";
+import Image from "next/image";
 
 /**
  * EmailSentPage — "Check your email" screen shown after Firebase sendSignInLinkToEmail().
@@ -109,10 +110,13 @@ export default function EmailSentPage({
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-center mb-8"
       >
-        <img
+        <Image
           src="/youlogo.png"
           alt="YouWorship"
+          width={48}
+          height={48}
           className="w-12 h-12 object-contain"
+          priority
         />
       </motion.div>
 

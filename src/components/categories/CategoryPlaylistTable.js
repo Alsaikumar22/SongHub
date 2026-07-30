@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
@@ -160,11 +161,13 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
               {/* Title, Artist and Transliteration */}
               <div className="flex items-center gap-3 min-w-0">
-                <img
+                <ImageWithFallback
                   src={song.coverUrl}
                   alt={song.title}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 object-cover rounded-lg border border-line shrink-0"
-                  onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZTFlMWUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwYTBhMGEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCNnKSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNDAiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zOCA1NSBMMzggODUgTDU1IDgwIEw1NSA1MFoiIGZpbGw9IiMzMzMiLz48L3N2Zz4='; }}
+                  sizes="40px"
                 />
                 <div className="min-w-0 flex-1">
                   <span className={`font-bold text-sm block truncate transition-colors ${

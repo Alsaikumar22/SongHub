@@ -21,6 +21,7 @@ import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 function SearchResultImage({ song }) {
   const [hasError, setHasError] = useState(false);
@@ -34,11 +35,13 @@ function SearchResultImage({ song }) {
   }
 
   return (
-    <img
+    <ImageWithFallback
       src={song.coverUrl}
       alt={song.title}
+      width={32}
+      height={32}
       className="w-full h-full object-cover"
-      onError={() => setHasError(true)}
+      sizes="32px"
     />
   );
 }
@@ -149,9 +152,11 @@ export default function Header({ setShowAuth, setAuthMode }) {
         className="flex items-center gap-2 md:gap-4 flex-shrink-0 group"
         aria-label="You Worship home"
       >
-        <img
+        <ImageWithFallback
           src="/youlogo.png"
           alt="You Worship"
+          width={44}
+          height={44}
           className="w-8 h-8 md:w-11 md:h-11 object-contain"
         />
         <div className="flex min-w-0 flex-col leading-none">

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, LogIn, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import Image from "next/image";
 
 /**
  * PasswordLogin — Email + Password login form.
@@ -54,10 +55,13 @@ export default function PasswordLogin({
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-center mb-6"
       >
-        <img
+        <Image
           src="/youlogo.png"
           alt="YouWorship"
+          width={56}
+          height={56}
           className="w-14 h-14 object-contain"
+          priority
         />
       </motion.div>
 

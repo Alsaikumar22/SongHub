@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import useWeeklySongs from "@/hooks/useWeeklySongs";
 import { HeroCarouselSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 
@@ -33,6 +34,7 @@ export default function HeroCarousel() {
   // Touch swipe support
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [failedImages, setFailedImages] = useState(() => new Set());
 
   const carouselSlides = weeklySongs.map((song) => {
     const rawArtist = typeof song?.artist === "object" && song?.artist !== null ? song.artist.name : song?.artist;
@@ -319,6 +321,7 @@ export default function HeroCarousel() {
             <div className="flex items-center gap-1.5">
               {carouselSlides.map((slide, idx) => {
                 const isActive = idx === currentSlide;
+                const hasFailed = failedImages.has(slide.id);
                 return (
                   <button
                     key={slide.id}
@@ -330,10 +333,17 @@ export default function HeroCarousel() {
                     }`}
                     title={`Slide ${idx + 1}: ${slide.title}`}
                   >
-                    {slide.bgUrl ? (
-                      <img src={slide.bgUrl} alt={slide.title} className="w-full h-full object-cover" onError={(e) => { e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZTFlMWUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwYTBhMGEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCNnKSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNDAiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0zOCA1NSBMMzggODUgTDU1IDgwIEw1NSA1MFoiIGZpbGw9IiMzMzMiLz48L3N2Zz4='; }} />
+                    {slide.bgUrl && !hasFailed ? (
+                      <ImageWithFallback
+                        src={slide.bgUrl}
+                        alt={slide.title}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                        sizes="(max-width: 640px) 32px, 40px"
+                      />
                     ) : (
-                      <div className="w-full h-full bg-card-hover" />
+                      <div className="w-full h-full bg-gradient-to-br from-neutral-700 to-neutral-900" />
                     )}
                   </button>
                 );
