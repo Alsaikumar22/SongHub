@@ -14,7 +14,7 @@ import { useAudio } from "@/context/audio-context";
 import { useSearch } from "@/context/search-context";
 import MobileMoreSheet from "./MobileMoreSheet";
 
-export default function MobileNav({ setShowTalkToUs, setShowAboutModal }) {
+export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, setShowTalkToUs, setShowAboutModal }) {
   const {
     activeTab,
     setActiveTab,
@@ -30,6 +30,15 @@ export default function MobileNav({ setShowTalkToUs, setShowAboutModal }) {
   const [showMoreSheet, setShowMoreSheet] = useState(false);
 
   const isOnSongPage = pathname?.startsWith("/song/");
+
+  const requireAuth = (callback) => {
+    if (!isAuthenticated) {
+      setAuthMode("signup");
+      setShowAuth(true);
+      return;
+    }
+    callback();
+  };
 
   const tabs = [
     {
@@ -49,49 +58,49 @@ export default function MobileNav({ setShowTalkToUs, setShowAboutModal }) {
       id: "categories",
       label: "Categories",
       icon: <Folder className="w-5 h-5" />,
-      onClick: () => {
+      onClick: () => requireAuth(() => {
         setActiveTab("categories");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         if (isOnSongPage) router.push("/");
-      },
+      }),
     },
     {
       id: "songs",
       label: "Songs",
       icon: <Music2 className="w-5 h-5" />,
-      onClick: () => {
+      onClick: () => requireAuth(() => {
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         setShowFullHome(false);
         if (isOnSongPage) router.push("/");
-      },
+      }),
     },
     {
       id: "search",
       label: "Search",
       icon: <Search className="w-5 h-5" />,
-      onClick: () => {
+      onClick: () => requireAuth(() => {
         setActiveTab("search");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         if (isOnSongPage) router.push("/");
-      },
+      }),
     },
     {
       id: "favorites",
       label: "Likes",
       icon: <Heart className="w-5 h-5" />,
-      onClick: () => {
+      onClick: () => requireAuth(() => {
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
         if (isOnSongPage) router.push("/");
-      },
+      }),
     },
   ];
 
@@ -128,7 +137,7 @@ export default function MobileNav({ setShowTalkToUs, setShowAboutModal }) {
 
           {/* ─── More Tab ─── */}
           <button
-            onClick={() => setShowMoreSheet(true)}
+            onClick={() => requireAuth(() => setShowMoreSheet(true))}
             className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
             title="More"
           >

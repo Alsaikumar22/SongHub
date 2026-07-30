@@ -45,6 +45,7 @@ export default function ProtectedAction({
 
       {showAuth && (
         <AuthModal
+          initialStep="signup"
           onClose={() => setShowAuth(false)}
           onSuccess={() => {
             setShowAuth(false);
