@@ -20,24 +20,28 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function main() {
-  console.log("🔍 Inspecting 10 documents from 'Youworship_songs'...");
-  const q = query(collection(db, "Youworship_songs"), limit(10));
-  const snap = await getDocs(q);
-  
-  if (snap.empty) {
-    console.log("No songs found.");
-    return;
-  }
+  console.log("🔍 Scanning all songs for Supabase image URL issues...");
+  const snap = await getDocs(collection(db, "Youworship_songs"));
+  console.log(`Loaded ${snap.docs.length} documents.`);
 
   for (const doc of snap.docs) {
     const data = doc.data();
-    console.log({
-      id: doc.id,
-      title: data.title,
-      artist: data.artist,
-      slug: data.slug,
-    });
+    const urls = [data.imageUrl, data.coverUrl, data.media?.image].filter(Boolean);
+
+    for (const url of urls) {
+      if (url.includes("unsplash.com")) {
+        console.log(`Document ID: ${doc.id}`);
+        console.log(`Title: ${data.title}`);
+        console.log(`imageUrl:`, data.imageUrl);
+        console.log(`coverUrl:`, data.coverUrl);
+        console.log(`media:`, data.media);
+        console.log("-----------------------------------------");
+        break;
+      }
+    }
   }
 }
 
 main().catch(console.error);
+
+

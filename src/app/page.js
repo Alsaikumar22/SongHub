@@ -56,17 +56,17 @@ export default async function LandingPage({ searchParams }) {
           />
           <div className="landing-float relative">
             <Image
-              src="/youlogo.png"
+              src="/youlogo-trans.png"
               alt="You Worship"
               width={1254}
               height={1254}
               priority
-              className="relative w-[clamp(5rem,10vh,8rem)] h-auto"
+              className="relative w-[clamp(8rem,15vh,13rem)] h-auto drop-shadow-[0_0_20px_rgba(242,193,78,0.25)]"
             />
             {/* Very faint diagonal light shimmer sweeping across the gold surface */}
             <div
               aria-hidden
-              className="landing-shimmer pointer-events-none absolute inset-0"
+              className="landing-shimmer pointer-events-none absolute inset-0 rounded-full"
             />
           </div>
         </div>
