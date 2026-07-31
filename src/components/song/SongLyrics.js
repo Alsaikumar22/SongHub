@@ -153,10 +153,10 @@ export default function SongLyrics({
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-hidden px-6 sm:px-12 md:px-16 py-12 select-text bg-card"
+        className="w-full flex-1 overflow-y-auto overscroll-contain px-6 sm:px-12 md:px-16 py-12 select-text bg-card"
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
-        <div className="max-w-5xl mx-auto pb-32">
+        <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center">
           {selectedLanguage === "dual" ? (
             /* Widescreen 2-Column Side-by-Side Grid, falling back to stack on Mobile */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">

@@ -183,6 +183,25 @@ export const AudioProvider = ({ children }) => {
     userRef.current = user;
   }, [user]);
 
+  // When the user signs out, stop playback entirely so music does not
+  // keep playing while the player bar is hidden for logged-out users.
+  useEffect(() => {
+    if (!user && currentSongRef.current) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeAttribute("src");
+      }
+      if (youtubePlayerRef.current && typeof youtubePlayerRef.current.pauseVideo === "function") {
+        try {
+          youtubePlayerRef.current.pauseVideo();
+        } catch (e) {}
+      }
+      setIsPlaying(false);
+      setCurrentSong(null);
+      setProgress(0);
+    }
+  }, [user]);
+
   // When Firebase user data loads, merge it (Firestore wins over localStorage)
   useEffect(() => {
     if (!firestoreData) return;
