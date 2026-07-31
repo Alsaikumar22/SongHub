@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Lato, NTR } from "next/font/google";
+import { Geist, Geist_Mono, Lato, NTR, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "@/context/audio-context";
 import { SearchProvider } from "@/context/search-context";
@@ -38,10 +38,17 @@ const ntr = NTR({
   preload: true,
 });
 
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
+
 export const metadata = {
-  title: "youworship",
+  title: "You Worship — Christian Songs, Lyrics, Audio & Videos",
   description:
-    "A sleek and clean minimalist music player built with Next.js and TailwindCSS",
+    "A Christ-centered worship platform. Telugu & English Christian songs with lyrics, audio and videos.",
   icons: {
     icon: "/youlogo.png",
   },
@@ -51,7 +58,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${ntr.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${ntr.variable} ${playfair.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="text-title font-sans select-none">

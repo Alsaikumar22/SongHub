@@ -51,7 +51,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setViewedSongId(null);
         setShowFullResults(false);
         setShowFullHome(true);
-        if (isOnSongPage) router.push("/");
+        if (isOnSongPage) router.push("/home");
       },
     },
     {
@@ -63,7 +63,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
-        if (isOnSongPage) router.push("/");
+        if (isOnSongPage) router.push("/home");
       }),
     },
     {
@@ -76,7 +76,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setViewedSongId(null);
         setShowFullResults(false);
         setShowFullHome(false);
-        if (isOnSongPage) router.push("/");
+        if (isOnSongPage) router.push("/home");
       }),
     },
     {
@@ -88,7 +88,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
-        if (isOnSongPage) router.push("/");
+        if (isOnSongPage) router.push("/home");
       }),
     },
     {
@@ -99,7 +99,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        if (isOnSongPage) router.push("/");
+        if (isOnSongPage) router.push("/home");
       }),
     },
   ];

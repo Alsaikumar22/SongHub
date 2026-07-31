@@ -6,5 +6,11 @@ export default function sitemap() {
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: "https://youworship.world/home",
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
   ];
 }

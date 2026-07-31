@@ -54,14 +54,14 @@ export default function ProfileDropdown() {
       setActiveTab("favorites");
       setActivePlaylistId(null);
       setViewedSongId(null);
-      router.push("/");
+      router.push("/home");
     }},
     { icon: <ListMusic className="w-4 h-4" />, label: "Playlists", onClick: () => {
       setIsOpen(false);
       setActiveTab("playlist");
       setActivePlaylistId(null);
       setViewedSongId(null);
-      router.push("/");
+      router.push("/home");
     }},
   ];
 
@@ -157,7 +157,7 @@ export default function ProfileDropdown() {
                     setIsOpen(false);
                     try {
                       await signOut();
-                      router.push("/");
+                      router.push("/home");
                     } catch (error) {
                       console.error("Logout error:", error);
                     }

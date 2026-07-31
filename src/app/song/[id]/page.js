@@ -142,7 +142,7 @@ function SongPageContent({ params }) {
     if (!authLoading && !isAuthenticated) {
       const currentPath = window.location.pathname + window.location.search;
       router.replace(
-        `/?auth=signup&redirect=${encodeURIComponent(currentPath)}`,
+        `/home?auth=signup&redirect=${encodeURIComponent(currentPath)}`,
       );
     }
   }, [isAuthenticated, authLoading, router]);
@@ -462,7 +462,7 @@ function SongPageContent({ params }) {
           {songsLoading ? "Loading song..." : "Song not found"}
         </h2>
         {!songsLoading && (
-          <Link href="/" className="mt-4 text-sm text-title hover:underline">
+          <Link href="/home" className="mt-4 text-sm text-title hover:underline">
             Return to home
           </Link>
         )}
@@ -593,6 +593,24 @@ function SongPageContent({ params }) {
               </button>
             </div>
 
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+              title="Share song"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            {/* Copy Lyrics Button */}
+            <button
+              onClick={handleCopyLyrics}
+              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+              title="Copy lyrics to clipboard"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
@@ -609,6 +627,14 @@ function SongPageContent({ params }) {
             fontSizeMultiplier={fontSizeMultiplier}
           />
         </div>
+
+        {/* Share/Copy Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-24 right-8 bg-[#D4A32A] text-black px-4 py-2.5 rounded-xl text-xs font-black shadow-2xl flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-3">
+            <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     );
   }

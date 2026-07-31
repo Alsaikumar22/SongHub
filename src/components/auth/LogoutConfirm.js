@@ -20,7 +20,7 @@ export default function LogoutConfirm({ onClose }) {
     try {
       await signOut();
       onClose();
-      router.push("/");
+      router.push("/home");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
