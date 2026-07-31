@@ -619,7 +619,7 @@ function SongPageContent({ params }) {
           </div>
         </div>
 
-        <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
+        <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col overflow-hidden">
           <SongLyrics
             song={song}
             isImmersive={true}

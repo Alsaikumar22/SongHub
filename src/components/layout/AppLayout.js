@@ -113,6 +113,9 @@ export default function AppLayout({ children }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Playback hotkey only for signed-in users (player bar is hidden otherwise)
+      if (!isAuthenticated) return;
+
       if (e.code === "Space" || e.key === " ") {
         // Skip hotkey when typing in input, textarea, select, button, or contenteditable
         const active = document.activeElement;
@@ -139,7 +142,7 @@ export default function AppLayout({ children }) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [togglePlay]);
+  }, [togglePlay, isAuthenticated]);
 
   // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
   if (authLoading) {
@@ -490,7 +493,11 @@ export default function AppLayout({ children }) {
         </aside>
 
         {/* MAIN PANEL CONTENT */}
-        <main className="flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative pb-[116px] lg:pb-0">
+        <main
+          className={`flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative ${
+            isAuthenticated ? "pb-[116px]" : "pb-[64px]"
+          } lg:pb-0`}
+        >
           {children}
         </main>
 
@@ -594,10 +601,12 @@ export default function AppLayout({ children }) {
         </aside>
       </div>
 
-      {/* PERSISTENT AUDIO PLAYER */}
-      <Suspense fallback={null}>
-        <PlayerBar />
-      </Suspense>
+      {/* PERSISTENT AUDIO PLAYER — only visible after login/signup */}
+      {isAuthenticated && (
+        <Suspense fallback={null}>
+          <PlayerBar />
+        </Suspense>
+      )}
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav
