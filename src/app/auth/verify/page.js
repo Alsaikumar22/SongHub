@@ -137,7 +137,7 @@ export default function VerifyPage() {
         >
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <Image src="/youlogo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
+            <Image src="/youworship-logo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
           </div>
 
           {/* Mail Icon */}
@@ -202,7 +202,7 @@ export default function VerifyPage() {
             className="flex justify-center mb-6"
           >
             <Image
-              src="/youlogo.png"
+              src="/youworship-logo.png"
               alt="You Worship"
               width={64}
               height={64}
@@ -274,7 +274,7 @@ export default function VerifyPage() {
       >
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Image src="/youlogo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
+          <Image src="/youworship-logo.png" alt="YouWorship" width={56} height={56} className="w-14 h-14 object-contain" priority />
         </div>
 
         <motion.div

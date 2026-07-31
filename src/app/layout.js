@@ -50,7 +50,7 @@ export const metadata = {
   description:
     "A Christ-centered worship platform. Telugu & English Christian songs with lyrics, audio and videos.",
   icons: {
-    icon: "/youlogo.png",
+    icon: "/youworship-logo.png",
   },
 };
 

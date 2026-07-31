@@ -153,7 +153,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
         aria-label="You Worship home"
       >
         <ImageWithFallback
-          src="/youlogo.png"
+          src="/youworship-logo.png"
           alt="You Worship"
           width={44}
           height={44}
