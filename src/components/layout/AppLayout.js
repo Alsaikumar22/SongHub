@@ -162,7 +162,7 @@ export default function AppLayout({ children }) {
         <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
           {/* Logo */}
           <Image
-            src="/youlogo.png"
+            src="/youworship-logo.png"
             alt="YouWorship"
             width={80}
             height={80}
@@ -718,7 +718,7 @@ export default function AppLayout({ children }) {
               {/* Logo & Brand */}
               <div className="flex items-center gap-4 pb-4 border-b border-line/50">
                 <Image
-                  src="/youlogo.png"
+                  src="/youworship-logo.png"
                   alt="You Worship"
                   width={56}
                   height={56}

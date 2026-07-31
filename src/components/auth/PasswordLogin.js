@@ -56,7 +56,7 @@ export default function PasswordLogin({
         className="flex justify-center mb-6"
       >
         <Image
-          src="/youlogo.png"
+          src="/youworship-logo.png"
           alt="YouWorship"
           width={56}
           height={56}

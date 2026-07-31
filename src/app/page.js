@@ -56,12 +56,12 @@ export default async function LandingPage({ searchParams }) {
           />
           <div className="landing-float relative">
             <Image
-              src="/youlogo-trans.png"
+              src="/youworship-logo.png"
               alt="You Worship"
               width={1254}
               height={1254}
               priority
-              className="relative w-[clamp(8rem,15vh,13rem)] h-auto drop-shadow-[0_0_20px_rgba(242,193,78,0.25)]"
+              className="relative w-[clamp(10.5rem,18vh,16rem)] h-auto drop-shadow-[0_0_20px_rgba(242,193,78,0.25)]"
             />
             {/* Very faint diagonal light shimmer sweeping across the gold surface */}
             <div

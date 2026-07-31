@@ -111,7 +111,7 @@ export default function EmailSentPage({
         className="flex justify-center mb-8"
       >
         <Image
-          src="/youlogo.png"
+          src="/youworship-logo.png"
           alt="YouWorship"
           width={48}
           height={48}
