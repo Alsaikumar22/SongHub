@@ -109,12 +109,18 @@ export default function AppLayout({ children }) {
     }
   };
 
-  const isDiscover = pathname === "/";
+  const isLanding = pathname === "/";
+  const isDiscover = pathname === "/home";
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Playback hotkey only for signed-in users (player bar is hidden otherwise)
       if (!isAuthenticated) return;
+      // Disable the hotkey on the landing page (no player chrome there).
+      // Read the live pathname so the deps array stays constant-sized
+      // (prevents a React Compiler size-mismatch error).
+      if (typeof window !== "undefined" && window.location.pathname === "/")
+        return;
 
       if (e.code === "Space" || e.key === " ") {
         // Skip hotkey when typing in input, textarea, select, button, or contenteditable
@@ -143,6 +149,11 @@ export default function AppLayout({ children }) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [togglePlay, isAuthenticated]);
+
+  // ─── LANDING PAGE (root URL): render children without app chrome ───
+  if (isLanding) {
+    return <>{children}</>;
+  }
 
   // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
   if (authLoading) {
@@ -215,7 +226,7 @@ export default function AppLayout({ children }) {
                 setActivePlaylistId(null);
                 setViewedSongId(null);
                 setShowFullHome(false);
-                router.push("/?tab=discover");
+                router.push("/home?tab=discover");
               }}
             />
             <SidebarNavItem
@@ -231,7 +242,7 @@ export default function AppLayout({ children }) {
                 } else {
                   setActivePlaylistId(null);
                   setViewedSongId(null);
-                  router.push("/");
+                  router.push("/home");
                 }
               }}
             />
@@ -243,7 +254,7 @@ export default function AppLayout({ children }) {
               onClick={() => {
                 setActivePlaylistId(null);
                 setViewedSongId(null);
-                router.push("/?tab=categories");
+                router.push("/home?tab=categories");
               }}
             />
           </div>
@@ -283,7 +294,7 @@ export default function AppLayout({ children }) {
                     onClick={() => {
                       setActivePlaylistId(null);
                       setViewedSongId(null);
-                      router.push("/?tab=favorites");
+                      router.push("/home?tab=favorites");
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
                       isDiscover && activeTab === "favorites"
@@ -356,7 +367,7 @@ export default function AppLayout({ children }) {
                       setActiveTab("playlist");
                       setActivePlaylistId(list.id);
                       setViewedSongId(null);
-                      router.push(`/?tab=playlist&playlistId=${list.id}`);
+                      router.push(`/home?tab=playlist&playlistId=${list.id}`);
                     }}
                   />
                   {!sidebarCollapsed && (

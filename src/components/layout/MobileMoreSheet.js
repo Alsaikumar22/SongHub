@@ -64,14 +64,14 @@ export default function MobileMoreSheet({
             );
           } else {
             setActiveTab("discover");
-            router.push("/");
+            router.push("/home");
           }
           break;
         case "categories":
           setActiveTab("categories");
           setActivePlaylistId(null);
           setViewedSongId(null);
-          router.push("/");
+          router.push("/home");
           break;
         case "contact":
           onOpenTalkToUs?.();

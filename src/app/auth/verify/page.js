@@ -75,7 +75,7 @@ export default function VerifyPage() {
 
       // Redirect to home after a brief celebration (replace to avoid stale URL in history)
       setTimeout(() => {
-        router.replace("/");
+        router.replace("/home");
       }, 1500);
     } catch (error) {
       console.error("Email link sign-in error:", error);
@@ -102,7 +102,7 @@ export default function VerifyPage() {
   };
 
   const handleRequestNewLink = () => {
-    router.push("/");
+    router.push("/home");
   };
 
   // ── Loading State ──

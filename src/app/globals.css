@@ -77,6 +77,7 @@
   --color-overlay: var(--overlay);
   --font-sans: var(--font-lato), var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-playfair), Georgia, 'Times New Roman', serif;
 }
 
 body {
@@ -251,4 +252,108 @@ input:-webkit-autofill:focus {
 .auth-backdrop {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* ─────────────────────────────────────────────── */
+/* Landing / Welcome Screen                       */
+/* ─────────────────────────────────────────────── */
+
+/* Metallic gold title — light warm gold (#F5D485) at the top of each letter
+   deepening to amber gold (#D9A544) at the bottom, per the hero typography spec */
+.gold-title-text {
+  background: linear-gradient(180deg, #f5d485 0%, #eec264 40%, #d9a544 85%, #d9a544 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Soft golden ambient glow behind the logo that gently breathes — only the glow size changes */
+@keyframes landing-glow-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.landing-glow {
+  animation: landing-glow-pulse 6s ease-in-out infinite;
+}
+
+/* Extremely subtle vertical float (2–3px) for the logo — no tilting or zooming */
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.landing-float {
+  animation: landing-float 8s ease-in-out infinite;
+}
+
+/* Very faint diagonal light shimmer that sweeps once across the gold surface,
+   then rests — a soft reflective sheen, not a color or design change */
+@keyframes landing-shimmer {
+  0% {
+    background-position: 170% 0;
+  }
+  16% {
+    background-position: -70% 0;
+  }
+  100% {
+    background-position: -70% 0;
+  }
+}
+
+.landing-shimmer {
+  background-image: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(255, 244, 214, 0.16) 50%,
+    transparent 58%
+  );
+  background-size: 240% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: soft-light;
+  animation: landing-shimmer 7s ease-in-out infinite;
+}
+
+/* Staggered fade-up entrance */
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-fade-up {
+  animation: landing-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* CTA glassmorphism glow on hover */
+.landing-cta {
+  position: relative;
+  transition: box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease,
+    background 0.35s ease;
+}
+
+.landing-cta:hover {
+  box-shadow: 0 0 45px rgba(212, 163, 42, 0.35), 0 0 90px rgba(212, 163, 42, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.landing-cta:active {
+  transform: translateY(0) scale(0.98);
 }

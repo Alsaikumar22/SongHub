@@ -131,7 +131,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
       setShowFullResults(true);
       setIsFocused(false);
       e.target.blur();
-      router.push("/");
+      router.push("/home");
     }
   };
 
@@ -140,7 +140,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
       className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex flex`}
     >
       <Link
-        href="/"
+        href="/home"
         onClick={() => {
           setActiveTab("discover");
           setActivePlaylistId(null);
@@ -177,7 +177,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
             setViewedSongId(null);
             clearSearch();
             setShowFullHome(true);
-            router.push("/");
+            router.push("/home");
           }}
           className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-90 flex-shrink-0"
           title="Home"
@@ -216,7 +216,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                 );
                 if (activeTab !== "categories") {
                   clearSearch();
-                  router.push("/");
+                  router.push("/home");
                 }
               }}
               className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
@@ -286,7 +286,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   onMouseDown={() => {
                     setShowFullResults(true);
                     setIsFocused(false);
-                    router.push("/");
+                    router.push("/home");
                   }}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-card-hover/20 hover:bg-card-hover/50 text-[10px] font-semibold text-muted hover:text-title uppercase tracking-widest border-t border-line transition-all cursor-pointer hover:text-title"
                 >

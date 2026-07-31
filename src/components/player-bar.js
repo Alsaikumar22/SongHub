@@ -593,7 +593,7 @@ export default function PlayerBar() {
                 Playing From
               </span>
               <span className="text-xs font-bold text-white block mt-0.5 truncate max-w-[200px]">
-                {pathname === "/" ? "Home Catalog" : "Details Page"}
+                {pathname === "/home" ? "Home Catalog" : "Details Page"}
               </span>
             </div>
             <div className="flex items-center gap-1">

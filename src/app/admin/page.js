@@ -425,12 +425,12 @@ export default function AdminPage() {
   if (loading) return <div className="min-h-screen bg-[#070707] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#D4A32A] animate-spin" /></div>;
   if (!isAuthenticated) return (
     <div className="min-h-screen bg-[#070707] flex items-center justify-center p-8">
-      <div className="text-center max-w-md"><AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" /><h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1><p className="text-[#a7a7a7] text-sm">Please sign in with an admin account.</p><button onClick={() => router.push("/")} className="mt-6 px-6 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-sm hover:bg-[#c49527] transition-all cursor-pointer">Go Home</button></div>
+      <div className="text-center max-w-md"><AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" /><h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1><p className="text-[#a7a7a7] text-sm">Please sign in with an admin account.</p><button onClick={() => router.push("/home")} className="mt-6 px-6 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-sm hover:bg-[#c49527] transition-all cursor-pointer">Go Home</button></div>
     </div>
   );
   if (!isAdmin) return (
     <div className="min-h-screen bg-[#070707] flex items-center justify-center p-8">
-      <div className="text-center max-w-md"><Shield className="w-12 h-12 text-[#D4A32A]/50 mx-auto mb-4" /><h1 className="text-2xl font-bold text-white mb-2">Admin Only</h1><p className="text-[#a7a7a7] text-sm">This dashboard is only available to administrators.</p><button onClick={() => router.push("/")} className="mt-6 px-6 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-sm hover:bg-[#c49527] transition-all cursor-pointer">Go Home</button></div>
+      <div className="text-center max-w-md"><Shield className="w-12 h-12 text-[#D4A32A]/50 mx-auto mb-4" /><h1 className="text-2xl font-bold text-white mb-2">Admin Only</h1><p className="text-[#a7a7a7] text-sm">This dashboard is only available to administrators.</p><button onClick={() => router.push("/home")} className="mt-6 px-6 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-sm hover:bg-[#c49527] transition-all cursor-pointer">Go Home</button></div>
     </div>
   );
 
@@ -440,7 +440,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-50 bg-[#070707]/95 backdrop-blur-md border-b border-[rgba(255,255,255,0.06)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => router.push("/")} className="w-8 h-8 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center text-[#727272] hover:text-white transition-all cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
+            <button onClick={() => router.push("/home")} className="w-8 h-8 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center text-[#727272] hover:text-white transition-all cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
             <div>
               <h1 className="text-lg font-black text-white tracking-tight">Admin Dashboard</h1>
               <p className="text-[10px] text-[#727272] font-medium">Manage your song collection</p>
