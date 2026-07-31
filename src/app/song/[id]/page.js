@@ -96,9 +96,10 @@ function SongPageContent({ params }) {
   // Read view mode from URL synchronously on every render.
   // Avoids useSearchParams() which can crash during client-side navigation in Next.js 16.
   // Safe because SongPageContent only renders on the client (use(params) suspends during SSR).
-  const viewMode = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("view") || null
-    : null; // "video" | "lyrics" | null
+  const viewMode =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("view") || null
+      : null; // "video" | "lyrics" | null
 
   const lyricsContainerRef = useRef(null);
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
@@ -140,7 +141,9 @@ function SongPageContent({ params }) {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       const currentPath = window.location.pathname + window.location.search;
-      router.replace(`/?auth=signup&redirect=${encodeURIComponent(currentPath)}`);
+      router.replace(
+        `/?auth=signup&redirect=${encodeURIComponent(currentPath)}`,
+      );
     }
   }, [isAuthenticated, authLoading, router]);
 
@@ -252,7 +255,9 @@ function SongPageContent({ params }) {
     } catch (err) {
       console.error("Clipboard write failed:", err);
       // Last resort: show the URL so user can manually copy
-      setToastMessage("Could not copy. Select and copy the link from the address bar.");
+      setToastMessage(
+        "Could not copy. Select and copy the link from the address bar.",
+      );
     }
     setTimeout(() => setToastMessage(""), 2500);
   };
@@ -588,30 +593,6 @@ function SongPageContent({ params }) {
               </button>
             </div>
 
-            {/* Share Button */}
-            <button
-              onClick={() => {
-                if (typeof navigator !== "undefined" && navigator.share) {
-                  handleShare();
-                } else {
-                  handleCopyLink();
-                }
-              }}
-              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90"
-              title="Share song"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-
-            {/* Copy Lyrics Button */}
-            <button
-              onClick={handleCopyLyrics}
-              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90"
-              title="Copy lyrics to clipboard"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
@@ -619,7 +600,7 @@ function SongPageContent({ params }) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col overflow-hidden">
+        <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
           <SongLyrics
             song={song}
             isImmersive={true}
@@ -628,14 +609,6 @@ function SongPageContent({ params }) {
             fontSizeMultiplier={fontSizeMultiplier}
           />
         </div>
-
-        {/* Share/Copy Toast Notification */}
-        {toastMessage && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#D4A32A] text-black px-4 py-2.5 rounded-xl text-xs font-black shadow-2xl flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-3">
-            <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
       </div>
     );
   }
