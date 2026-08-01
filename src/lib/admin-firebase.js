@@ -10,13 +10,13 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 const COLLECTION_NAME = "Youworship_songs";
 
-let adminDb = null;
+let adminDb = typeof global !== "undefined" ? global.firebaseAdminDb : null;
 
 /**
  * Initialize Firebase Admin SDK (singleton pattern)
  */
 export function getFirebaseAdmin() {
-  if (adminDb) return adminDb;
+  if (typeof global !== "undefined" && global.firebaseAdminDb) return global.firebaseAdminDb;
 
   const projectId =
     process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -56,8 +56,11 @@ export function getFirebaseAdmin() {
     }
   }
 
-  adminDb = getFirestore();
-  return adminDb;
+  const dbInstance = getFirestore();
+  if (typeof global !== "undefined") {
+    global.firebaseAdminDb = dbInstance;
+  }
+  return dbInstance;
 }
 
 /**

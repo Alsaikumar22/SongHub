@@ -110,22 +110,15 @@ export default function CategorySongCard({ song, language, onClick }) {
           transition={{ duration: 0.4 }}
         />
 
-        {/* Hover overlay with Play button */}
-        <ProtectedAction action={handlePlayClick}>
-          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-            <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            </div>
-          </div>
-        </ProtectedAction>
         {/* Hover overlay with Play button — always visible on mobile, hover on desktop */}
-        <ProtectedAction action={handlePlayClick}>
-          <div className="absolute inset-0 bg-black/45 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-            <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            </div>
+        <div
+          onClick={handlePlayClick}
+          className="absolute inset-0 bg-black/45 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer z-20"
+        >
+          <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
+            <Play className="w-5 h-5 fill-current ml-0.5" />
           </div>
-        </ProtectedAction>
+        </div>
 
         {/* Active Now Playing indicator */}
         {isSongPlaying && (

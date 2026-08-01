@@ -137,16 +137,6 @@ function SongPageContent({ params }) {
 
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  // Auth guard: if user is not authenticated, redirect to signup
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      const currentPath = window.location.pathname + window.location.search;
-      router.replace(
-        `/home?auth=signup&redirect=${encodeURIComponent(currentPath)}`,
-      );
-    }
-  }, [isAuthenticated, authLoading, router]);
-
   const { theme, toggleTheme } = useTheme();
   const isLight = theme === "light";
   const {
@@ -506,18 +496,17 @@ function SongPageContent({ params }) {
             <span>Back</span>
           </button>
 
-          <ProtectedAction
-            action={() =>
+          <button
+            onClick={() =>
               router.push(
                 `/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`,
               )
             }
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm"
           >
-            <button className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm">
-              <FileText className="w-3.5 h-3.5 text-title" />
-              <span>View Lyrics</span>
-            </button>
-          </ProtectedAction>
+            <FileText className="w-3.5 h-3.5 text-title" />
+            <span>View Lyrics</span>
+          </button>
         </div>
 
         {/* Center Main Screen Video Player */}
@@ -676,20 +665,17 @@ function SongPageContent({ params }) {
 
         {/* Right Side: Action Icons Group */}
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
-          {/* 1. Play/Pause Button */}
-          <ProtectedAction action={handlePlayClick}>
-            <button
-              onClick={handlePlayClick}
-              className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
-              title={isThisPlaying ? "Pause" : "Play"}
-            >
-              {isThisPlaying ? (
-                <Pause className="w-4 h-4 fill-current" />
-              ) : (
-                <Play className="w-4 h-4 fill-current ml-0.5" />
-              )}
-            </button>
-          </ProtectedAction>
+          <button
+            onClick={handlePlayClick}
+            className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
+            title={isThisPlaying ? "Pause" : "Play"}
+          >
+            {isThisPlaying ? (
+              <Pause className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            )}
+          </button>
 
           {/* 2. Favorite Button */}
           <ProtectedAction action={() => toggleFavorite(song.id)}>

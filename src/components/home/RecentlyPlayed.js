@@ -5,7 +5,10 @@ import { useAudio } from "@/context/audio-context";
 import SongCard from "./SongCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { useWelcomeModal } from "@/context/welcome-modal-context";
+
 export default function RecentlyPlayed() {
+  const { requireAuth } = useWelcomeModal();
   const {
     songs,
     recentlyPlayed,
@@ -62,8 +65,10 @@ export default function RecentlyPlayed() {
         </h2>
         <button
           onClick={() => {
-            setActiveTab("recently-played");
-            setActivePlaylistId(null);
+            requireAuth(() => {
+              setActiveTab("recently-played");
+              setActivePlaylistId(null);
+            });
           }}
           className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
         >

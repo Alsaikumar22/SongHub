@@ -12,8 +12,8 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
   const isSmall = size === "sm";
 
   return (
-    <ProtectedAction action={() => playSong(song)}>
     <div
+      onClick={() => playSong(song)}
       className={`relative flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
     >
       <div
@@ -60,6 +60,5 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
         {song.titleEnglish}
       </span>
     </div>
-    </ProtectedAction>
   );
 }
