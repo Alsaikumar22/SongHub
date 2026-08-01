@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Lato, NTR, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono, Lato, NTR, Playfair_Display, Noto_Serif_Telugu, Noto_Sans_Telugu, Merriweather, Inter } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "@/context/audio-context";
 import { SearchProvider } from "@/context/search-context";
@@ -45,6 +45,37 @@ const playfair = Playfair_Display({
   preload: true,
 });
 
+const notoSerifTelugu = Noto_Serif_Telugu({
+  variable: "--font-noto-serif-telugu",
+  subsets: ["telugu"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: true,
+});
+
+const notoSansTelugu = Noto_Sans_Telugu({
+  variable: "--font-noto-sans-telugu",
+  subsets: ["telugu"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: true,
+});
+
+const merriweather = Merriweather({
+  variable: "--font-merriweather",
+  subsets: ["latin"],
+  weight: ["300", "400", "700", "900"],
+  display: "swap",
+  preload: true,
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
+
 export const metadata = {
   title: "You Worship — Christian Songs, Lyrics, Audio & Videos",
   description:
@@ -58,7 +89,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${ntr.variable} ${playfair.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lato.variable} ${ntr.variable} ${playfair.variable} ${notoSerifTelugu.variable} ${notoSansTelugu.variable} ${merriweather.variable} ${inter.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="text-title font-sans select-none">

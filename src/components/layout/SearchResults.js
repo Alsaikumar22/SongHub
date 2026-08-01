@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Play, Pause, Search, Music, Clock } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
 import ProtectedAction from "@/components/auth/ProtectedAction";
@@ -12,6 +13,8 @@ export default function SearchResults({
   isPlaying,
   playSong,
 }) {
+  const router = useRouter();
+
   if (!query || !query.trim()) return null;
 
   const trimmed = query.trim();
@@ -64,7 +67,10 @@ export default function SearchResults({
             return (
               <React.Fragment key={song.id ?? `${song.title}-${index}`}>
                 <div
-                  onClick={() => playSong(song)}
+                  onClick={() => {
+                    playSong(song);
+                    router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                  }}
                   className="grid grid-cols-[28px_1fr_48px] items-center gap-4 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-white/3 active:bg-white/5"
                 >
                   {/* Index / Play indicator */}
@@ -102,14 +108,14 @@ export default function SearchResults({
                     />
                     <div className="min-w-0 flex-1 flex flex-col justify-center">
                       <span
-                        className={`text-xs font-medium truncate block leading-tight ${
+                        className={`text-xs font-bold truncate block leading-tight ${
                           isCurrent ? "text-[#D4A32A]" : "text-copy group-hover:text-title"
-                        } ${song.teluguTitle ? "font-telugu" : ""}`}
+                        } font-song-title`}
                       >
                         {song.teluguTitle || song.title}
                       </span>
                       <span className="text-[10px] text-dim truncate block leading-tight mt-0.5">
-                        {song.titleEnglish} &middot; {song.artist?.name || "Unknown Artist"}
+                        <span className="font-bold font-song-title">{song.titleEnglish}</span> &middot; {song.artist?.name || "Unknown Artist"}
                       </span>
                     </div>
                   </div>

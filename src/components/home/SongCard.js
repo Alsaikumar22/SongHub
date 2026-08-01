@@ -49,14 +49,14 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
       </div>
 
       <span
-        className={`font-semibold text-title block truncate group-hover:text-handle transition-colors ${
+        className={`font-bold text-title block truncate group-hover:text-handle transition-colors ${
           isSmall ? "text-sm" : "text-base"
-        } ${song.teluguTitle ? "font-telugu" : ""}`}
+        } font-song-title`}
       >
         {song.teluguTitle || song.title}
       </span>
 
-      <span className={`text-muted block truncate mt-0.5 ${isSmall ? "text-xs" : "text-sm"}`}>
+      <span className={`text-muted block truncate mt-0.5 font-bold font-song-title ${isSmall ? "text-xs" : "text-sm"}`}>
         {song.titleEnglish}
       </span>
     </div>

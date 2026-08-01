@@ -228,7 +228,7 @@ export default function PlayerBar() {
                 iconSize="w-4.5 h-4.5"
               />
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-title block truncate leading-tight">
+                <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
                   {currentSong.teluguTitle || currentSong.title}
                 </span>
                 <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
@@ -304,14 +304,11 @@ export default function PlayerBar() {
                 <div className="overflow-hidden min-w-0">
                   <Link
                     href={`/song/${currentSong.slug || currentSong.id}`}
-                    href={`/song/${currentSong.slug || currentSong.id}`}
-                    className={`font-medium text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer ${
-                      currentSong.teluguTitle ? "font-telugu" : ""
-                    }`}
+                    className="font-bold text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer font-song-title"
                   >
                     {currentSong.teluguTitle || currentSong.title}
                   </Link>
-                  <span className="text-xs text-muted block truncate">
+                  <span className="text-xs font-bold text-muted block truncate font-song-title">
                     {currentSong.titleEnglish}
                   </span>
                 </div>
@@ -662,13 +659,11 @@ export default function PlayerBar() {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <h2
-                  className={`text-2xl font-black text-white truncate text-left tracking-tight ${
-                    currentSong.teluguTitle ? "font-telugu" : ""
-                  }`}
+                  className="text-2xl font-bold text-white truncate text-left tracking-tight font-song-title"
                 >
                   {currentSong.teluguTitle || currentSong.title}
                 </h2>
-                <span className="text-sm font-medium text-muted block text-left mt-1 truncate">
+                <span className="text-sm font-bold text-muted block text-left mt-1 truncate font-song-title">
                   {currentSong.titleEnglish}
                 </span>
               </div>
