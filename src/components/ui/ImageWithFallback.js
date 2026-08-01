@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import { Music } from "lucide-react";
 
 export default function ImageWithFallback({
@@ -30,16 +29,15 @@ export default function ImageWithFallback({
   }
 
   return (
-    <Image
+    <img
       src={src}
       alt={alt}
       width={width}
       height={height}
       className={className}
-      sizes={sizes}
-      priority={priority}
       onError={() => setHasError(true)}
       style={style}
+      loading={priority ? "eager" : "lazy"}
     />
   );
 }

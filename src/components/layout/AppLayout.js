@@ -9,6 +9,9 @@ import PlayerBar from "@/components/player-bar";
 import AuthModal from "@/components/auth/AuthModal";
 import TalkToUsDrawer from "./TalkToUsDrawer";
 import { useAuth } from "@/context/auth-context";
+import { WelcomeModalProvider, useWelcomeModal } from "@/context/welcome-modal-context";
+import WelcomeModal from "@/components/auth/WelcomeModal";
+import SignInNudge from "@/components/auth/SignInNudge";
 import Image from "next/image";
 import SongArtwork from "@/components/ui/SongArtwork";
 import {
@@ -35,6 +38,37 @@ import {
 export default function AppLayout({ children }) {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState("signup");
+
+  return (
+    <WelcomeModalProvider showAuthModal={() => { setShowAuth(true); setAuthMode("signup"); }}>
+      <AppLayoutInner
+        showAuth={showAuth}
+        setShowAuth={setShowAuth}
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+      >
+        {children}
+      </AppLayoutInner>
+    </WelcomeModalProvider>
+  );
+}
+
+function AppLayoutInner({
+  children,
+  showAuth,
+  setShowAuth,
+  authMode,
+  setAuthMode,
+}) {
+  const {
+    isOpen: isWelcomeOpen,
+    triggerReason: welcomeReason,
+    closeWelcomeModal,
+    nudgeMessage,
+    dismissNudge,
+    requireAuth,
+  } = useWelcomeModal();
+
   const {
     songs,
     currentSong,
@@ -100,6 +134,16 @@ export default function AppLayout({ children }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
 
+  const scrollToTop = () => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      const mainEl = document.querySelector("main");
+      if (mainEl) {
+        mainEl.scrollTo(0, 0);
+      }
+    }
+  };
+
   const handleCreatePlaylist = (e) => {
     e.preventDefault();
     if (newPlaylistName.trim()) {
@@ -114,8 +158,6 @@ export default function AppLayout({ children }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Playback hotkey only for signed-in users (player bar is hidden otherwise)
-      if (!isAuthenticated) return;
       // Disable the hotkey on the landing page (no player chrome there).
       // Read the live pathname so the deps array stays constant-sized
       // (prevents a React Compiler size-mismatch error).
@@ -190,25 +232,6 @@ export default function AppLayout({ children }) {
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
       <div
         className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
-        onClickCapture={
-          !isAuthenticated && !showAuth
-            ? (e) => {
-                // Sidebar clicks: allow navigation to work (no stopPropagation)
-                // Content clicks: stop propagation to prevent ProtectedAction double-modals
-                const flexContainer = e.currentTarget;
-                const sidebar = flexContainer?.querySelector("aside");
-                if (sidebar?.contains(e.target)) {
-                  // Sidebar navigation — show auth but let event propagate
-                  setAuthMode("signup");
-                  setShowAuth(true);
-                  return;
-                }
-                e.stopPropagation();
-                setAuthMode("signup");
-                setShowAuth(true);
-              }
-            : undefined
-        }
       >
         {/* SIDEBAR — production-grade navigation */}
         <aside
@@ -222,6 +245,7 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={isDiscover && activeTab === "discover"}
               onClick={() => {
+                scrollToTop();
                 setActiveTab("discover");
                 setActivePlaylistId(null);
                 setViewedSongId(null);
@@ -235,6 +259,7 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={false}
               onClick={() => {
+                scrollToTop();
                 if (currentSong) {
                   router.push(
                     `/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`,
@@ -252,6 +277,7 @@ export default function AppLayout({ children }) {
               collapsed={sidebarCollapsed}
               active={isDiscover && activeTab === "categories"}
               onClick={() => {
+                scrollToTop();
                 setActivePlaylistId(null);
                 setViewedSongId(null);
                 router.push("/home?tab=categories");
@@ -277,7 +303,11 @@ export default function AppLayout({ children }) {
                 <Library className="w-5 h-5 text-dim" />
               ) : (
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => {
+                    requireAuth(() => {
+                      setShowCreateModal(true);
+                    });
+                  }}
                   className="p-1 hover:bg-card-hover rounded-md text-dim hover:text-copy transition-colors cursor-pointer"
                   title="New Playlist"
                 >
@@ -292,9 +322,12 @@ export default function AppLayout({ children }) {
                 <div className="group relative">
                   <button
                     onClick={() => {
-                      setActivePlaylistId(null);
-                      setViewedSongId(null);
-                      router.push("/home?tab=favorites");
+                      requireAuth(() => {
+                        scrollToTop();
+                        setActivePlaylistId(null);
+                        setViewedSongId(null);
+                        router.push("/home?tab=favorites");
+                      });
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
                       isDiscover && activeTab === "favorites"
@@ -364,10 +397,13 @@ export default function AppLayout({ children }) {
                       activePlaylistId === list.id
                     }
                     onClick={() => {
-                      setActiveTab("playlist");
-                      setActivePlaylistId(list.id);
-                      setViewedSongId(null);
-                      router.push(`/home?tab=playlist&playlistId=${list.id}`);
+                      requireAuth(() => {
+                        scrollToTop();
+                        setActiveTab("playlist");
+                        setActivePlaylistId(list.id);
+                        setViewedSongId(null);
+                        router.push(`/home?tab=playlist&playlistId=${list.id}`);
+                      });
                     }}
                   />
                   {!sidebarCollapsed && (
@@ -612,12 +648,10 @@ export default function AppLayout({ children }) {
         </aside>
       </div>
 
-      {/* PERSISTENT AUDIO PLAYER — only visible after login/signup */}
-      {isAuthenticated && (
-        <Suspense fallback={null}>
-          <PlayerBar />
-        </Suspense>
-      )}
+      {/* PERSISTENT AUDIO PLAYER */}
+      <Suspense fallback={null}>
+        <PlayerBar />
+      </Suspense>
 
       {/* MOBILE BOTTOM NAV — fixed at bottom on mobile, hidden on md+ */}
       <MobileNav
@@ -726,7 +760,7 @@ export default function AppLayout({ children }) {
                 />
                 <div>
                   <h2 className="text-lg font-bold text-title">YouWorship</h2>
-                  <p className="text-xs text-muted">🎸Anywhere🎸</p>
+                  <p className="text-xs text-muted">Anywhere</p>
                 </div>
               </div>
 
@@ -812,6 +846,28 @@ export default function AppLayout({ children }) {
         onClose={() => setShowTalkToUs(false)}
         initialTab={talkToUsTab}
         initialCategory={talkToUsCategory}
+      />
+
+      {/* WELCOME MODAL */}
+      <WelcomeModal
+        isOpen={isWelcomeOpen}
+        onClose={closeWelcomeModal}
+        onSignIn={() => {
+          setShowAuth(true);
+          setAuthMode("signup");
+        }}
+        triggerReason={welcomeReason}
+      />
+
+      {/* SIGN IN NUDGE */}
+      <SignInNudge
+        isOpen={!!nudgeMessage}
+        message={nudgeMessage || ""}
+        onDismiss={dismissNudge}
+        onSignIn={() => {
+          setShowAuth(true);
+          setAuthMode("signup");
+        }}
       />
     </div>
   );

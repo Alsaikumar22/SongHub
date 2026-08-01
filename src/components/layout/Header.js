@@ -152,19 +152,21 @@ export default function Header({ setShowAuth, setAuthMode }) {
         className="flex items-center gap-2 md:gap-4 flex-shrink-0 group"
         aria-label="You Worship home"
       >
-        <ImageWithFallback
-          src="/youworship-logo.png"
-          alt="You Worship"
-          width={44}
-          height={44}
-          className="w-8 h-8 md:w-11 md:h-11 object-contain"
-        />
+        <div className="bg-black rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-md">
+          <ImageWithFallback
+            src="/youworship-logo.png"
+            alt="You Worship"
+            width={44}
+            height={44}
+            className="w-8 h-8 md:w-10 md:h-10 object-contain"
+          />
+        </div>
         <div className="flex min-w-0 flex-col leading-none">
           <span className="text-sm md:text-[19px] font-black tracking-[0.01em] text-title whitespace-nowrap">
             You Worship
           </span>
           <span className="mt-1 text-[11px] font-bold tracking-[0.16em] text-amber-400">
-            🎸Anywhere🎸
+            Anywhere
           </span>
         </div>
       </Link>

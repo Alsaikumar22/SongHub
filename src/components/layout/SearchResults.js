@@ -63,8 +63,10 @@ export default function SearchResults({
             const isCurrent = currentSong?.id === song.id;
             return (
               <React.Fragment key={song.id ?? `${song.title}-${index}`}>
-              <ProtectedAction action={() => playSong(song)}>
-                <div className="grid grid-cols-[28px_1fr_48px] items-center gap-4 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-white/3 active:bg-white/5">
+                <div
+                  onClick={() => playSong(song)}
+                  className="grid grid-cols-[28px_1fr_48px] items-center gap-4 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group hover:bg-white/3 active:bg-white/5"
+                >
                   {/* Index / Play indicator */}
                   <div className="flex items-center justify-center h-full">
                     <span
@@ -73,45 +75,41 @@ export default function SearchResults({
                       }`}
                     >
                       {isCurrent && isPlaying ? (
-                        <div className="flex items-end gap-0.5 h-3">
-                          <span className="w-0.5 bg-white/70 rounded-full animate-music-bar-1" />
-                          <span className="w-0.5 bg-white/50 rounded-full animate-music-bar-2" />
-                          <span className="w-0.5 bg-white/60 rounded-full animate-music-bar-3" />
+                        <div className="flex items-end gap-[2px] h-3 w-3 shrink-0">
+                          <span className="w-[1.5px] bg-[#D4A32A] rounded-full animate-music-bar-1" />
+                          <span className="w-[1.5px] bg-[#D4A32A] rounded-full animate-music-bar-2" />
+                          <span className="w-[1.5px] bg-[#D4A32A] rounded-full animate-music-bar-3" />
                         </div>
                       ) : (
                         index + 1
                       )}
                     </span>
-                    <span className="hidden group-hover:block">
+                    <button className="hidden group-hover:block text-[#D4A32A] hover:scale-105 active:scale-95 transition-transform cursor-pointer shrink-0">
                       {isCurrent && isPlaying ? (
-                        <Pause className="w-3 h-3 fill-current text-title" />
+                        <Pause className="w-3.5 h-3.5 fill-current" />
                       ) : (
-                        <Play className="w-3 h-3 fill-current text-title ml-0.5" />
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                       )}
-                    </span>
+                    </button>
                   </div>
 
-                  {/* Song info */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg overflow-hidden border border-white/6 shrink-0 bg-card-hover shadow-sm">
-                      <SongArtwork
-                        song={song}
-                        className="w-full h-full object-cover"
-                        iconSize="w-3.5 h-3.5"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
+                  {/* Artwork + Titles */}
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <SongArtwork
+                      song={song}
+                      className="w-10 h-10 object-cover rounded border border-line shrink-0"
+                      iconSize="w-3.5 h-3.5"
+                    />
+                    <div className="min-w-0 flex-1 flex flex-col justify-center">
                       <span
-                        className={`text-sm font-medium block truncate leading-tight transition-colors ${
-                          isCurrent
-                            ? "text-title"
-                            : "text-title group-hover:text-title/90"
+                        className={`text-xs font-medium truncate block leading-tight ${
+                          isCurrent ? "text-[#D4A32A]" : "text-copy group-hover:text-title"
                         } ${song.teluguTitle ? "font-telugu" : ""}`}
                       >
                         {song.teluguTitle || song.title}
                       </span>
-                      <span className="text-xs text-muted block truncate mt-0.5 leading-tight">
-                        {song.titleEnglish}
+                      <span className="text-[10px] text-dim truncate block leading-tight mt-0.5">
+                        {song.titleEnglish} &middot; {song.artist?.name || "Unknown Artist"}
                       </span>
                     </div>
                   </div>
@@ -121,7 +119,6 @@ export default function SearchResults({
                     {song.duration}
                   </div>
                 </div>
-              </ProtectedAction>
               </React.Fragment>
             );
           })}

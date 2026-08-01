@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import { useSearch } from "@/context/search-context";
+import { useWelcomeModal } from "@/context/welcome-modal-context";
 import MobileMoreSheet from "./MobileMoreSheet";
 
 export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, setShowTalkToUs, setShowAboutModal }) {
@@ -31,13 +32,16 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
 
   const isOnSongPage = pathname?.startsWith("/song/");
 
-  const requireAuth = (callback) => {
-    if (!isAuthenticated) {
-      setAuthMode("signup");
-      setShowAuth(true);
-      return;
+  const { requireAuth: triggerWelcomeNudge } = useWelcomeModal();
+
+  const scrollToTop = () => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      const mainEl = document.querySelector("main");
+      if (mainEl) {
+        mainEl.scrollTo(0, 0);
+      }
     }
-    callback();
   };
 
   const tabs = [
@@ -46,6 +50,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       label: "Home",
       icon: <Home className="w-5 h-5" />,
       onClick: () => {
+        scrollToTop();
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
@@ -58,44 +63,48 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       id: "categories",
       label: "Categories",
       icon: <Folder className="w-5 h-5" />,
-      onClick: () => requireAuth(() => {
+      onClick: () => {
+        scrollToTop();
         setActiveTab("categories");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         if (isOnSongPage) router.push("/home");
-      }),
+      },
     },
     {
       id: "songs",
       label: "Songs",
       icon: <Music2 className="w-5 h-5" />,
-      onClick: () => requireAuth(() => {
+      onClick: () => {
+        scrollToTop();
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         setShowFullHome(false);
         if (isOnSongPage) router.push("/home");
-      }),
+      },
     },
     {
       id: "search",
       label: "Search",
       icon: <Search className="w-5 h-5" />,
-      onClick: () => requireAuth(() => {
+      onClick: () => {
+        scrollToTop();
         setActiveTab("search");
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullResults(false);
         if (isOnSongPage) router.push("/home");
-      }),
+      },
     },
     {
       id: "favorites",
       label: "Likes",
       icon: <Heart className="w-5 h-5" />,
-      onClick: () => requireAuth(() => {
+      onClick: () => triggerWelcomeNudge(() => {
+        scrollToTop();
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
@@ -137,7 +146,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
 
           {/* ─── More Tab ─── */}
           <button
-            onClick={() => requireAuth(() => setShowMoreSheet(true))}
+            onClick={() => setShowMoreSheet(true)}
             className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
             title="More"
           >

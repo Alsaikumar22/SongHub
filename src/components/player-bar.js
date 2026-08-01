@@ -253,20 +253,18 @@ export default function PlayerBar() {
                 </button>
               )}
               <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-              <button
-                className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
-                aria-label="Add to favorites"
-              >
-                <Heart
-                  className={`w-4.5 h-4.5 ${
-                    isFavorited
-                      ? "fill-red-500 text-red-500"
-                      : "text-dim hover:text-title"
-                  }`}
-                />
-              </button>
-              </ProtectedAction>
+                <button
+                  className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
+                  aria-label="Add to favorites"
+                >
+                  <Heart
+                    className={`w-4.5 h-4.5 ${
+                      isFavorited
+                        ? "fill-red-500 text-red-500"
+                        : "text-dim hover:text-title"
+                    }`}
+                  />
+                </button>
               </ProtectedAction>
               <button
                 onClick={togglePlay}
@@ -318,20 +316,18 @@ export default function PlayerBar() {
                   </span>
                 </div>
                 <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-                <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-                <button
-                  className="p-1 hover:bg-card-hover rounded-full group transition-colors flex-shrink-0 cursor-pointer"
-                  aria-label="Add to favorites"
-                >
-                  <Heart
-                    className={`w-4 h-4 transition-transform group-active:scale-90 ${
-                      isFavorited
-                        ? "fill-red-500 text-red-500"
-                        : "text-dim hover:text-handle"
-                    }`}
-                  />
-                </button>
-                </ProtectedAction>
+                  <button
+                    className="p-1 hover:bg-card-hover rounded-full group transition-colors flex-shrink-0 cursor-pointer"
+                    aria-label="Add to favorites"
+                  >
+                    <Heart
+                      className={`w-4 h-4 transition-transform group-active:scale-90 ${
+                        isFavorited
+                          ? "fill-red-500 text-red-500"
+                          : "text-dim hover:text-handle"
+                      }`}
+                    />
+                  </button>
                 </ProtectedAction>
               </>
             ) : (
@@ -485,14 +481,13 @@ export default function PlayerBar() {
                   <MicIcon className="w-4 h-4" />
                 </Link>
               ) : (
-                <ProtectedAction action={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}>
-                  <button
-                    className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
-                    title="View Lyrics"
-                  >
-                    <MicIcon className="w-4 h-4" />
-                  </button>
-                </ProtectedAction>
+                <button
+                  onClick={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}
+                  className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
+                  title="View Lyrics"
+                >
+                  <MicIcon className="w-4 h-4" />
+                </button>
               )
             ) : (
               <span className="p-1.5 text-muted">
@@ -617,19 +612,18 @@ export default function PlayerBar() {
               >
                 <Share2 className="w-5.5 h-5.5" />
               </button>
-              <ProtectedAction action={() => {
-                setIsExpanded(false);
-                if (currentSong) {
-                  router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
-                }
-              }}>
-                <button
-                  className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
-                  title="View lyrics"
-                >
-                  <MicIcon className="w-5.5 h-5.5" />
-                </button>
-              </ProtectedAction>
+              <button
+                onClick={() => {
+                  setIsExpanded(false);
+                  if (currentSong) {
+                    router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
+                  }
+                }}
+                className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                title="View lyrics"
+              >
+                <MicIcon className="w-5.5 h-5.5" />
+              </button>
               {currentSong?.media?.video || currentSong?.videoUrl || currentSong?.youtubeUrl ? (
                 <button
                   onClick={() => {
@@ -679,19 +673,17 @@ export default function PlayerBar() {
                 </span>
               </div>
               <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-              <button
-                className="p-2 rounded-full hover:bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
-              >
-                <Heart
-                  className={`w-6.5 h-6.5 ${
-                    isFavorited
-                      ? "fill-red-500 text-red-500 animate-in zoom-in duration-200"
-                      : "text-dim hover:text-white"
-                  }`}
-                />
-              </button>
-              </ProtectedAction>
+                <button
+                  className="p-2 rounded-full hover:bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                >
+                  <Heart
+                    className={`w-6.5 h-6.5 ${
+                      isFavorited
+                        ? "fill-red-500 text-red-500 animate-in zoom-in duration-200"
+                        : "text-dim hover:text-white"
+                    }`}
+                  />
+                </button>
               </ProtectedAction>
             </div>
 

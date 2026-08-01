@@ -118,14 +118,15 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const dateAdded = `Jan 15, ${year}`;
 
           return (
-            <ProtectedAction key={song.id} action={() => {
-              if (isCurrent) {
-                togglePlay();
-              } else {
-                playSong(song);
-              }
-            }}>
             <motion.div
+              key={song.id}
+              onClick={() => {
+                if (isCurrent) {
+                  togglePlay();
+                } else {
+                  playSong(song);
+                }
+              }}
               variants={itemVariants}
               onMouseEnter={() => setHoveredRowId(song.id)}
               onMouseLeave={() => setHoveredRowId(null)}
@@ -208,16 +209,17 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 </span>
 
                 <div className={`absolute right-4 flex items-center gap-3 transition-all duration-200 ${isHovered ? "opacity-100 visible translate-x-0" : "opacity-0 invisible translate-x-2"}`}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(song.id);
-                    }}
-                    className={`p-1.5 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-muted hover:text-title"}`}
-                    title={isFav ? "Remove Favorite" : "Favorite"}
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
-                  </button>
+                  <ProtectedAction action={() => toggleFavorite(song.id)}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      className={`p-1.5 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-500" : "text-muted hover:text-title"}`}
+                      title={isFav ? "Remove Favorite" : "Favorite"}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
+                    </button>
+                  </ProtectedAction>
 
                   <div className="relative">
                     <button
@@ -263,7 +265,6 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 </div>
               </div>
             </motion.div>
-            </ProtectedAction>
           );
         })}
       </motion.div>

@@ -55,13 +55,50 @@ const LYRICS_LANG_MAP = {
 };
 
 const ROMANIZED_LANG = { value: "en", tabKey: "en", nativeLabel: "Romanized", field: "lyricsEn", format: "transliteration", placeholder: "Paste Romanized/English lyrics here...", font: "" };
-
 const EMPTY_FORM = {
   title: "", titleEnglish: "", artistName: "", artistId: "", language: "te",
   categories: [], album: "", year: new Date().getFullYear(),
   duration: "", tags: [], lyricsTe: "", lyricsEn: "", lyricsHi: "",
   mediaImage: "", mediaAudio: "", mediaVideo: "",
 };
+// ─── Safe Fetch Response Parser ──────────────────────────────────────
+async function safeParseResponse(res, defaultError) {
+  const contentType = res.headers.get("content-type");
+  let data = null;
+  if (contentType && contentType.includes("application/json")) {
+    try {
+      data = await res.json();
+    } catch (e) {
+      console.error("Error parsing JSON response:", e);
+    }
+  }
+  if (!res.ok) {
+    const errorMsg = data?.error || `${defaultError} (Status ${res.status})`;
+    throw new Error(errorMsg);
+  }
+  return data;
+}
+
+// ─── Fetch with Timeout Helper ───────────────────────────────────────
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 12000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    if (err.name === "AbortError") {
+      throw new Error("Request timed out. Please check your connection or refresh the page.");
+    }
+    throw err;
+  }
+}
 
 // ─── Tag Input ─────────────────────────────────────────────────────
 function TagInput({ tags, setTags }) {
@@ -106,15 +143,6 @@ function CategorySelect({ selected, setSelected }) {
 
   const toggle = (cat) => {
     setSelected(selected.includes(cat) ? selected.filter((c) => c !== cat) : [...selected, cat]);
-    setIsOpen(false);
-    if (typeof window !== "undefined") {
-      setTimeout(() => {
-        const container = document.querySelector(".h-full.overflow-y-auto");
-        if (container) {
-          container.scrollBy({ top: 160, behavior: "smooth" });
-        }
-      }, 50);
-    }
   };
   return (
     <div className="relative" ref={dropdownRef}>
@@ -167,6 +195,336 @@ function DeleteConfirmModal({ song, onConfirm, onCancel, deleting }) {
   );
 }
 
+// ─── Edit Song Modal ───────────────────────────────────────────────
+function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
+  const [form, setForm] = useState(() => {
+    let formLang = "te";
+    if (song.language) {
+      const lowerLang = song.language.toLowerCase();
+      if (lowerLang.startsWith("tel")) formLang = "te";
+      else if (lowerLang.startsWith("hin")) formLang = "hi";
+      else if (lowerLang.startsWith("eng")) formLang = "en";
+      else formLang = song.language;
+    }
+
+    return {
+      title: song.title || "",
+      titleEnglish: song.titleEnglish || "",
+      artistName: typeof song.artist === "string" ? song.artist : (song.artist?.name || ""),
+      artistId: typeof song.artist === "string" ? "" : (song.artist?.id || ""),
+      language: formLang,
+      categories: Array.isArray(song.category) ? song.category : (song.category ? [song.category] : []),
+      album: song.album || "",
+      year: song.year || new Date().getFullYear(),
+      duration: song.duration?.toString() || "",
+      tags: Array.isArray(song.tags) ? song.tags : [],
+      lyricsTe: typeof song.lyrics === "string" 
+        ? song.lyrics 
+        : (Array.isArray(song.lyrics) ? (song.lyrics.find((l) => l.language === "te" || l.language === "Telugu")?.content || "") : ""),
+      lyricsEn: typeof song.englishLyrics === "string"
+        ? song.englishLyrics
+        : (Array.isArray(song.lyrics) ? (song.lyrics.find((l) => l.language === "en" || l.language === "English" || l.title === "Romanized")?.content || "") : ""),
+      lyricsHi: Array.isArray(song.lyrics) ? (song.lyrics.find((l) => l.language === "hi" || l.language === "Hindi")?.content || "") : "",
+      mediaImage: song.imageUrl || song.media?.image || "",
+      mediaAudio: song.media?.audio || "",
+      mediaVideo: song.media?.video || "",
+    };
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [lyricsTab, setLyricsTab] = useState(
+    form.language === "en" ? "ro" : form.language
+  );
+
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setError(null);
+    if (field === "language") {
+      setLyricsTab(value === "en" ? "ro" : value);
+    }
+  };
+
+  const buildSongData = () => {
+    const durationNum = parseInt(form.duration, 10) || 0;
+
+    const lyricsArray = [];
+    if (form.lyricsTe.trim()) {
+      lyricsArray.push({
+        language: "te",
+        format: "original",
+        title: "తెలుగు",
+        content: form.lyricsTe.trim(),
+        isDefault: form.language === "te",
+      });
+    }
+    if (form.lyricsHi.trim()) {
+      lyricsArray.push({
+        language: "hi",
+        format: "original",
+        title: "हिन्दी",
+        content: form.lyricsHi.trim(),
+        isDefault: form.language === "hi",
+      });
+    }
+    if (form.lyricsEn.trim()) {
+      lyricsArray.push({
+        language: "en",
+        format: "transliteration",
+        title: "Romanized",
+        content: form.lyricsEn.trim(),
+        isDefault: form.language === "en",
+      });
+    }
+
+    if (lyricsArray.length > 0 && !lyricsArray.some((l) => l.isDefault)) {
+      lyricsArray[0].isDefault = true;
+    }
+
+    return {
+      title: form.title.trim(),
+      titleEnglish: form.titleEnglish.trim(),
+      artist: {
+        id: form.artistId.trim() || null,
+        name: form.artistName.trim() || "Unknown Artist"
+      },
+      language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
+      category: form.categories.length > 0 ? form.categories : ["Praise & Worship"],
+      album: form.album.trim() || null,
+      year: parseInt(form.year, 10) || new Date().getFullYear(),
+      duration: durationNum,
+      tags: form.tags,
+      lyrics: lyricsArray,
+      imageUrl: form.mediaImage.trim(),
+      media: { image: form.mediaImage.trim() || "", audio: form.mediaAudio.trim() || "", video: form.mediaVideo.trim() || "" },
+    };
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) { setError("Song title is required."); return; }
+    if (!form.artistName.trim()) { setError("Artist name is required."); return; }
+    setSaving(true); setError(null);
+    try {
+      const token = await getIdToken();
+      const songData = buildSongData();
+      const res = await fetch(`/api/admin/songs/${song.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(songData),
+      });
+      await safeParseResponse(res, "Failed to save song");
+      onSaveSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#111] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-white">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Edit3 className="w-5 h-5 text-[#D4A32A]" />
+            <div>
+              <h2 className="text-lg font-black tracking-tight">Edit Song</h2>
+              <p className="text-xs text-[#727272]">Modify details for &ldquo;{song.title}&rdquo;</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] flex items-center justify-center text-[#727272] hover:text-white transition-all cursor-pointer"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Scrollable Content */}
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+          {error && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* Basic Info */}
+          <section className="bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+              <Music className="w-4 h-4 text-[#D4A32A]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">Basic Information</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Song Title (Telugu) <span className="text-red-400">*</span></label>
+                <input type="text" value={form.title} onChange={(e) => updateField("title", e.target.value)} required className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Song Title (English / Romanized)</label>
+                <input type="text" value={form.titleEnglish} onChange={(e) => updateField("titleEnglish", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist Name <span className="text-red-400">*</span></label>
+                <input type="text" value={form.artistName} onChange={(e) => updateField("artistName", e.target.value)} required className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist ID (optional)</label>
+                <input type="text" value={form.artistId} onChange={(e) => updateField("artistId", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Language</label>
+                <select value={form.language} onChange={(e) => updateField("language", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all appearance-none cursor-pointer" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23727272' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}>
+                  {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.nativeLabel} ({l.label})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Album (optional)</label>
+                <input type="text" value={form.album} onChange={(e) => updateField("album", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Year</label>
+                <input type="number" value={form.year} onChange={(e) => updateField("year", e.target.value)} min="1900" max="2099" className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Duration (seconds)</label>
+                <input type="number" value={form.duration} onChange={(e) => updateField("duration", e.target.value)} placeholder="e.g. 342" min="0" className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+            </div>
+          </section>
+
+          {/* Categories & Tags */}
+          <section className="bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+              <FolderOpen className="w-4 h-4 text-[#D4A32A]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">Categories & Tags</h3>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">Categories</label>
+              <CategorySelect selected={form.categories} setSelected={(val) => updateField("categories", val)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">Tags</label>
+              <TagInput tags={form.tags} setTags={(val) => updateField("tags", val)} />
+            </div>
+          </section>
+
+          {/* Lyrics */}
+          <section className="bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+              <FileText className="w-4 h-4 text-[#D4A32A]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">Lyrics</h3>
+            </div>
+
+            {(() => {
+              const primary = LYRICS_LANG_MAP[form.language] || LYRICS_LANG_MAP.te;
+              const secondary = ROMANIZED_LANG;
+              const primaryTabKey = form.language === "en" ? "ro" : form.language;
+              const secondaryTabKey = "en";
+              return (
+                <>
+                  <div className="flex items-center gap-1 bg-[#111] border border-[rgba(255,255,255,0.06)] rounded-xl p-1 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setLyricsTab(primaryTabKey)}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        lyricsTab === primaryTabKey
+                          ? "bg-[#D4A32A] text-black shadow-sm"
+                          : "text-[#727272] hover:text-white"
+                      }`}
+                    >
+                      {primary.nativeLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLyricsTab(secondaryTabKey)}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        lyricsTab === secondaryTabKey
+                          ? "bg-[#D4A32A] text-black shadow-sm"
+                          : "text-[#727272] hover:text-white"
+                      }`}
+                    >
+                      {secondary.nativeLabel}
+                    </button>
+                  </div>
+
+                  {lyricsTab === primaryTabKey && (
+                    <div>
+                      <label className="block text-xs font-semibold text-white/70 mb-1.5">
+                        {primary.nativeLabel} Lyrics <span className="text-[#727272] font-normal">({primary.format})</span>
+                      </label>
+                      <textarea
+                        value={form[primary.field]}
+                        onChange={(e) => updateField(primary.field, e.target.value)}
+                        placeholder={primary.placeholder}
+                        rows={8}
+                        className={`w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all resize-vertical ${primary.font}`}
+                      />
+                    </div>
+                  )}
+
+                  {lyricsTab === secondaryTabKey && (
+                    <div>
+                      <label className="block text-xs font-semibold text-white/70 mb-1.5">
+                        Romanized Lyrics <span className="text-[#727272] font-normal">(transliteration)</span>
+                      </label>
+                      <textarea
+                        value={form.lyricsEn}
+                        onChange={(e) => updateField("lyricsEn", e.target.value)}
+                        placeholder={secondary.placeholder}
+                        rows={8}
+                        className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all resize-vertical"
+                      />
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </section>
+
+          {/* Media URLs */}
+          <section className="bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+              <Image className="w-4 h-4 text-[#D4A32A]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">Media URLs</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Cover Image URL</label>
+                <input type="url" value={form.mediaImage} onChange={(e) => updateField("mediaImage", e.target.value)} placeholder="https://example.com/cover.jpg" className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Audio URL</label>
+                <input type="url" value={form.mediaAudio} onChange={(e) => updateField("mediaAudio", e.target.value)} placeholder="https://example.com/song.mp3" className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Video URL</label>
+                <input type="url" value={form.mediaVideo} onChange={(e) => updateField("mediaVideo", e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+            </div>
+          </section>
+
+          {/* Sticky footer spacing */}
+          <div className="h-4" />
+        </form>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-[#0a0a0a] border-t border-[rgba(255,255,255,0.06)] flex items-center justify-end gap-3">
+          <button type="button" onClick={onClose} disabled={saving} className="px-5 py-2.5 rounded-full border border-[rgba(255,255,255,0.1)] text-xs font-semibold text-[#727272] hover:text-white hover:border-[rgba(255,255,255,0.2)] transition-all cursor-pointer disabled:opacity-50">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !form.title.trim()} className="px-6 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-xs hover:bg-[#c49527] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#D4A32A]/10">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>{saving ? "Saving..." : "Save Changes"}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Admin Dashboard ──────────────────────────────────────────
 export default function AdminPage() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -196,6 +554,7 @@ export default function AdminPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingSongForModal, setEditingSongForModal] = useState(null);
   const [lyricsTab, setLyricsTab] = useState(
     EMPTY_FORM.language === "en" ? "ro" : EMPTY_FORM.language
   ); // "te" | "hi" | "ro" | "en"
@@ -233,11 +592,11 @@ export default function AdminPage() {
     setError(null);
     try {
       const token = await getIdToken();
-      const res = await fetch("/api/admin/songs", {
+      const res = await fetchWithTimeout("/api/admin/songs", {
         headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch songs.");
+      const data = await safeParseResponse(res, "Failed to fetch songs");
       if (mountedRef.current) {
         setSongs(data.songs || []);
       }
@@ -371,8 +730,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(songData),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save song.");
+      const data = await safeParseResponse(res, "Failed to save song");
       resetForm();
       setSuccess(editingId ? "Song updated successfully!" : "Song added successfully!");
       fetchSongs();
@@ -396,8 +754,7 @@ export default function AdminPage() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      await safeParseResponse(res, "Failed to delete song");
       setDeleteTarget(null);
       setSuccess("Song deleted successfully!");
       fetchSongs();
@@ -703,7 +1060,7 @@ export default function AdminPage() {
                     {/* Thumbnail */}
                     <div className="w-10 h-10 rounded-lg bg-[#111] border border-[rgba(255,255,255,0.06)] overflow-hidden shrink-0 flex items-center justify-center">
                       {song.media?.image ? (
-                        <NextImage src={song.media.image} alt={song.title} width={40} height={40} className="w-full h-full object-cover" />
+                        <img src={song.media.image} alt={song.title} className="w-full h-full object-cover" />
                       ) : (
                         <Music className="w-4 h-4 text-[#727272]" />
                       )}
@@ -717,15 +1074,10 @@ export default function AdminPage() {
                     <span className="text-xs text-[#727272] font-mono shrink-0 hidden sm:block">
                       {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")}` : "--:--"}
                     </span>
-                    {/* Actions */}
-                    <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => populateForm(song)} className="p-2 rounded-lg text-[#727272] hover:text-[#D4A32A] hover:bg-[#D4A32A]/10 transition-all cursor-pointer" title="Edit song"><Edit3 className="w-4 h-4" /></button>
+                    {/* Actions (Always Visible) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button onClick={() => setEditingSongForModal(song)} className="p-2 rounded-lg text-[#727272] hover:text-[#D4A32A] hover:bg-[#D4A32A]/10 transition-all cursor-pointer" title="Edit song"><Edit3 className="w-4 h-4" /></button>
                       <button onClick={() => setDeleteTarget(song)} className="p-2 rounded-lg text-[#727272] hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer" title="Delete song"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                    {/* Always visible on mobile */}
-                    <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
-                      <button onClick={() => populateForm(song)} className="p-2 rounded-lg text-[#727272] hover:text-[#D4A32A] transition-all cursor-pointer"><Edit3 className="w-4 h-4" /></button>
-                      <button onClick={() => setDeleteTarget(song)} className="p-2 rounded-lg text-[#727272] hover:text-red-400 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                 ))}
@@ -742,6 +1094,21 @@ export default function AdminPage() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
           deleting={deleting}
+        />
+      )}
+
+      {/* ─── Edit Song Modal ───────────────────────────── */}
+      {editingSongForModal && (
+        <EditSongModal
+          song={editingSongForModal}
+          onClose={() => setEditingSongForModal(null)}
+          onSaveSuccess={() => {
+            fetchSongs();
+            setEditingSongForModal(null);
+            setSuccess("Song updated successfully!");
+            setTimeout(() => { if (mountedRef.current) setSuccess(null); }, 5000);
+          }}
+          getIdToken={getIdToken}
         />
       )}
     </div>

@@ -1,16 +1,10 @@
 "use client";
 
-import React, { useState, cloneElement, Children } from "react";
-import { useAuth } from "@/context/auth-context";
-import AuthModal from "./AuthModal";
+import React, { cloneElement, Children } from "react";
+import { useWelcomeModal } from "@/context/welcome-modal-context";
 
 /**
  * ProtectedAction — wraps a single child element that requires authentication.
- * Shows the AuthModal when a non-authenticated user triggers the action.
- * On success, performs the original action.
- *
- * Uses React.cloneElement to attach the onClick handler directly to the child,
- * avoiding nested button elements.
  */
 export default function ProtectedAction({
   children,
@@ -18,45 +12,20 @@ export default function ProtectedAction({
   disabled = false,
   ...props
 }) {
-  const { isAuthenticated, loading } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
+  const { requireAuth } = useWelcomeModal();
 
   const handleClick = (e) => {
     if (disabled) return;
-    
-    if (!isAuthenticated && !loading) {
-      setShowAuth(true);
-      return;
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
     }
-
-    if (action) {
-      action(e);
-    }
+    requireAuth(action);
   };
 
   const child = Children.only(children);
 
-  return (
-    <>
-      {cloneElement(child, {
-        onClick: handleClick,
-        ...props,
-      })}
-
-      {showAuth && (
-        <AuthModal
-          initialStep="signup"
-          onClose={() => setShowAuth(false)}
-          onSuccess={() => {
-            setShowAuth(false);
-            // Execute the pending action after modal closes
-            if (action) {
-              requestAnimationFrame(() => action());
-            }
-          }}
-          returnAction
-        />
-      )}
-    </>
-  );
+  return cloneElement(child, {
+    onClick: handleClick,
+    ...props,
+  });
 }

@@ -264,12 +264,13 @@ export default function HeroCarousel() {
         {/* Left: Play + Lyrics + Favorite */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Play / Pause Button */}
-          <ProtectedAction action={() => playSong(current.originalSong)}>
           <button
+            onClick={() => playSong(current.originalSong)}
             className="px-4 sm:px-7 h-10 sm:h-12 bg-title text-card font-black text-[11px] sm:text-sm rounded-full shadow-xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             {isCurrentPlaying ? (
               <>
+                <Play className="hidden" />
                 <Pause className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 fill-current text-card" />
                 <span>Pause</span>
                 <div className="flex items-end gap-[2px] h-3 ml-0.5">
@@ -285,17 +286,15 @@ export default function HeroCarousel() {
               </>
             )}
           </button>
-          </ProtectedAction>
 
           {/* Lyrics Link */}
-          <ProtectedAction action={() => router.push(`/song/${encodeURIComponent(current.slug || current.id)}?view=lyrics`)}>
-            <button
-              className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
-            >
-              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
-              <span className="hidden sm:inline">View Lyrics</span>
-            </button>
-          </ProtectedAction>
+          <button
+            onClick={() => router.push(`/song/${encodeURIComponent(current.slug || current.id)}?view=lyrics`)}
+            className="w-9 h-9 sm:w-auto sm:h-12 sm:px-5 bg-card/85 hover:bg-card border border-line text-title font-bold text-xs rounded-full flex items-center justify-center sm:gap-2 backdrop-blur-xl transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
+            <span className="hidden sm:inline">View Lyrics</span>
+          </button>
 
           {/* Favorite Button */}
           <ProtectedAction action={() => toggleFavorite(current.id)}>
