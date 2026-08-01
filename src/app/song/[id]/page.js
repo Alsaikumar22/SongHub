@@ -520,7 +520,7 @@ function SongPageContent({ params }) {
               />
               <div className="text-center">
                 <h2
-                  className={`text-xl md:text-2xl font-bold text-title ${song.teluguTitle ? "font-telugu" : ""}`}
+                  className="text-xl md:text-2xl font-bold text-title font-song-title"
                 >
                   {song.teluguTitle || song.title}
                 </h2>
@@ -651,7 +651,7 @@ function SongPageContent({ params }) {
           </button>
           <div className="flex flex-col leading-tight min-w-0">
             <h1
-              className={`text-title text-base md:text-lg font-bold truncate ${song.teluguTitle ? "font-telugu" : ""}`}
+              className="text-title text-base md:text-lg font-bold truncate font-song-title"
             >
               {song.teluguTitle || song.title}
             </h1>

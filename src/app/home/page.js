@@ -511,7 +511,10 @@ function HomeContent() {
                       return (
                         <div
                           key={song.id}
-                          onClick={() => playSong(song)}
+                          onClick={() => {
+                            playSong(song);
+                            router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                          }}
                           className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
                             isCurrent ? "bg-card-hover border border-line" : ""
                           }`}

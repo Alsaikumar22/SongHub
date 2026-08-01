@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
 .font-telugu {
-  font-family: var(--font-ntr), 'NTR', sans-serif;
+  font-family: var(--font-noto-serif-telugu), serif;
 }
 
 .font-lato {
-  font-family: 'Lato', var(--font-lato), sans-serif;
+  font-family: var(--font-inter), var(--font-noto-sans-telugu), sans-serif;
+}
+
+.font-song-title {
+  font-family: var(--font-merriweather), var(--font-noto-serif-telugu), serif;
+}
+
+.font-lyrics {
+  font-family: var(--font-merriweather), var(--font-noto-serif-telugu), serif;
 }
 
 /* ─────────────────────────────────────────────── */
@@ -75,15 +83,15 @@
   --color-chip-bg: var(--chip-bg);
   --color-chip-text: var(--chip-text);
   --color-overlay: var(--overlay);
-  --font-sans: var(--font-lato), var(--font-geist-sans), sans-serif;
+  --font-sans: var(--font-inter), var(--font-noto-sans-telugu), sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-playfair), Georgia, 'Times New Roman', serif;
+  --font-serif: var(--font-merriweather), var(--font-noto-serif-telugu), serif;
 }
 
 body {
   background: var(--canvas);
   color: var(--title);
-  font-family: var(--font-lato), Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), var(--font-noto-sans-telugu), sans-serif;
 }
 
 /* Controlled smooth transitions during user-initiated theme toggles */

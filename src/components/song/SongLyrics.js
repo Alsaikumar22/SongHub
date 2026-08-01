@@ -153,7 +153,7 @@ export default function SongLyrics({
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-y-auto overscroll-contain px-6 sm:px-12 md:px-16 py-12 select-text bg-card"
+        className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 select-text bg-card font-lyrics"
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center">
@@ -170,7 +170,7 @@ export default function SongLyrics({
                     {stanzaLines.map((line, lIdx) => (
                       <p
                         key={`te-line-${sIdx}-${lIdx}`}
-                        className="text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] font-extrabold tracking-tight leading-relaxed text-title font-telugu select-text"
+                        className="text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] font-normal tracking-tight leading-relaxed text-title font-telugu select-text"
                       >
                         {line}
                       </p>
@@ -189,7 +189,7 @@ export default function SongLyrics({
                     {stanzaLines.map((line, lIdx) => (
                       <p
                         key={`en-line-${sIdx}-${lIdx}`}
-                        className="text-center text-[1.125em] sm:text-[1.25em] md:text-[1.5em] font-bold tracking-wide leading-relaxed text-muted select-text"
+                        className="text-center text-[1.125em] sm:text-[1.25em] md:text-[1.5em] font-normal tracking-wide leading-relaxed text-muted select-text"
                       >
                         {line}
                       </p>
@@ -217,10 +217,10 @@ export default function SongLyrics({
                         className="py-1 transition-all duration-300"
                       >
                         <p
-                          className={`text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] lg:text-[2.25em] font-extrabold tracking-tight leading-relaxed transition-all duration-300 ${
+                          className={`text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] lg:text-[2.25em] tracking-tight leading-relaxed transition-all duration-300 ${
                             isActive
-                              ? "text-title scale-[1.02] font-black"
-                              : "text-copy font-bold hover:text-title cursor-pointer"
+                              ? "text-title scale-[1.02] font-bold"
+                              : "text-copy font-normal hover:text-title cursor-pointer"
                           } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
                         >
                           {line}
@@ -250,7 +250,7 @@ export default function SongLyrics({
   }
 
   const lyricsContent = (
-    <div className="relative">
+    <div className="relative font-lyrics">
       <div
         ref={containerRef}
         className="relative px-4 sm:px-8 py-6 space-y-8"
@@ -264,7 +264,7 @@ export default function SongLyrics({
                   {stanza.telugu.map((line, lIdx) => (
                     <p
                       key={`te-${sIdx}-${lIdx}`}
-                      className="text-center text-base sm:text-lg md:text-xl font-bold leading-relaxed text-title font-telugu"
+                      className="text-center text-base sm:text-lg md:text-xl font-normal leading-relaxed text-title font-telugu"
                     >
                       {line}
                     </p>
@@ -275,7 +275,7 @@ export default function SongLyrics({
                     {stanza.english.map((line, lIdx) => (
                       <p
                         key={`en-${sIdx}-${lIdx}`}
-                        className="text-center text-xs sm:text-sm md:text-base font-semibold leading-relaxed text-muted"
+                        className="text-center text-xs sm:text-sm md:text-base font-normal leading-relaxed text-muted"
                       >
                         {line}
                       </p>
@@ -301,10 +301,10 @@ export default function SongLyrics({
                       className="py-0.5 transition-all duration-300"
                     >
                       <p
-                        className={`text-center text-[1em] sm:text-[1.125em] md:text-[1.25em] font-bold leading-relaxed transition-all duration-300 ${
+                        className={`text-center text-[1em] sm:text-[1.125em] md:text-[1.25em] leading-relaxed transition-all duration-300 ${
                           isActive
-                            ? "text-title scale-[1.01] font-black"
-                            : "text-copy font-bold hover:text-title cursor-pointer"
+                            ? "text-title scale-[1.01] font-bold"
+                            : "text-copy font-normal hover:text-title cursor-pointer"
                         } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
                       >
                         {line}
