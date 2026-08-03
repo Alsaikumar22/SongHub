@@ -13,6 +13,7 @@ import {
   Check,
   Heart,
   Download,
+  VolumeX,
 } from "lucide-react";
 import SongCard from "./SongCard";
 import SongArtwork from "../ui/SongArtwork";
@@ -650,23 +651,29 @@ export default function SongsSection({
 
                           {/* Right: Controls */}
                           <div className="flex items-center gap-3 shrink-0 select-none">
-                            {/* Play/Pause Button */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playSong(song);
-                              }}
-                              className={`p-1.5 rounded-full transition-all hover:bg-card-hover ${
-                                isCurrent ? "text-[#D4A32A]" : "text-dim hover:text-copy"
-                              }`}
-                            >
-                              {isThisPlaying ? (
-                                <Pause className="w-4 h-4 fill-current" />
-                              ) : (
-                                <Play className="w-4 h-4 fill-current ml-0.5" />
-                              )}
-                            </button>
+                            {/* Play/Pause Button or Mute Icon */}
+                            {song.audioUrl || song.media?.audio || song.youtubeId ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playSong(song);
+                                }}
+                                className={`p-1.5 rounded-full transition-all hover:bg-card-hover ${
+                                  isCurrent ? "text-[#D4A32A]" : "text-dim hover:text-copy"
+                                }`}
+                              >
+                                {isThisPlaying ? (
+                                  <Pause className="w-4 h-4 fill-current" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                )}
+                              </button>
+                            ) : (
+                              <div className="p-1.5 text-red-500/60 cursor-not-allowed" title="Lyrics only — No audio available">
+                                <VolumeX className="w-4 h-4" />
+                              </div>
+                            )}
 
                             {/* Download link */}
                             {song.audioUrl && (

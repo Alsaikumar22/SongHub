@@ -12,9 +12,16 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
 
-    const { id } = await params;
-    if (!id) {
+    const { id: rawId } = await params;
+    if (!rawId) {
       return NextResponse.json({ error: "Song ID is required." }, { status: 400 });
+    }
+
+    let id = rawId;
+    try {
+      id = decodeURIComponent(rawId);
+    } catch (e) {
+      id = rawId;
     }
 
     const body = await request.json();
@@ -91,11 +98,31 @@ export async function PUT(request, { params }) {
     updateData.updatedBy = auth.uid;
     updateData.updatedAt = FieldValue.serverTimestamp();
 
-    await songRef.update(updateData);
+    if (newId !== id) {
+      // Check if new document already exists to avoid conflict
+      const newDocRef = db.collection(COLLECTION_NAME).doc(newId);
+      const newDoc = await newDocRef.get();
+      if (newDoc.exists) {
+        return NextResponse.json(
+          { error: "A song with this title and artist name already exists." },
+          { status: 400 }
+        );
+      }
+
+      // Merge and write new document, then delete old document
+      const fullData = {
+        ...existingData,
+        ...updateData,
+      };
+      await newDocRef.set(fullData);
+      await songRef.delete();
+    } else {
+      await songRef.update(updateData);
+    }
 
     return NextResponse.json({
       success: true,
-      id,
+      id: newId,
       message: "Song updated successfully.",
     });
   } catch (error) {
@@ -118,9 +145,16 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
 
-    const { id } = await params;
-    if (!id) {
+    const { id: rawId } = await params;
+    if (!rawId) {
       return NextResponse.json({ error: "Song ID is required." }, { status: 400 });
+    }
+
+    let id = rawId;
+    try {
+      id = decodeURIComponent(rawId);
+    } catch (e) {
+      id = rawId;
     }
 
     const db = getFirebaseAdmin();

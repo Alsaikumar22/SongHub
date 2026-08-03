@@ -80,6 +80,7 @@ export const AudioProvider = ({ children }) => {
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [showFullHome, setShowFullHome] = useState(true);
   const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
+  const [lyricsLanguage, setLyricsLanguage] = useState("telugu");
 
   const isLoopingRef = useRef(isLooping);
   const isShuffledRef = useRef(isShuffled);
@@ -457,21 +458,31 @@ export const AudioProvider = ({ children }) => {
     const playerDivId = `yt-audio-${youtubeId}-${Date.now()}`;
     const playerDiv = document.createElement("div");
     playerDiv.id = playerDivId;
-    playerDiv.style.display = "none";
+    playerDiv.style.position = "absolute";
+    playerDiv.style.width = "200px";
+    playerDiv.style.height = "200px";
+    playerDiv.style.opacity = "0";
+    playerDiv.style.pointerEvents = "none";
+    playerDiv.style.left = "-9999px";
+    playerDiv.style.top = "-9999px";
     document.body.appendChild(playerDiv);
 
     const createPlayer = () => {
       if (!isMounted || !window.YT?.Player) return;
       try {
         const player = new window.YT.Player(playerDivId, {
-          height: "1",
-          width: "1",
+          height: "200",
+          width: "200",
           videoId: youtubeId,
           playerVars: { autoplay: 0, controls: 0, modestbranding: 1, enablejsapi: 1 },
           events: {
             onReady: () => {
               if (!isMounted) return;
               youtubePlayerRef.current = player;
+
+              if (typeof player.setVolume === "function") {
+                player.setVolume(isMuted ? 0 : volume * 100);
+              }
 
               const detectedSec = player.getDuration();
               if (detectedSec && detectedSec > 0) {
@@ -835,6 +846,8 @@ export const AudioProvider = ({ children }) => {
         setShowFullHome,
         isMiniPlayerActive,
         setIsMiniPlayerActive,
+        lyricsLanguage,
+        setLyricsLanguage,
       }}
     >
       {children}
