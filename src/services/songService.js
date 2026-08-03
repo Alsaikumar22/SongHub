@@ -59,17 +59,25 @@ export function transformSongDoc(docSnap) {
   const docId = docSnap.id;
 
   // 1. Core Fields
-  const title = data.title || "";
+  const title = (data.title || "").replace(/-/g, " ");
   const slug = data.slug || docId;
 
   // 2. Artist Object
   let rawArtistName = "";
+  let rawArtistNameEnglish = "";
+  let artistId = null;
   if (typeof data.artist === "object" && data.artist !== null) {
     rawArtistName = data.artist.name || "";
+    rawArtistNameEnglish = data.artist.nameEnglish || "";
+    artistId = data.artist.id || null;
   } else if (typeof data.artist === "string") {
     rawArtistName = data.artist;
   } else if (typeof data.artistName === "string") {
     rawArtistName = data.artistName;
+  }
+
+  if (typeof data.artistNameEnglish === "string") {
+    rawArtistNameEnglish = data.artistNameEnglish;
   }
 
   const cleanArtist = rawArtistName.trim();
@@ -78,7 +86,12 @@ export function transformSongDoc(docSnap) {
     ? "Unknown Artist"
     : cleanArtist;
 
-  const artistObj = { id: null, name: artistName };
+  const cleanArtistEnglish = rawArtistNameEnglish.trim();
+  const artistNameEnglish = (!cleanArtistEnglish || invalidArtistValues.includes(cleanArtistEnglish.toLowerCase()))
+    ? "Unknown Artist"
+    : cleanArtistEnglish;
+
+  const artistObj = { id: artistId, name: artistName, nameEnglish: artistNameEnglish };
 
   // 3. Categories & Tags
   const categoryArr = Array.isArray(data.category)
@@ -149,11 +162,12 @@ export function transformSongDoc(docSnap) {
   return {
     id: docId,
     title,
-    titleEnglish: data.titleEnglish || "",
+    titleEnglish: (data.titleEnglish || "").replace(/-/g, " "),
     slug: slug || docId,
     artist: artistName,
     artistObj: artistObj,
     artistName: artistName,
+    artistNameEnglish: artistNameEnglish,
     language: data.language || "te",
     category: categoryPrimary,
     categoryArr: categoryArr,

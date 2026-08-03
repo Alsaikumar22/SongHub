@@ -56,7 +56,7 @@ const LYRICS_LANG_MAP = {
 
 const ROMANIZED_LANG = { value: "en", tabKey: "en", nativeLabel: "Romanized", field: "lyricsEn", format: "transliteration", placeholder: "Paste Romanized/English lyrics here...", font: "" };
 const EMPTY_FORM = {
-  title: "", titleEnglish: "", artistName: "", artistId: "", language: "te",
+  title: "", titleEnglish: "", artistName: "", artistNameEnglish: "", artistId: "", language: "te",
   categories: [], album: "", year: new Date().getFullYear(),
   duration: "", tags: [], lyricsTe: "", lyricsEn: "", lyricsHi: "",
   mediaImage: "", mediaAudio: "", mediaVideo: "",
@@ -81,7 +81,7 @@ async function safeParseResponse(res, defaultError) {
 
 // ─── Fetch with Timeout Helper ───────────────────────────────────────
 async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 12000 } = options;
+  const { timeout = 40000 } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
@@ -211,6 +211,7 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
       title: song.title || "",
       titleEnglish: song.titleEnglish || "",
       artistName: typeof song.artist === "string" ? song.artist : (song.artist?.name || ""),
+      artistNameEnglish: typeof song.artist === "string" ? "" : (song.artist?.nameEnglish || ""),
       artistId: typeof song.artist === "string" ? "" : (song.artist?.id || ""),
       language: formLang,
       categories: Array.isArray(song.category) ? song.category : (song.category ? [song.category] : []),
@@ -286,7 +287,8 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
       titleEnglish: form.titleEnglish.trim(),
       artist: {
         id: form.artistId.trim() || null,
-        name: form.artistName.trim() || "Unknown Artist"
+        name: form.artistName.trim() || "Unknown Artist",
+        nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
       category: form.categories.length > 0 ? form.categories : ["Praise & Worship"],
@@ -363,10 +365,14 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
                 <input type="text" value={form.titleEnglish} onChange={(e) => updateField("titleEnglish", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist Name <span className="text-red-400">*</span></label>
                 <input type="text" value={form.artistName} onChange={(e) => updateField("artistName", e.target.value)} required className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist Name (English)</label>
+                <input type="text" value={form.artistNameEnglish} onChange={(e) => updateField("artistNameEnglish", e.target.value)} className="w-full px-4 py-2.5 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist ID (optional)</label>
@@ -660,7 +666,8 @@ export default function AdminPage() {
       titleEnglish: form.titleEnglish.trim(),
       artist: {
         id: form.artistId.trim() || null,
-        name: form.artistName.trim() || "Unknown Artist"
+        name: form.artistName.trim() || "Unknown Artist",
+        nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
       category: form.categories.length > 0 ? form.categories : ["Praise & Worship"],
@@ -864,10 +871,14 @@ export default function AdminPage() {
                       <input type="text" value={form.titleEnglish || ""} onChange={(e) => updateField("titleEnglish", e.target.value)} placeholder="Agni Mandinchu" className="w-full px-4 py-3 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-white/70 mb-1.5"><User className="w-3 h-3 inline mr-1 text-[#D4A32A]" />Artist Name <span className="text-red-400">*</span></label>
                       <input type="text" value={form.artistName} onChange={(e) => updateField("artistName", e.target.value)} placeholder="ఫ్రెడ్డీ పాల్" required className="w-full px-4 py-3 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist Name (English)</label>
+                      <input type="text" value={form.artistNameEnglish} onChange={(e) => updateField("artistNameEnglish", e.target.value)} placeholder="Freddie Paul" className="w-full px-4 py-3 bg-[#111] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-white/70 mb-1.5">Artist ID <span className="text-[#727272] font-normal">(optional)</span></label>

@@ -151,12 +151,15 @@ function SongPageContent({ params }) {
     addSongToPlaylist,
     removeSongFromPlaylist,
     setActiveTab,
+    lyricsLanguage,
+    setLyricsLanguage,
   } = useAudio();
 
   const { setSearchQuery, setShowFullResults } = useSearch();
 
   const [song, setSong] = useState(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("telugu");
+  const selectedLanguage = lyricsLanguage;
+  const setSelectedLanguage = setLyricsLanguage;
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const fetchingRef = useRef(false);
   const prevIdRef = useRef(id);
@@ -522,9 +525,13 @@ function SongPageContent({ params }) {
                 <h2
                   className="text-xl md:text-2xl font-bold text-title font-song-title"
                 >
-                  {song.teluguTitle || song.title}
+                  {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
                 </h2>
-                <p className="text-xs text-muted mt-1">{song.artist}</p>
+                <p className="text-xs text-muted mt-1">
+                  {selectedLanguage === "english"
+                    ? (song.artistNameEnglish || song.artist)
+                    : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
+                </p>
               </div>
             </div>
           ) : (
@@ -653,11 +660,13 @@ function SongPageContent({ params }) {
             <h1
               className="text-title text-base md:text-lg font-bold truncate font-song-title"
             >
-              {song.teluguTitle || song.title}
+              {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
             </h1>
             {song.artist && (
               <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
-                {song.artist}
+                {selectedLanguage === "english"
+                  ? (song.artistNameEnglish || song.artist)
+                  : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
               </p>
             )}
           </div>

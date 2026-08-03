@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Play, Pause, Search, Music, Clock } from "lucide-react";
+import { Play, Pause, Search, Music, Clock, VolumeX } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 
@@ -108,11 +108,14 @@ export default function SearchResults({
                     />
                     <div className="min-w-0 flex-1 flex flex-col justify-center">
                       <span
-                        className={`text-xs font-bold truncate block leading-tight ${
+                        className={`text-xs font-bold truncate flex items-center gap-1.5 leading-tight ${
                           isCurrent ? "text-[#D4A32A]" : "text-copy group-hover:text-title"
                         } font-song-title`}
                       >
-                        {song.teluguTitle || song.title}
+                        <span className="truncate">{song.teluguTitle || song.title}</span>
+                        {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                          <VolumeX className="w-3.5 h-3.5 text-red-500/60 shrink-0" title="Lyrics only — No audio available" />
+                        )}
                       </span>
                       <span className="text-[10px] text-dim truncate block leading-tight mt-0.5">
                         <span className="font-bold font-song-title">{song.titleEnglish}</span> &middot; {song.artist?.name || "Unknown Artist"}

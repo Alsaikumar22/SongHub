@@ -101,11 +101,8 @@ export async function verifyAdminAuth(request) {
  * Spaces are replaced with hyphens, Unicode characters preserved.
  */
 export function generateSongId(title, artistName) {
-  const cleanTitle = (title || "").trim();
-  const cleanArtist = (artistName || "").trim() || "Unknown Artist";
-  // Join title and artist with a hyphen separator
-  // Spaces within the title and artist names are preserved (Unicode-safe)
-  return `${cleanTitle}-${cleanArtist}`;
+  // Use song title only, replace spaces and slashes with hyphens to ensure it is route-safe
+  return (title || "").trim().replace(/\s+/g, "-").replace(/[\/\\]/g, "-");
 }
 
 export { admin, COLLECTION_NAME, FieldValue };

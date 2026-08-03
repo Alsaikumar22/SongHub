@@ -93,7 +93,8 @@ export default function PlayerBar() {
     favorites,
     toggleFavorite,
     isMiniPlayerActive,
-    setIsMiniPlayerActive
+    setIsMiniPlayerActive,
+    lyricsLanguage,
   } = useAudio();
 
   const pathname = usePathname();
@@ -229,10 +230,12 @@ export default function PlayerBar() {
               />
               <div className="min-w-0 flex-1">
                 <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
-                  {currentSong.teluguTitle || currentSong.title}
+                  {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
                 </span>
                 <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
-                  {currentSong.artist}
+                  {lyricsLanguage === "english"
+                    ? (currentSong.artistNameEnglish || currentSong.artist)
+                    : (currentSong.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (currentSong.artistName || currentSong.artist))}
                 </span>
               </div>
             </div>
@@ -306,10 +309,10 @@ export default function PlayerBar() {
                     href={`/song/${currentSong.slug || currentSong.id}`}
                     className="font-bold text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer font-song-title"
                   >
-                    {currentSong.teluguTitle || currentSong.title}
+                    {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
                   </Link>
                   <span className="text-xs font-bold text-muted block truncate font-song-title">
-                    {currentSong.titleEnglish}
+                    {lyricsLanguage === "english" ? (currentSong.teluguTitle || currentSong.title) : currentSong.titleEnglish}
                   </span>
                 </div>
                 <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
@@ -661,10 +664,10 @@ export default function PlayerBar() {
                 <h2
                   className="text-2xl font-bold text-white truncate text-left tracking-tight font-song-title"
                 >
-                  {currentSong.teluguTitle || currentSong.title}
+                  {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
                 </h2>
                 <span className="text-sm font-bold text-muted block text-left mt-1 truncate font-song-title">
-                  {currentSong.titleEnglish}
+                  {lyricsLanguage === "english" ? (currentSong.teluguTitle || currentSong.title) : currentSong.titleEnglish}
                 </span>
               </div>
               <ProtectedAction action={() => toggleFavorite(currentSong.id)}>

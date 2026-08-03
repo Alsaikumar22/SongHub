@@ -95,7 +95,7 @@ function HomeContent() {
     "Jesus worship"
   ]);
 
-  // Sync 1: browser URL parameters -> context tab/search state (on load/popstate)
+  // Sync 1: browser URL parameters -> context tab/search/letter state (on load/popstate)
   useEffect(() => {
     if (!searchParams) return;
     
@@ -131,6 +131,17 @@ function HomeContent() {
       if (searchQuery) {
         setSearchQuery("");
         setShowFullResults(false);
+      }
+    }
+
+    const letterParam = searchParams.get("letter");
+    if (letterParam) {
+      if (letterParam !== selectedLetter) {
+        setSelectedLetter(letterParam);
+      }
+    } else {
+      if (selectedLetter) {
+        setSelectedLetter(null);
       }
     }
   }, [searchParams]);
@@ -179,16 +190,29 @@ function HomeContent() {
       changed = true;
     }
 
+    // Sync letter param
+    const currentLetterInUrl = params.get("letter");
+    if (selectedLetter) {
+      if (selectedLetter !== currentLetterInUrl) {
+        params.set("letter", selectedLetter);
+        changed = true;
+      }
+    } else if (currentLetterInUrl) {
+      params.delete("letter");
+      changed = true;
+    }
+
     if (changed) {
       router.push(`/home?${params.toString()}`);
     }
-  }, [activeTab, activePlaylistId, searchQuery, showFullResults]);
+  }, [activeTab, activePlaylistId, searchQuery, showFullResults, selectedLetter]);
 
+  // Reset letter if user switches tabs or runs search query
   useEffect(() => {
-    setTimeout(() => {
+    if (activeTab !== "discover" || (searchQuery && showFullResults)) {
       setSelectedLetter(null);
-    }, 0);
-  }, [activeTab, activePlaylistId, searchQuery, searchParams]);
+    }
+  }, [activeTab, searchQuery, showFullResults]);
 
   const getFilteredSongs = () => {
     const safeSongs = Array.isArray(songs) ? songs : [];
