@@ -553,6 +553,9 @@ export default function AdminPage() {
   const [songs, setSongs] = useState([]);
   const [songsLoading, setSongsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null); // string message
   const [error, setError] = useState(null);
@@ -740,6 +743,7 @@ export default function AdminPage() {
       const data = await safeParseResponse(res, "Failed to save song");
       resetForm();
       setSuccess(editingId ? "Song updated successfully!" : "Song added successfully!");
+      setActiveTab("list");
       fetchSongs();
       scrollToTop();
       setTimeout(() => { if (mountedRef.current) setSuccess(null); }, 5000);
@@ -776,14 +780,32 @@ export default function AdminPage() {
   // ─── Preview Data ──────────────────────────────────────────────
   const previewData = showPreview ? buildSongData() : null;
 
-  // ─── Filtered Songs ─────────────────────────────────────────────
+  // ─── Filtered Songs & Pagination ───────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedLanguage, selectedCategory]);
+
   const filteredSongs = songs.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const title = (s.title || "").toLowerCase();
-    const artist = (s.artist?.name || "").toLowerCase();
-    return title.includes(q) || artist.includes(q);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const title = (s.title || "").toLowerCase();
+      const artist = (s.artist?.name || "").toLowerCase();
+      if (!title.includes(q) && !artist.includes(q)) return false;
+    }
+    if (selectedLanguage) {
+      if (s.language !== selectedLanguage) return false;
+    }
+    if (selectedCategory) {
+      const categories = Array.isArray(s.category) ? s.category : (s.category ? [s.category] : []);
+      const matched = categories.some(cat => cat.toLowerCase() === selectedCategory.toLowerCase());
+      if (!matched) return false;
+    }
+    return true;
   });
+
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredSongs.length / itemsPerPage);
+  const paginatedSongs = filteredSongs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // ─── Auth Guards ────────────────────────────────────────────────
   if (loading) return <div className="min-h-screen bg-[#070707] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#D4A32A] animate-spin" /></div>;
@@ -1043,55 +1065,97 @@ export default function AdminPage() {
         ) : (
           /* ─── ALL SONGS TAB ─────────────────────────────── */
           <div className="space-y-6">
-            {/* Search + Refresh */}
-            <div className="flex items-center gap-3">
+            {/* Search + Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#727272]" />
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search songs by title or artist..." className="w-full pl-10 pr-4 py-3 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl text-sm text-white placeholder-[#727272] focus:outline-none focus:border-[#D4A32A] focus:ring-1 focus:ring-[#D4A32A]/30 transition-all" />
               </div>
-              <button onClick={fetchSongs} className="p-3 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl text-[#727272] hover:text-white hover:border-[rgba(255,255,255,0.15)] transition-all cursor-pointer" title="Refresh"><RefreshCw className={`w-4 h-4 ${songsLoading ? "animate-spin" : ""}`} /></button>
-              <button onClick={() => { resetForm(); setActiveTab("add"); scrollToTop(); }} className="px-5 py-3 rounded-xl bg-[#D4A32A]/10 border border-[#D4A32A]/20 text-[#D4A32A] text-sm font-bold hover:bg-[#D4A32A]/20 transition-all cursor-pointer whitespace-nowrap"><Plus className="w-4 h-4 inline mr-1.5" />New Song</button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Language Filter */}
+                <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)} className="px-4 py-3 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl text-sm text-white focus:outline-none focus:border-[#D4A32A] transition-all">
+                  <option value="">All Languages</option>
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.value} value={lang.value}>{lang.label}</option>
+                  ))}
+                </select>
+                {/* Category Filter */}
+                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="px-4 py-3 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl text-sm text-white focus:outline-none focus:border-[#D4A32A] transition-all max-w-[160px] md:max-w-xs">
+                  <option value="">All Categories</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <button onClick={() => { resetForm(); setActiveTab("add"); scrollToTop(); }} className="px-5 py-3 rounded-xl bg-[#D4A32A]/10 border border-[#D4A32A]/20 text-[#D4A32A] text-sm font-bold hover:bg-[#D4A32A]/20 transition-all cursor-pointer whitespace-nowrap"><Plus className="w-4 h-4 inline mr-1.5" />New Song</button>
+              </div>
             </div>
 
-            {/* Song Count */}
-            <p className="text-xs text-[#727272] font-medium">{filteredSongs.length} of {songs.length} songs</p>
+            {/* Library Section Header (Mockup Style) */}
+            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] pb-4 mt-8">
+              <h2 className="text-xs font-black tracking-widest text-[#a7a7a7] uppercase">CURRENT LIBRARY ({songs.length})</h2>
+              <button onClick={fetchSongs} className="text-xs font-bold text-[#D4A32A] hover:text-[#f3be3e] hover:underline transition-all cursor-pointer flex items-center gap-1.5">
+                <RefreshCw className={`w-3.5 h-3.5 ${songsLoading ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
 
             {/* Song List */}
             {songsLoading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 text-[#D4A32A] animate-spin" /></div>
-            ) : filteredSongs.length === 0 ? (
+            ) : paginatedSongs.length === 0 ? (
               <div className="text-center py-16 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-2xl">
                 <Music className="w-12 h-12 text-[#727272] mx-auto mb-4" />
-                <p className="text-sm text-[#727272]">{searchQuery ? "No songs match your search." : "No songs in the collection yet."}</p>
+                <p className="text-sm text-[#727272]">
+                  {searchQuery || selectedLanguage || selectedCategory ? "No songs match your filters." : "No songs in the collection yet."}
+                </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {filteredSongs.map((song) => (
-                  <div key={song.id} className="group bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)] rounded-xl p-4 flex items-center gap-4 transition-all">
-                    {/* Thumbnail */}
-                    <div className="w-10 h-10 rounded-lg bg-[#111] border border-[rgba(255,255,255,0.06)] overflow-hidden shrink-0 flex items-center justify-center">
-                      {song.media?.image ? (
-                        <img src={song.media.image} alt={song.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <Music className="w-4 h-4 text-[#727272]" />
-                      )}
+              <div className="space-y-1">
+                {paginatedSongs.map((song) => {
+                  const artist = song.artist?.name || "Unknown Artist";
+                  const yearInfo = song.year ? ` - ${song.year}` : "";
+                  const langLabel = LANGUAGES.find(l => l.value === song.language)?.label || song.language?.toUpperCase() || "Telugu";
+                  const subtitle = `${artist}${yearInfo} • ${langLabel}`;
+                  return (
+                    <div key={song.id} className="group bg-transparent hover:bg-[rgba(255,255,255,0.03)] border-b border-[rgba(255,255,255,0.03)] rounded-lg p-4 flex items-center gap-4 transition-all">
+                      {/* Thumbnail */}
+                      <div className="w-10 h-10 rounded-lg bg-[#111] border border-[rgba(255,255,255,0.06)] overflow-hidden shrink-0 flex items-center justify-center">
+                        {song.media?.image ? (
+                          <img src={song.media.image} alt={song.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <Music className="w-4 h-4 text-[#727272]" />
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-bold text-white truncate group-hover:text-[#D4A32A] transition-colors">{song.title}</p>
+                        <p className="text-xs text-[#727272] font-medium mt-0.5 truncate">{subtitle}</p>
+                      </div>
+                      {/* Duration */}
+                      <span className="text-xs text-[#727272] font-mono shrink-0 hidden sm:block">
+                        {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")}` : ""}
+                      </span>
+                      {/* Hover Actions (Translucent Circular Buttons) */}
+                      <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shrink-0">
+                        <button onClick={() => setEditingSongForModal(song)} className="w-8 h-8 rounded-full bg-[#1e293b]/80 border border-white/10 hover:bg-[#D4A32A] hover:text-black flex items-center justify-center text-[#a7a7a7] hover:border-[#D4A32A]/30 transition-all cursor-pointer" title="Edit song">
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => setDeleteTarget(song)} className="w-8 h-8 rounded-full bg-[#1e293b]/80 border border-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 flex items-center justify-center text-[#a7a7a7] transition-all cursor-pointer" title="Delete song">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{song.title}</p>
-                      <p className="text-xs text-[#727272] truncate">{song.artist?.name || "Unknown Artist"} · {song.language?.toUpperCase() || "TE"} · {(Array.isArray(song.category) ? song.category[0] : song.category) || "No category"}</p>
-                    </div>
-                    {/* Duration */}
-                    <span className="text-xs text-[#727272] font-mono shrink-0 hidden sm:block">
-                      {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")}` : "--:--"}
-                    </span>
-                    {/* Actions (Always Visible) */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={() => setEditingSongForModal(song)} className="p-2 rounded-lg text-[#727272] hover:text-[#D4A32A] hover:bg-[#D4A32A]/10 transition-all cursor-pointer" title="Edit song"><Edit3 className="w-4 h-4" /></button>
-                      <button onClick={() => setDeleteTarget(song)} className="p-2 rounded-lg text-[#727272] hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer" title="Delete song"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+                <button onClick={() => { setCurrentPage((p) => Math.max(1, p - 1)); scrollToTop(); }} disabled={currentPage === 1} className="px-4 py-2 rounded-xl bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] text-xs font-bold text-white hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">Previous</button>
+                <span className="text-xs text-[#727272]">Page {currentPage} of {totalPages}</span>
+                <button onClick={() => { setCurrentPage((p) => Math.min(totalPages, p + 1)); scrollToTop(); }} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] text-xs font-bold text-white hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">Next</button>
               </div>
             )}
           </div>

@@ -22,6 +22,12 @@ export function getFirebaseAdmin() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  console.log("[Firebase Admin Init] Diagnosing Env Vars:");
+  console.log("  - FIREBASE_PROJECT_ID:", projectId ? "Present" : "Missing");
+  console.log("  - FIREBASE_CLIENT_EMAIL:", clientEmail ? "Present" : "Missing");
+  console.log("  - FIREBASE_PRIVATE_KEY:", privateKey ? `Present (Length: ${privateKey.length})` : "Missing");
+
   if (privateKey) {
     privateKey = privateKey.trim();
     // Remove wrapping quotes/commas from copy-paste
@@ -45,12 +51,20 @@ export function getFirebaseAdmin() {
 
   if (admin.getApps().length === 0) {
     if (projectId && clientEmail && privateKey) {
-      admin.initializeApp({
-        credential: admin.cert({ projectId, clientEmail, privateKey }),
-      });
+      try {
+        console.log("[Firebase Admin Init] Initializing with service account cert credentials...");
+        admin.initializeApp({
+          credential: admin.cert({ projectId, clientEmail, privateKey }),
+        });
+      } catch (certError) {
+        console.error("Firebase Admin initialization with cert failed:", certError);
+        throw new Error(`Firebase Admin cert initialization failed: ${certError.message}. Please verify your environment credentials.`);
+      }
     } else if (projectId) {
+      console.log("[Firebase Admin Init] Initializing with projectId fallback...");
       admin.initializeApp({ projectId });
     } else {
+      console.log("[Firebase Admin Init] Initializing with default application credentials fallback...");
       admin.initializeApp();
     }
   }
