@@ -3,10 +3,9 @@
  * Used by admin API routes to avoid code duplication.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const admin = require("firebase-admin");
-const { getAuth } = require("firebase-admin/auth");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+import admin from "firebase-admin";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const COLLECTION_NAME = "Youworship_songs";
 
