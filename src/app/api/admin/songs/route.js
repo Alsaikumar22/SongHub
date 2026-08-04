@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, verifyAdminAuth, COLLECTION_NAME, generateSongId, FieldValue } from "@/lib/admin-firebase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/songs
  * List all songs from the Youworship_songs collection.
