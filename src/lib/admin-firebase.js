@@ -3,7 +3,7 @@
  * Used by admin API routes to avoid code duplication.
  */
 
-import admin from "firebase-admin";
+import * as admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
