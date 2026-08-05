@@ -292,7 +292,6 @@ export default function PlayerBar() {
               <>
                 <Link
                   href={`/song/${currentSong.slug || currentSong.id}`}
-                  href={`/song/${currentSong.slug || currentSong.id}`}
                   className="group relative block overflow-hidden rounded-md border border-line flex-shrink-0 cursor-pointer"
                 >
                   <SongArtwork
@@ -458,7 +457,6 @@ export default function PlayerBar() {
           <div className="flex items-center gap-2 w-[30%] justify-end min-w-0">
             {currentSong?.id && (
               <button
-                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`)}
                 onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`)}
                 className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
                 title="Watch Video"

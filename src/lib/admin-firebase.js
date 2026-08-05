@@ -3,7 +3,10 @@
  * Used by admin API routes to avoid code duplication.
  */
 
-import admin from "firebase-admin";
+import dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
+
+import * as admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
@@ -70,6 +73,7 @@ export function getFirebaseAdmin() {
   }
 
   const dbInstance = getFirestore();
+  dbInstance.settings({ preferRest: true });
   if (typeof global !== "undefined") {
     global.firebaseAdminDb = dbInstance;
   }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, verifyAdminAuth, COLLECTION_NAME, generateSongId, FieldValue } from "@/lib/admin-firebase";
 
+export const dynamic = "force-dynamic";
+
 /**
  * PUT /api/admin/songs/[id]
  * Update an existing song by document ID.

@@ -54,7 +54,7 @@ export default function VerifyPage() {
     }
   }, []);
 
-  const completeSignIn = async (emailAddress, url) => {
+  async function completeSignIn(emailAddress, url) {
     setStatus("loading");
     setErrorMessage("");
 
@@ -92,7 +92,7 @@ export default function VerifyPage() {
       };
       setErrorMessage(messages[code] || "An unexpected error occurred. Please try again.");
     }
-  };
+  }
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
