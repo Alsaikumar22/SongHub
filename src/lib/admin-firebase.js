@@ -1,6 +1,16 @@
 /**
  * Shared Firebase Admin SDK initialization and admin auth verification.
  * Used by admin API routes to avoid code duplication.
+ *
+ * IMPORTANT:
+ * - This file must only be imported from Node.js server code (app/api/admin/*).
+ * - Keep "firebase-admin" listed in `serverExternalPackages` in next.config.mjs
+ *   so Next.js does not bundle it. firebase-admin pulls in jose (via jwks-rsa),
+ *   which is pure ESM; bundling it into a CJS serverless function causes
+ *   ERR_REQUIRE_ESM at runtime. Externalizing it lets Node's native
+ *   require()/import() handle the ESM boundary.
+ * - Route handlers must declare `export const runtime = "nodejs"` (firebase-admin
+ *   cannot run on the Edge runtime).
  */
 
 import dns from "node:dns";
@@ -12,72 +22,87 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const COLLECTION_NAME = "Youworship_songs";
 
-let adminDb = typeof global !== "undefined" ? global.firebaseAdminDb : null;
+// Singleton cache. globalThis survives hot reloads and repeated imports so the
+// Admin SDK is never initialized more than once per serverless instance.
+const globalRef = typeof globalThis !== "undefined" ? globalThis : {};
 
 /**
- * Initialize Firebase Admin SDK (singleton pattern)
+ * Initialize Firebase Admin SDK (singleton pattern).
+ * Returns the Firestore instance. Safe to call multiple times.
  */
 export function getFirebaseAdmin() {
-  if (typeof global !== "undefined" && global.firebaseAdminDb) return global.firebaseAdminDb;
+  if (globalRef.__firebaseAdminDb) return globalRef.__firebaseAdminDb;
 
   const projectId =
     process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-  console.log("[Firebase Admin Init] Diagnosing Env Vars:");
-  console.log("  - FIREBASE_PROJECT_ID:", projectId ? "Present" : "Missing");
-  console.log("  - FIREBASE_CLIENT_EMAIL:", clientEmail ? "Present" : "Missing");
-  console.log("  - FIREBASE_PRIVATE_KEY:", privateKey ? `Present (Length: ${privateKey.length})` : "Missing");
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
     privateKey = privateKey.trim();
     // Remove wrapping quotes/commas from copy-paste
-    privateKey = privateKey.replace(/^[^a-zA-Z0-9+\/=_-]+|[^a-zA-Z0-9+\/=_-]+$/g, '');
-    
+    privateKey = privateKey.replace(/^[^a-zA-Z0-9+/=_-]+|[^a-zA-Z0-9+/=_-]+$/g, "");
+
     // Fix leftover 'n' from '\n' if header was removed
-    if (privateKey.startsWith('nMII')) {
-      privateKey = '-----BEGIN PRIVATE KEY-----\n' + privateKey.substring(1);
+    if (privateKey.startsWith("nMII")) {
+      privateKey = "-----BEGIN PRIVATE KEY-----\n" + privateKey.substring(1);
     }
-    
+
     // Ensure BEGIN/END headers exist
-    if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
-      privateKey = '-----BEGIN PRIVATE KEY-----\n' + privateKey;
+    if (!privateKey.startsWith("-----BEGIN PRIVATE KEY-----")) {
+      privateKey = "-----BEGIN PRIVATE KEY-----\n" + privateKey;
     }
-    if (!privateKey.endsWith('-----END PRIVATE KEY-----')) {
-      privateKey = privateKey + '\n-----END PRIVATE KEY-----';
+    if (!privateKey.endsWith("-----END PRIVATE KEY-----")) {
+      privateKey = privateKey + "\n-----END PRIVATE KEY-----";
     }
-    
+
+    // Convert literal "\n" sequences into real newlines (Vercel env vars)
     privateKey = privateKey.replace(/\\n/g, "\n");
   }
 
+  // Singleton guard: never call initializeApp() more than once.
   if (admin.getApps().length === 0) {
     if (projectId && clientEmail && privateKey) {
       try {
-        console.log("[Firebase Admin Init] Initializing with service account cert credentials...");
         admin.initializeApp({
           credential: admin.cert({ projectId, clientEmail, privateKey }),
         });
       } catch (certError) {
         console.error("Firebase Admin initialization with cert failed:", certError);
-        throw new Error(`Firebase Admin cert initialization failed: ${certError.message}. Please verify your environment credentials.`);
+        throw new Error(
+          `Firebase Admin cert initialization failed: ${certError.message}. ` +
+            "Please verify your environment credentials (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)."
+        );
       }
     } else if (projectId) {
-      console.log("[Firebase Admin Init] Initializing with projectId fallback...");
       admin.initializeApp({ projectId });
     } else {
-      console.log("[Firebase Admin Init] Initializing with default application credentials fallback...");
       admin.initializeApp();
     }
   }
 
-  const dbInstance = getFirestore();
-  dbInstance.settings({ preferRest: true });
-  if (typeof global !== "undefined") {
-    global.firebaseAdminDb = dbInstance;
+  console.log(
+    `[Firebase Admin] initialized (project: ${projectId || "default"}, ` +
+      `cert: ${Boolean(projectId && clientEmail && privateKey)})`
+  );
+
+  const db = getFirestore();
+  db.settings({ preferRest: true });
+
+  globalRef.__firebaseAdminDb = db;
+  return db;
+}
+
+/**
+ * Returns the cached Firebase Auth singleton (initialized exactly once).
+ */
+export function getAdminAuth() {
+  if (!globalRef.__firebaseAdminAuth) {
+    getFirebaseAdmin(); // ensure the app is initialized before accessing Auth
+    globalRef.__firebaseAdminAuth = getAuth();
   }
-  return dbInstance;
+  return globalRef.__firebaseAdminAuth;
 }
 
 /**
@@ -85,9 +110,6 @@ export function getFirebaseAdmin() {
  * and checks if the user has admin privileges.
  */
 export async function verifyAdminAuth(request) {
-  // Ensure Firebase Admin is initialized before accessing Auth services
-  getFirebaseAdmin();
-
   const authHeader = request.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return { authorized: false, error: "Missing or invalid authorization header" };
@@ -95,8 +117,9 @@ export async function verifyAdminAuth(request) {
 
   try {
     const idToken = authHeader.split("Bearer ")[1];
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-
+    // Auth verification happens before any Firestore access; a failure here is
+    // an auth problem (or token invalid), never a Firestore data problem.
+    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
 
     const email = decodedToken.email || "";
     const isAdmin =
