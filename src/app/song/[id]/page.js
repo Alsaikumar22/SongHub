@@ -25,6 +25,7 @@ import { useSearch } from "@/context/search-context";
 import { useAuth } from "@/context/auth-context";
 
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
+import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import { extractDominantColor } from "@/utils/extract-color";
 import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
