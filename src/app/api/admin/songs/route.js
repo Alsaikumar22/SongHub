@@ -62,9 +62,11 @@ export async function POST(request) {
 
 
     let artistName = "Unknown Artist";
+    let artistNameEnglish = "";
     let artistId = null;
     if (typeof body.artist === "object" && body.artist !== null) {
       artistName = body.artist.name?.trim() || "Unknown Artist";
+      artistNameEnglish = body.artist.nameEnglish?.trim() || "";
       artistId = body.artist.id || null;
     } else if (typeof body.artist === "string" && body.artist.trim()) {
       artistName = body.artist.trim();
@@ -128,7 +130,7 @@ export async function POST(request) {
       const updateData = {
         title: body.title.trim(),
         titleEnglish: body.titleEnglish ? body.titleEnglish.trim() : (existingData.titleEnglish || ""),
-        artist: { id: artistId, name: artistName },
+        artist: { id: artistId, name: artistName, nameEnglish: artistNameEnglish || existingData.artist?.nameEnglish || "" },
         language: body.language || existingData.language || "te",
         category: mergedCategories,
         album: body.album !== undefined ? body.album : (existingData.album || null),
@@ -158,7 +160,7 @@ export async function POST(request) {
       title: body.title.trim(),
       titleEnglish: body.titleEnglish ? body.titleEnglish.trim() : "",
       slug: customId,
-      artist: { id: artistId, name: artistName },
+      artist: { id: artistId, name: artistName, nameEnglish: artistNameEnglish },
       language: body.language || "te",
       category: Array.isArray(body.category) ? body.category : (body.category ? [body.category] : []),
       album: body.album || null,
