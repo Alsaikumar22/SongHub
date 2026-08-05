@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, verifyAdminAuth, COLLECTION_NAME, generateSongId, FieldValue } from "@/lib/admin-firebase";
 
+// firebase-admin requires Node.js APIs (crypto, net) and must NOT run on the
+// Edge runtime. Explicitly opt into the Node.js runtime.
+export const runtime = "nodejs";
+
 export const dynamic = "force-dynamic";
 
 /**

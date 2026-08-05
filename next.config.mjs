@@ -6,6 +6,14 @@ const nextConfig = {
   reactCompiler: true,
   allowedDevOrigins: ["song-hub-mu.vercel.app"],
 
+  // ─── Server-Side Native Modules ───
+  // Do NOT bundle firebase-admin into the serverless function. It (via
+  // jwks-rsa) depends on jose, which ships as pure ESM; when webpack
+  // bundles it as CJS, Node throws ERR_REQUIRE_ESM at runtime.
+  // Externalizing lets Node's native require()/import() handle the ESM
+  // boundary, which works on Node >= 22.12 (project engine: 24.x).
+  serverExternalPackages: ["firebase-admin"],
+
   // ─── Image Optimization ───
   images: {
     formats: ["image/avif", "image/webp"],
