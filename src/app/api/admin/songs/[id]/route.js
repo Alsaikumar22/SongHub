@@ -50,14 +50,16 @@ export async function PUT(request, { params }) {
     // Update artist info
     if (body.artist !== undefined) {
       let artistName = "Unknown Artist";
+      let artistNameEnglish = "";
       let artistId = null;
       if (typeof body.artist === "object" && body.artist !== null) {
         artistName = body.artist.name?.trim() || "Unknown Artist";
+        artistNameEnglish = body.artist.nameEnglish?.trim() || "";
         artistId = body.artist.id || null;
       } else if (typeof body.artist === "string" && body.artist.trim()) {
         artistName = body.artist.trim();
       }
-      updateData.artist = { id: artistId, name: artistName };
+      updateData.artist = { id: artistId, name: artistName, nameEnglish: artistNameEnglish };
     }
 
     if (body.language !== undefined) updateData.language = body.language;
