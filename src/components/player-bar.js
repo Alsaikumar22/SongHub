@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
@@ -9,6 +9,7 @@ import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
 import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import { getShareableSongUrl, getShareableSongText, getShareableSongTitle } from "@/utils/share";
+import ConnectScreen from "@/components/connect/ConnectScreen";
 import {
   Play,
   Pause,
@@ -25,7 +26,8 @@ import {
   ListMusic,
   ChevronDown,
   Music,
-  X
+  X,
+  Cast
 } from "lucide-react";
 
 // Inline MicVocal SVG to bypass Turbopack / lucide caching errors
@@ -107,6 +109,10 @@ export default function PlayerBar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
   const [toastMessage, setToastMessage] = useState("");
+  const [isVolumeOpen, setIsVolumeOpen] = useState(false);
+  const [isConnectOpen, setIsConnectOpen] = useState(false);
+  const volumeBtnRef = useRef(null);
+  const volumePopoverRef = useRef(null);
 
   const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
 
@@ -135,6 +141,39 @@ export default function PlayerBar() {
       }, 0);
     }
   }, [currentSong]);
+
+  // Close the volume popover when tapping outside, pressing Escape,
+  // switching songs, or navigating to another page.
+  useEffect(() => {
+    if (!isVolumeOpen) return;
+
+    const handlePointerDown = (e) => {
+      if (
+        volumePopoverRef.current?.contains(e.target) ||
+        volumeBtnRef.current?.contains(e.target)
+      ) {
+        return;
+      }
+      setIsVolumeOpen(false);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsVolumeOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isVolumeOpen]);
+
+  useEffect(() => {
+    setIsVolumeOpen(false);
+  }, [currentSong?.id, pathname]);
 
   if (!isClient) return null;
 
@@ -171,6 +210,12 @@ export default function PlayerBar() {
     // Prevent expansion when clicking action buttons
     if (e.target.closest("button") || e.target.closest("a")) return;
     setIsExpanded(true);
+    setIsVolumeOpen(false);
+  };
+
+  const toggleVolumePopover = (e) => {
+    e.stopPropagation();
+    setIsVolumeOpen((prev) => !prev);
   };
 
   const isFavorited = currentSong && favorites.includes(currentSong.id);
@@ -269,6 +314,80 @@ export default function PlayerBar() {
                   />
                 </button>
               </ProtectedAction>
+              {/* Connect to a device (YouWorship Connect) */}
+              <ProtectedAction action={() => { setIsVolumeOpen(false); setIsConnectOpen(true); }}>
+                <button
+                  className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
+                  aria-label="Connect to a device"
+                  title="Connect to a device"
+                >
+                  <Cast className="w-4.5 h-4.5" />
+                </button>
+              </ProtectedAction>
+              {/* Volume (Speaker) control with slider popover */}
+              <div className="relative">
+                <button
+                  ref={volumeBtnRef}
+                  onClick={toggleVolumePopover}
+                  className={`p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer ${
+                    isVolumeOpen
+                      ? "text-title bg-white/5"
+                      : "text-muted hover:text-title"
+                  }`}
+                  aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                  aria-haspopup="dialog"
+                  aria-expanded={isVolumeOpen}
+                  title="Volume"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-4.5 h-4.5" />
+                  ) : (
+                    <Volume2 className="w-4.5 h-4.5" />
+                  )}
+                </button>
+
+                {/* Volume popover — anchored above the speaker icon */}
+                {isVolumeOpen && (
+                  <div
+                    ref={volumePopoverRef}
+                    role="dialog"
+                    aria-label="Volume"
+                    className="absolute bottom-full right-0 mb-2 z-50 w-44 rounded-2xl border border-line bg-card/95 backdrop-blur-xl shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={toggleMute}
+                        className="text-muted hover:text-title cursor-pointer active:scale-90 transition-transform shrink-0 p-0.5"
+                        aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                        title={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                      >
+                        {isMuted || volume === 0 ? (
+                          <VolumeX className="w-4 h-4" />
+                        ) : (
+                          <Volume2 className="w-4 h-4" />
+                        )}
+                      </button>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={isMuted ? 0 : volume}
+                        onChange={(e) => adjustVolume(parseFloat(e.target.value))}
+                        className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-[#D4A32A] focus:outline-none"
+                        style={{
+                          background: `linear-gradient(to right, #D4A32A 0%, #D4A32A ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) 100%)`,
+                        }}
+                      />
+                      <span className="text-[10px] font-bold text-muted tabular-nums w-8 text-right shrink-0">
+                        {Math.round((isMuted ? 0 : volume) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={togglePlay}
                 className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer"
@@ -492,6 +611,17 @@ export default function PlayerBar() {
                 <MicIcon className="w-4 h-4" />
               </span>
             )}
+
+            {/* Connect to a device (YouWorship Connect) */}
+            <ProtectedAction action={() => setIsConnectOpen(true)}>
+              <button
+                className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
+                title="Connect to a device"
+                aria-label="Connect to a device"
+              >
+                <Cast className="w-4 h-4" />
+              </button>
+            </ProtectedAction>
 
           <button
             onClick={toggleMute}
@@ -800,6 +930,11 @@ export default function PlayerBar() {
         >
           <X className="w-3.5 h-3.5" />
         </button>
+      )}
+
+      {/* YouWorship Connect screen */}
+      {isConnectOpen && (
+        <ConnectScreen onClose={() => setIsConnectOpen(false)} />
       )}
 
     </>
