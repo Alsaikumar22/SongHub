@@ -29,8 +29,10 @@ import {
   Edit3,
   ListMusic,
   RefreshCw,
+  MonitorSmartphone,
 } from "lucide-react";
 import NextImage from "next/image";
+import ConnectedDevices from "@/components/admin/ConnectedDevices";
 
 // ─── Constants ─────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -549,7 +551,7 @@ export default function AdminPage() {
   };
 
   // ─── Tab State ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("add"); // "add" | "list"
+  const [activeTab, setActiveTab] = useState("add"); // "add" | "list" | "devices"
   const [songs, setSongs] = useState([]);
   const [songsLoading, setSongsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -849,6 +851,9 @@ export default function AdminPage() {
           <button onClick={() => { setActiveTab("list"); fetchSongs(); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "list" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
             <ListMusic className="w-3.5 h-3.5 inline mr-1.5" />All Songs ({songs.length})
           </button>
+          <button onClick={() => { setActiveTab("devices"); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "devices" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
+            <MonitorSmartphone className="w-3.5 h-3.5 inline mr-1.5" />Connected Devices
+          </button>
         </div>
       </div>
 
@@ -867,7 +872,9 @@ export default function AdminPage() {
           </div>
         )}
 
-        {activeTab === "add" ? (
+        {activeTab === "devices" && <ConnectedDevices />}
+
+        {activeTab !== "devices" && (activeTab === "add" ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* ─── Form Column ──────────────────────────── */}
             <div className="lg:col-span-2 space-y-8">
@@ -1159,7 +1166,7 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        )}
+        ))}
       </div>
 
       {/* ─── Delete Confirm Modal ───────────────────────── */}
