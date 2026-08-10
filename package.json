@@ -27,6 +27,9 @@
     "ytdl-core": "^4.11.5",
     "zod": "^4.4.3"
   },
+  "overrides": {
+    "jose": "4.15.9"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "babel-plugin-react-compiler": "1.0.0",
