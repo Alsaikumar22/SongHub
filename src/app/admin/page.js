@@ -29,10 +29,8 @@ import {
   Edit3,
   ListMusic,
   RefreshCw,
-  MonitorSmartphone,
 } from "lucide-react";
 import NextImage from "next/image";
-import ConnectedDevices from "@/components/admin/ConnectedDevices";
 
 // ─── Constants ─────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -312,7 +310,7 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
     try {
       const token = await getIdToken();
       const songData = buildSongData();
-      const res = await fetch(`/api/admin/songs/${song.id}`, {
+      const res = await fetch(`/api/admin/songs?id=${encodeURIComponent(song.id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(songData),
@@ -535,7 +533,7 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
 
 // ─── Main Admin Dashboard ──────────────────────────────────────────
 export default function AdminPage() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, firestoreData } = useAuth();
   const router = useRouter();
   const mountedRef = useRef(true);
 
@@ -551,7 +549,7 @@ export default function AdminPage() {
   };
 
   // ─── Tab State ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("add"); // "add" | "list" | "devices"
+  const [activeTab, setActiveTab] = useState("add"); // "add" | "list"
   const [songs, setSongs] = useState([]);
   const [songsLoading, setSongsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -590,7 +588,11 @@ export default function AdminPage() {
   };
 
   // ─── Auth Protection ────────────────────────────────────────────
-  const isAdmin = user?.email === "alsaikumar22@gmail.com" || user?.email?.endsWith("@youworship.admin");
+  const isAdmin =
+    user?.email === "alsaikumar22@gmail.com" ||
+    user?.email === "control@youworship.world" ||
+    user?.email?.endsWith("@youworship.admin") ||
+    firestoreData?.role === "admin";
 
   const getIdToken = useCallback(async () => {
     if (!user) throw new Error("Not authenticated");
@@ -736,7 +738,7 @@ export default function AdminPage() {
       const token = await getIdToken();
       const songData = buildSongData();
       const method = editingId ? "PUT" : "POST";
-      const url = editingId ? `/api/admin/songs/${editingId}` : "/api/admin/songs";
+      const url = editingId ? `/api/admin/songs?id=${encodeURIComponent(editingId)}` : "/api/admin/songs";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -763,7 +765,7 @@ export default function AdminPage() {
     setDeleting(true);
     try {
       const token = await getIdToken();
-      const res = await fetch(`/api/admin/songs/${deleteTarget.id}`, {
+      const res = await fetch(`/api/admin/songs?id=${encodeURIComponent(deleteTarget.id)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -851,9 +853,6 @@ export default function AdminPage() {
           <button onClick={() => { setActiveTab("list"); fetchSongs(); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "list" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
             <ListMusic className="w-3.5 h-3.5 inline mr-1.5" />All Songs ({songs.length})
           </button>
-          <button onClick={() => { setActiveTab("devices"); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "devices" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
-            <MonitorSmartphone className="w-3.5 h-3.5 inline mr-1.5" />Connected Devices
-          </button>
         </div>
       </div>
 
@@ -872,9 +871,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {activeTab === "devices" && <ConnectedDevices />}
-
-        {activeTab !== "devices" && (activeTab === "add" ? (
+        {activeTab === "add" ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* ─── Form Column ──────────────────────────── */}
             <div className="lg:col-span-2 space-y-8">
@@ -1166,7 +1163,7 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        ))}
+        )}
       </div>
 
       {/* ─── Delete Confirm Modal ───────────────────────── */}

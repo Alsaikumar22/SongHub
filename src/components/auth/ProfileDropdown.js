@@ -20,7 +20,7 @@ import Image from "next/image";
  * Menu items: Favorites, Playlists, Admin Dashboard, Logout.
  */
 export default function ProfileDropdown() {
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, signOut, firestoreData } = useAuth();
   const { setActiveTab, setActivePlaylistId, setViewedSongId } = useAudio();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -66,7 +66,11 @@ export default function ProfileDropdown() {
   ];
 
   // Admin-only item
-  const isAdmin = user?.email === "alsaikumar22@gmail.com" || user?.email?.endsWith("@youworship.admin");
+  const isAdmin =
+    user?.email === "alsaikumar22@gmail.com" ||
+    user?.email === "control@youworship.world" ||
+    user?.email?.endsWith("@youworship.admin") ||
+    firestoreData?.role === "admin";
 
   return (
     <>

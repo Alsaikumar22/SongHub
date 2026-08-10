@@ -1,7 +1,6 @@
 import { Geist, Geist_Mono, Lato, NTR, Playfair_Display, Noto_Serif_Telugu, Noto_Sans_Telugu, Merriweather, Inter } from "next/font/google";
 import "./globals.css";
 import { AudioProvider } from "@/context/audio-context";
-import { ConnectProvider } from "@/context/connect-context";
 import { SearchProvider } from "@/context/search-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { AuthProvider } from "@/context/auth-context";
@@ -98,11 +97,9 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             <AudioProvider>
-              <ConnectProvider>
-                <SearchProvider>
-                  <AppLayout>{children}</AppLayout>
-                </SearchProvider>
-              </ConnectProvider>
+              <SearchProvider>
+                <AppLayout>{children}</AppLayout>
+              </SearchProvider>
             </AudioProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -21,7 +21,10 @@ rules_version = '2';
 function isAdmin() {
   return request.auth != null && (
     request.auth.token.email == 'alsaikumar22@gmail.com' ||
-    request.auth.token.email.endsWith('@youworship.admin')
+    request.auth.token.email == 'control@youworship.world' ||
+    request.auth.token.email.endsWith('@youworship.admin') ||
+    request.auth.token.admin == true ||
+    get(/databases/$(database)/documents/Youworship_users/$(request.auth.uid)).data.role == 'admin'
   );
 }
 
