@@ -134,9 +134,17 @@ export async function PUT(request, { params }) {
       message: "Song updated successfully.",
     });
   } catch (error) {
-    console.error("Error updating song:", error);
+    console.error("Error updating song:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: error.message || "Failed to update song." },
+      {
+        error: error.message || "Failed to update song.",
+        code: error.code || "unknown",
+        stack: error.stack,
+      },
       { status: 500 }
     );
   }

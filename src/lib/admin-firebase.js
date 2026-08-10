@@ -75,10 +75,16 @@ export function getFirebaseAdmin() {
             "Please verify your environment credentials (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)."
         );
       }
-    } else if (projectId) {
-      admin.initializeApp({ projectId });
     } else {
-      admin.initializeApp();
+      const missing = [];
+      if (!projectId) missing.push("FIREBASE_PROJECT_ID / NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+      if (!clientEmail) missing.push("FIREBASE_CLIENT_EMAIL");
+      if (!privateKey) missing.push("FIREBASE_PRIVATE_KEY");
+      throw new Error(
+        "Firebase Admin credentials are not fully configured. " +
+        `Missing environment variables: ${missing.join(", ")}. ` +
+        "Please check your hosting provider's dashboard and set these values."
+      );
     }
   }
 

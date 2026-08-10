@@ -309,9 +309,17 @@ export async function PUT(request) {
       message: "Song updated successfully.",
     });
   } catch (error) {
-    console.error("Error updating song:", error);
+    console.error("Error updating song:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: error.stack || error.message || "Failed to update song." },
+      {
+        error: error.message || "Failed to update song.",
+        code: error.code || "unknown",
+        stack: error.stack,
+      },
       { status: 500 }
     );
   }
@@ -350,9 +358,17 @@ export async function DELETE(request) {
       message: "Song deleted successfully.",
     });
   } catch (error) {
-    console.error("Error deleting song:", error);
+    console.error("Error deleting song:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: error.stack || error.message || "Failed to delete song." },
+      {
+        error: error.message || "Failed to delete song.",
+        code: error.code || "unknown",
+        stack: error.stack,
+      },
       { status: 500 }
     );
   }
