@@ -16,7 +16,7 @@
 import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 
-import * as admin from "firebase-admin";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
@@ -62,11 +62,11 @@ export function getFirebaseAdmin() {
   }
 
   // Singleton guard: never call initializeApp() more than once.
-  if (admin.getApps().length === 0) {
+  if (getApps().length === 0) {
     if (projectId && clientEmail && privateKey) {
       try {
-        admin.initializeApp({
-          credential: admin.cert({ projectId, clientEmail, privateKey }),
+        initializeApp({
+          credential: cert({ projectId, clientEmail, privateKey }),
         });
       } catch (certError) {
         console.error("Firebase Admin initialization with cert failed:", certError);
@@ -160,4 +160,4 @@ export function generateSongId(title, artistName) {
   return (title || "").trim().replace(/\s+/g, "-").replace(/[\/\\]/g, "-");
 }
 
-export { admin, COLLECTION_NAME, FieldValue };
+export { COLLECTION_NAME, FieldValue };
