@@ -311,7 +311,7 @@ export async function PUT(request) {
   } catch (error) {
     console.error("Error updating song:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to update song." },
+      { error: error.stack || error.message || "Failed to update song." },
       { status: 500 }
     );
   }
@@ -352,7 +352,7 @@ export async function DELETE(request) {
   } catch (error) {
     console.error("Error deleting song:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to delete song." },
+      { error: error.stack || error.message || "Failed to delete song." },
       { status: 500 }
     );
   }
