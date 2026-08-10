@@ -9,7 +9,6 @@ import SongArtwork from "@/components/ui/SongArtwork";
 import { extractDominantColor } from "@/utils/extract-color";
 import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import { getShareableSongUrl, getShareableSongText, getShareableSongTitle } from "@/utils/share";
-import ConnectScreen from "@/components/connect/ConnectScreen";
 import {
   Play,
   Pause,
@@ -26,8 +25,7 @@ import {
   ListMusic,
   ChevronDown,
   Music,
-  X,
-  Cast
+  X
 } from "lucide-react";
 
 // Inline MicVocal SVG to bypass Turbopack / lucide caching errors
@@ -110,7 +108,6 @@ export default function PlayerBar() {
   const [ambientColor, setAmbientColor] = useState({ r: 18, g: 18, b: 18 });
   const [toastMessage, setToastMessage] = useState("");
   const [isVolumeOpen, setIsVolumeOpen] = useState(false);
-  const [isConnectOpen, setIsConnectOpen] = useState(false);
   const volumeBtnRef = useRef(null);
   const volumePopoverRef = useRef(null);
 
@@ -314,16 +311,7 @@ export default function PlayerBar() {
                   />
                 </button>
               </ProtectedAction>
-              {/* Connect to a device (YouWorship Connect) */}
-              <ProtectedAction action={() => { setIsVolumeOpen(false); setIsConnectOpen(true); }}>
-                <button
-                  className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
-                  aria-label="Connect to a device"
-                  title="Connect to a device"
-                >
-                  <Cast className="w-4.5 h-4.5" />
-                </button>
-              </ProtectedAction>
+
               {/* Volume (Speaker) control with slider popover */}
               <div className="relative">
                 <button
@@ -612,16 +600,7 @@ export default function PlayerBar() {
               </span>
             )}
 
-            {/* Connect to a device (YouWorship Connect) */}
-            <ProtectedAction action={() => setIsConnectOpen(true)}>
-              <button
-                className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
-                title="Connect to a device"
-                aria-label="Connect to a device"
-              >
-                <Cast className="w-4 h-4" />
-              </button>
-            </ProtectedAction>
+
 
           <button
             onClick={toggleMute}
@@ -932,10 +911,7 @@ export default function PlayerBar() {
         </button>
       )}
 
-      {/* YouWorship Connect screen */}
-      {isConnectOpen && (
-        <ConnectScreen onClose={() => setIsConnectOpen(false)} />
-      )}
+
 
     </>
   );

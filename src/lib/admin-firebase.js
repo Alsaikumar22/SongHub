@@ -122,8 +122,17 @@ export async function verifyAdminAuth(request) {
     const decodedToken = await getAdminAuth().verifyIdToken(idToken);
 
     const email = decodedToken.email || "";
+    const db = getFirebaseAdmin();
+    const userDocRef = db.collection("Youworship_users").doc(decodedToken.uid);
+    const userDoc = await userDocRef.get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+
     const isAdmin =
-      email === "alsaikumar22@gmail.com" || email.endsWith("@youworship.admin");
+      email === "alsaikumar22@gmail.com" ||
+      email === "control@youworship.world" ||
+      email.endsWith("@youworship.admin") ||
+      userData?.role === "admin" ||
+      decodedToken.admin === true;
 
     if (!isAdmin) {
       return { authorized: false, error: "User does not have admin privileges" };
