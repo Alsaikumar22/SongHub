@@ -32,14 +32,9 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import NextImage from "next/image";
+import { CATEGORIES_DATA } from "@/components/categories/categoryData";
 
-const CATEGORIES = [
-  "Praise Songs", "Worship Songs", "Encouraging Songs", "Hope Songs", "Gospel Songs", "Prayer Songs", 
-  "Commitment Songs", "Comfort Songs", "Christmas Songs", "Repentance Songs", "Thanksgiving Songs", 
-  "Correction Songs", "Good Friday Songs", "Second Coming Songs", "Marriage Songs",
-  "Morning Worship Songs", "Salvation Songs", "Holy Spirit Songs", "Healing & Miracles Songs", 
-  "Bible-Based Songs", "Youth Songs", "Communion Songs", "Easter Songs", "Baptism Songs",
-];
+const CATEGORIES = CATEGORIES_DATA.map((c) => c.nameEn);
 
 const LANGUAGES = [
   { value: "te", label: "Telugu", nativeLabel: "తెలుగు" },
@@ -291,7 +286,7 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
         nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
-      category: form.categories.length > 0 ? form.categories : ["Praise & Worship"],
+      category: form.categories.length > 0 ? form.categories : ["Praise Songs"],
       album: form.album.trim() || null,
       year: parseInt(form.year, 10) || new Date().getFullYear(),
       duration: durationNum,
@@ -740,7 +735,7 @@ export default function AdminPage() {
         nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
-      category: form.categories.length > 0 ? form.categories : ["Praise & Worship"],
+      category: form.categories.length > 0 ? form.categories : ["Praise Songs"],
       album: form.album.trim() || null,
       year: parseInt(form.year, 10) || new Date().getFullYear(),
       duration: durationNum,
