@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# photos
+/photos
+
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -39,3 +42,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Reserved Windows filenames (Turbopack bug workaround)
+nul
+CON
+PRN
+AUX
+COM1
+LPT1

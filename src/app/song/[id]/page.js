@@ -1,33 +1,148 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAudio } from "../../context/audio-context";
 import {
   ArrowLeft,
+  Music,
+  Video,
+  FileText,
+  Plus,
+  Share2,
+  Copy,
+  Check,
   Play,
   Pause,
   Heart,
-  Plus,
-  Music,
-  Disc,
-  Calendar,
-  Layers,
-  Activity,
-  BarChart,
-  ChevronRight,
-  Sparkles,
-  ListMusic
+  Maximize2,
+  Minimize2,
+  Link as LinkIcon,
 } from "lucide-react";
+import { useAudio } from "@/context/audio-context";
+import { useTheme } from "@/context/theme-context";
+import { useSearch } from "@/context/search-context";
+import { useAuth } from "@/context/auth-context";
 
-export default function SongPage({ params }) {
+import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
+import YouTubeIcon from "@/components/ui/YouTubeIcon";
+import { extractDominantColor } from "@/utils/extract-color";
+import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
+import ProtectedAction from "@/components/auth/ProtectedAction";
+import { songService } from "@/services/songService";
+import {
+  getShareableSongUrl,
+  getShareableSongText,
+  getShareableSongTitle,
+} from "@/utils/share";
+
+function formatVideoEmbedUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (trimmed.includes("youtube.com/embed/")) return trimmed;
+  if (trimmed.includes("youtube.com/watch")) {
+    const match = trimmed.match(/[?&]v=([^&]+)/);
+    if (match && match[1])
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+  }
+  if (trimmed.includes("youtu.be/")) {
+    const parts = trimmed.split("youtu.be/");
+    if (parts[1]) {
+      const id = parts[1].split("?")[0];
+      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    }
+  }
+  return trimmed;
+}
+
+function YouTubeVideoPlayer({ embedUrl, title, isPlaying }) {
+  const iframeRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!iframeRef.current) return;
+    if (isPlaying) {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "playVideo", args: "" }),
+        "*",
+      );
+    } else {
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "pauseVideo", args: "" }),
+        "*",
+      );
+    }
+  }, [isPlaying]);
+
+  const srcWithJsApi = `${embedUrl}${embedUrl.includes("?") ? "&" : "?"}enablejsapi=1`;
+
+  return (
+    <div className="relative w-full max-w-5xl aspect-video bg-black/40 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-white/10 mx-auto">
+      <iframe
+        ref={iframeRef}
+        src={srcWithJsApi}
+        title={`${title} - Video`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full border-0"
+      />
+    </div>
+  );
+}
+
+function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
   const router = useRouter();
 
+  // Read view mode from URL synchronously on every render.
+  // Avoids useSearchParams() which can crash during client-side navigation in Next.js 16.
+  // Safe because SongPageContent only renders on the client (use(params) suspends during SSR).
+  const viewMode =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("view") || null
+      : null; // "video" | "lyrics" | null
+
+  const lyricsContainerRef = useRef(null);
+  const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
+  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(0.6);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreenLyrics(
+        document.fullscreenElement === lyricsContainerRef.current,
+      );
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreenLyrics = () => {
+    const el = lyricsContainerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const increaseFontSize = () => {
+    setFontSizeMultiplier((prev) => Math.min(prev + 0.15, 2.0));
+  };
+  const decreaseFontSize = () => {
+    setFontSizeMultiplier((prev) => Math.max(prev - 0.15, 0.7));
+  };
+
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  const { theme, toggleTheme } = useTheme();
+  const isLight = theme === "light";
   const {
     songs,
+    songsLoading,
     currentSong,
     isPlaying,
     playSong,
@@ -35,330 +150,771 @@ export default function SongPage({ params }) {
     toggleFavorite,
     playlists,
     addSongToPlaylist,
-    removeSongFromPlaylist
+    removeSongFromPlaylist,
+    setActiveTab,
+    lyricsLanguage,
+    setLyricsLanguage,
   } = useAudio();
 
+  const { setSearchQuery, setShowFullResults } = useSearch();
+
   const [song, setSong] = useState(null);
+  const selectedLanguage = lyricsLanguage;
+  const setSelectedLanguage = setLyricsLanguage;
+  const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
+  const fetchingRef = useRef(false);
+  const prevIdRef = useRef(id);
+
+  const isCurrentSong = currentSong?.id === song?.id;
+  const isThisPlaying = isCurrentSong && isPlaying;
+
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
+  const [showShareDropdown, setShowShareDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const playlistDropdownRef = useRef(null);
+  const shareDropdownRef = useRef(null);
 
   useEffect(() => {
-    // Find the song details
-    const foundSong = songs.find(s => s.id === id);
-    if (foundSong) {
-      setSong(foundSong);
+    const handleClickOutside = (e) => {
+      if (
+        playlistDropdownRef.current &&
+        !playlistDropdownRef.current.contains(e.target)
+      ) {
+        setShowPlaylistDropdown(false);
+      }
+      if (
+        shareDropdownRef.current &&
+        !shareDropdownRef.current.contains(e.target)
+      ) {
+        setShowShareDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const songTitle = song ? song.teluguTitle || song.title : "";
+  const songSubtitle =
+    song && (song.titleEnglish || song.title) !== songTitle
+      ? ` (${song.titleEnglish || song.title})`
+      : "";
+
+  // canonical URL is generated on-the-fly by handleShare / handleCopyLink
+
+  const handleShare = async () => {
+    setShowShareDropdown(false);
+    const shareUrl = getShareableSongUrl(song);
+    const shareText = getShareableSongText(song);
+    const shareTitle = getShareableSongTitle(song);
+
+    // Try native Web Share API first (mobile & modern desktop)
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return; // Success — done
+      } catch (err) {
+        // User cancelled or share failed — fall through to clipboard
+        if (err.name !== "AbortError") {
+          console.debug("Web Share API error:", err);
+        }
+      }
     }
-  }, [id, songs]);
 
-  if (!song) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <Music className="w-12 h-12 text-gray-300 mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-gray-700">Finding song...</h2>
-        <Link href="/" className="mt-4 text-sm text-indigo-600 hover:underline">
-          Return to home
-        </Link>
-      </div>
-    );
-  }
-
-  const isCurrentSong = currentSong?.id === song.id;
-  const isFavorited = favorites.includes(song.id);
-
-  // Filter out the current song from recommended/up next list
-  const getUpNext = () => {
-    return songs.filter(s => s.id !== song.id).slice(0, 4);
+    // Fallback: copy clean URL to clipboard
+    await handleCopyLink(shareUrl);
   };
 
-  const upNextList = getUpNext();
+  const handleCopyLink = async (url) => {
+    const linkToCopy = url || getShareableSongUrl(song);
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(linkToCopy);
+      } else {
+        // Older fallback for browsers without Clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = linkToCopy;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setToastMessage("Link copied!");
+      setShowShareDropdown(false);
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
+      // Last resort: show the URL so user can manually copy
+      setToastMessage(
+        "Could not copy. Select and copy the link from the address bar.",
+      );
+    }
+    setTimeout(() => setToastMessage(""), 2500);
+  };
 
-  // Generate random heights for static bars when not playing
-  const visualizerBars = Array.from({ length: 28 }, (_, i) => ({
-    id: i,
-    staticHeight: `${15 + (i * 7) % 50}%`,
-    delay: `${(i * 0.04).toFixed(2)}s`,
-    duration: `${(0.6 + (i * 0.15) % 0.8).toFixed(2)}s`
-  }));
+  const getRawLyrics = (lang) => {
+    if (!song) return "";
+    if (lang === "english") {
+      if (song.lyricsEnglish) {
+        return Array.isArray(song.lyricsEnglish)
+          ? song.lyricsEnglish.join("\n")
+          : song.lyricsEnglish;
+      }
+      if (Array.isArray(song.lyrics)) {
+        const matched = song.lyrics.find((l) => l.language === "en");
+        if (matched) return matched.content || matched.text || "";
+      }
+      return "";
+    } else {
+      if (song.lyricsTelugu) {
+        return Array.isArray(song.lyricsTelugu)
+          ? song.lyricsTelugu.join("\n")
+          : song.lyricsTelugu;
+      }
+      if (Array.isArray(song.lyrics)) {
+        const matched = song.lyrics.find((l) => l.language === "te");
+        if (matched) return matched.content || matched.text || "";
+      }
+      if (typeof song.lyrics === "string") return song.lyrics;
+      return "";
+    }
+  };
+
+  const handleCopyLyrics = async () => {
+    if (typeof window !== "undefined" && typeof navigator !== "undefined") {
+      let lyricsText = "";
+      let header = "";
+
+      if (selectedLanguage === "telugu") {
+        lyricsText = getRawLyrics("telugu");
+        header = `YouWorship Lyrics: ${song.teluguTitle || song.title} (Telugu)\n\n`;
+      } else if (selectedLanguage === "english") {
+        lyricsText = getRawLyrics("english");
+        header = `YouWorship Lyrics: ${song.titleEnglish || song.title} (English)\n\n`;
+      } else {
+        // Dual view
+        const teluguLyrics = getRawLyrics("telugu");
+        const englishLyrics = getRawLyrics("english");
+
+        if (teluguLyrics && englishLyrics && teluguLyrics !== englishLyrics) {
+          const teluguLines = teluguLyrics
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const englishLines = englishLyrics
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const combined = [];
+          const maxLen = Math.max(teluguLines.length, englishLines.length);
+          for (let i = 0; i < maxLen; i++) {
+            if (teluguLines[i]) combined.push(teluguLines[i]);
+            if (englishLines[i]) combined.push(englishLines[i]);
+            if (teluguLines[i] || englishLines[i]) combined.push("");
+          }
+          lyricsText = combined.join("\n");
+          header = `YouWorship Lyrics: ${song.teluguTitle || song.title} - ${song.titleEnglish || song.title} (Bilingual)\n\n`;
+        } else {
+          lyricsText = teluguLyrics || englishLyrics;
+          header = `YouWorship Lyrics: ${song.teluguTitle || song.title}\n\n`;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(header + lyricsText);
+      } catch (e) {
+        // Clipboard write failed silently
+      }
+      setToastMessage(
+        `Lyrics (${selectedLanguage === "dual" ? "bilingual" : selectedLanguage}) copied!`,
+      );
+      setTimeout(() => setToastMessage(""), 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (prevIdRef.current !== id) {
+      setSong(null);
+      fetchingRef.current = false;
+      prevIdRef.current = id;
+    }
+
+    let decodedId = id;
+    try {
+      decodedId = decodeURIComponent(id || "");
+    } catch (e) {
+      decodedId = id;
+    }
+
+    const targetNFC = (decodedId || "").normalize("NFC");
+    const rawNFC = (id || "").normalize("NFC");
+
+    const foundSong =
+      songs.find((s) => {
+        const sIdNFC = (s.id || "").normalize("NFC");
+        const sSlugNFC = (s.slug || "").normalize("NFC");
+        return (
+          sIdNFC === targetNFC ||
+          sIdNFC === rawNFC ||
+          sSlugNFC === targetNFC ||
+          sSlugNFC === rawNFC ||
+          decodeURIComponent(sIdNFC) === targetNFC ||
+          decodeURIComponent(sSlugNFC) === targetNFC
+        );
+      }) ||
+      (currentSong &&
+      ((currentSong.id || "").normalize("NFC") === targetNFC ||
+        (currentSong.id || "").normalize("NFC") === rawNFC ||
+        (currentSong.slug || "").normalize("NFC") === targetNFC ||
+        (currentSong.slug || "").normalize("NFC") === rawNFC)
+        ? currentSong
+        : null);
+
+    if (foundSong) {
+      queueMicrotask(() => setSong(foundSong));
+      return;
+    }
+
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    songService
+      .getSongById(decodedId)
+      .then((fetchedSong) => {
+        if (fetchedSong) {
+          setSong(fetchedSong);
+          fetchingRef.current = false;
+        } else {
+          // Fallback to Next.js API route if not found directly
+          fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
+            cache: "no-store",
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.song) setSong(data.song);
+              fetchingRef.current = false;
+            })
+            .catch((err) => {
+              console.error("API fallback fetch failed:", err);
+              fetchingRef.current = false;
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch song directly from Firestore:", err);
+        // Fallback to API route on error
+        fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
+          cache: "no-store",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.song) setSong(data.song);
+            fetchingRef.current = false;
+          })
+          .catch((fetchErr) => {
+            console.error(
+              "API fallback fetch failed on direct error:",
+              fetchErr,
+            );
+            fetchingRef.current = false;
+          });
+      });
+  }, [id, songs, currentSong]);
+
+  useEffect(() => {
+    if (song?.coverUrl) {
+      extractDominantColor(song.coverUrl).then(setGradientColor);
+    }
+  }, [song]);
+
+  useEffect(() => {
+    if (song) {
+      const hasTelugu = !!(
+        (typeof song.lyricsTelugu === "string" &&
+          song.lyricsTelugu.trim().length > 0) ||
+        (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0) ||
+        (Array.isArray(song.lyrics) &&
+          song.lyrics.some((l) => l.language === "te"))
+      );
+      setSelectedLanguage(hasTelugu ? "telugu" : "english");
+    }
+  }, [song]);
 
   const handlePlayClick = () => {
     playSong(song);
   };
 
-  return (
-    <div className="flex-1 overflow-y-auto bg-white py-8 px-4 md:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Navigation header */}
-        <div className="flex items-center justify-between">
+  if (!song) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
+        <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
+        <h2 className="text-xl font-bold text-white">
+          {songsLoading ? "Loading song..." : "Song not found"}
+        </h2>
+        {!songsLoading && (
+          <Link href="/home" className="mt-4 text-sm text-title hover:underline">
+            Return to home
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  const isFavorited = favorites.includes(song.id);
+  const hasDualLyrics = !!(
+    song &&
+    ((typeof song.lyricsTelugu === "string" &&
+      song.lyricsTelugu.trim().length > 0) ||
+      (Array.isArray(song.lyricsTelugu) && song.lyricsTelugu.length > 0)) &&
+    ((typeof song.lyricsEnglish === "string" &&
+      song.lyricsEnglish.trim().length > 0) ||
+      (Array.isArray(song.lyricsEnglish) && song.lyricsEnglish.length > 0))
+  );
+
+  const rawVideoUrl =
+    song.media?.video || song.videoUrl || song.youtubeUrl || "";
+  const embedUrl = formatVideoEmbedUrl(rawVideoUrl);
+  const { r, g, b } = gradientColor;
+
+  // 1. FULL CENTER SCREEN VIDEO VIEW (?view=video)
+  if (viewMode === "video") {
+    return (
+      <div
+        className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
+        style={{
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)},0.05) 45%, var(--canvas) 100%)`,
+        }}
+      >
+        {/* Minimal back link */}
+        <div className="p-6 flex items-center justify-between z-40">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
+            title="Back"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Go Back</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
           </button>
 
-          <span className="text-xs text-gray-400 font-medium">
-            Now Playing Detail
-          </span>
+          <button
+            onClick={() =>
+              router.push(
+                `/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`,
+              )
+            }
+            className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3.5 py-1.5 rounded-full border border-line shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5 text-title" />
+            <span>View Lyrics</span>
+          </button>
         </div>
 
-        {/* Hero Section Card */}
-        <div className="bg-white border border-gray-200/80 rounded-2xl shadow-sm p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center md:items-stretch relative overflow-hidden">
-          {/* Subtle background decoration */}
-          <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-50/20 rounded-full blur-3xl -z-10 pointer-events-none" />
-
-          {/* Left: Artwork Container */}
-          <div className="w-56 h-56 md:w-64 md:h-64 rounded-xl overflow-hidden shadow-md border border-gray-150 relative group shrink-0">
-            <img
-              src={song.coverUrl}
-              alt={song.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            {/* Overlay Play Indicator */}
-            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <button
-                onClick={handlePlayClick}
-                className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300 cursor-pointer"
-              >
-                {isCurrentSong && isPlaying ? (
-                  <Pause className="w-5 h-5 text-gray-800 fill-current" />
-                ) : (
-                  <Play className="w-5 h-5 text-gray-800 fill-current ml-0.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Right: Metadata and Visualizer */}
-          <div className="flex-1 flex flex-col justify-between w-full min-w-0">
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight leading-tight truncate">
-                      {song.title}
-                    </h1>
-                    <span className="text-sm md:text-base font-medium text-gray-500 block truncate mt-1">
-                      {song.artist}
-                    </span>
-                  </div>
-
-                  {/* Favorite Toggle Button */}
-                  <button
-                    onClick={() => toggleFavorite(song.id)}
-                    className={`w-10 h-10 border rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all active:scale-95 hover:bg-gray-50 ${
-                      isFavorited ? "bg-red-50/20 border-red-200" : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <Heart
-                      className={`w-5 h-5 ${
-                        isFavorited ? "fill-red-500 text-red-500" : "text-gray-400"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid of quick song stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50/50 p-4 rounded-xl border border-gray-150">
-                <div className="flex items-center gap-2">
-                  <Disc className="w-4 h-4 text-gray-400 shrink-0" />
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">Album</span>
-                    <span className="text-xs font-semibold text-gray-700 block truncate">{song.album}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">Year</span>
-                    <span className="text-xs font-semibold text-gray-700 block">{song.releaseYear}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-gray-400 shrink-0" />
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">Genre</span>
-                    <span className="text-xs font-semibold text-gray-700 block">{song.genre}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-gray-400 shrink-0" />
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">BPM</span>
-                    <span className="text-xs font-semibold text-gray-700 block">{song.bpm}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Animated Visualizer */}
-            <div className="mt-6 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-gray-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                  Interactive Audio Stream
-                </span>
-                <span className="text-gray-400 text-[11px]">
-                  {isCurrentSong && isPlaying ? "Active Playback Visualizer" : "Paused"}
-                </span>
-              </div>
-              <div className="h-14 bg-gray-900 rounded-xl flex items-end justify-center gap-[3px] px-4 py-2 border border-gray-800 shadow-inner">
-                {visualizerBars.map(bar => (
-                  <div
-                    key={bar.id}
-                    className="w-1.5 bg-indigo-400/90 rounded-full origin-bottom"
-                    style={{
-                      height: isCurrentSong && isPlaying ? "35%" : bar.staticHeight,
-                      animationDelay: bar.delay,
-                      animationDuration: bar.duration,
-                      animationName: isCurrentSong && isPlaying ? "bounce-bar" : "none",
-                      animationIterationCount: "infinite",
-                      animationTimingFunction: "ease-in-out"
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Large Play and Add buttons */}
-            <div className="flex flex-wrap gap-3 mt-6">
-              <button
-                onClick={handlePlayClick}
-                className={`flex-1 min-w-[140px] h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold active:scale-98 transition-all shadow-sm ${
-                  isCurrentSong && isPlaying
-                    ? "bg-gray-900 text-white hover:bg-gray-800"
-                    : "bg-indigo-600 text-white hover:bg-indigo-500"
-                }`}
-              >
-                {isCurrentSong && isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4 fill-current" />
-                    <span>Pause Track</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-current ml-0.5" />
-                    <span>Play Track</span>
-                  </>
-                )}
-              </button>
-
-              <div className="relative flex-1 min-w-[140px]">
-                <button
-                  onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                  className="w-full h-11 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 active:scale-98 transition-all shadow-sm"
+        {/* Center Main Screen Video Player */}
+        <div className="flex-1 w-full flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden">
+          {rawVideoUrl && embedUrl ? (
+            <div className="w-full max-w-5xl space-y-4">
+              <YouTubeVideoPlayer
+                embedUrl={embedUrl}
+                title={song.title}
+                isPlaying={isPlaying}
+              />
+              <div className="text-center">
+                <h2
+                  className="text-xl md:text-2xl font-bold text-title font-song-title"
                 >
-                  <Plus className="w-4 h-4 text-gray-500" />
-                  <span>Add to Playlist</span>
-                </button>
-
-                {showPlaylistDropdown && (
-                  <div className="absolute left-0 right-0 bottom-full mb-1 bg-white border border-gray-250 rounded-xl shadow-lg py-1 z-30 max-h-48 overflow-y-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                      Select Playlist
-                    </div>
-                    {playlists.length > 0 ? (
-                      playlists.map(list => {
-                        const isInPlaylist = list.songIds.includes(song.id);
-                        return (
-                          <button
-                            key={list.id}
-                            onClick={() => {
-                              if (isInPlaylist) {
-                                removeSongFromPlaylist(list.id, song.id);
-                              } else {
-                                addSongToPlaylist(list.id, song.id);
-                              }
-                              setShowPlaylistDropdown(false);
-                            }}
-                            className="w-full px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 text-left flex items-center justify-between"
-                          >
-                            <span className="truncate">{list.name}</span>
-                            {isInPlaylist ? (
-                              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.2 rounded font-semibold border border-indigo-100">
-                                Added
-                              </span>
-                            ) : (
-                              <Plus className="w-3.5 h-3.5 text-gray-400" />
-                            )}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="px-3 py-2 text-xs text-gray-400 italic text-center">
-                        No custom playlists
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Lyrics & Next Up Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Lyrics column */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-sm md:col-span-2 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              Lyrics / Sync Script
-            </h3>
-            <div className="h-64 overflow-y-auto pr-2 text-sm text-gray-600 space-y-4 leading-relaxed font-mono text-center md:text-left bg-gray-50/50 p-4 rounded-xl border border-gray-150 scrollbar-thin scrollbar-thumb-gray-200">
-              {song.lyrics ? (
-                song.lyrics.split("\n").map((line, idx) => (
-                  <p key={idx} className="transition-colors hover:text-gray-900">
-                    {line}
-                  </p>
-                ))
-              ) : (
-                <p className="italic text-gray-400 text-center pt-24">
-                  Lyrics are not available for this track.
+                  {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
+                </h2>
+                <p className="text-xs text-muted mt-1">
+                  {selectedLanguage === "english"
+                    ? (song.artistNameEnglish || song.artist)
+                    : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
                 </p>
-              )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center px-8 py-16">
+              <div className="w-20 h-20 rounded-full bg-card border border-line flex items-center justify-center mb-5 shadow-sm">
+                <YouTubeIcon className="w-9 h-9 text-muted" />
+              </div>
+              <h4 className="text-lg font-bold text-muted mb-2">
+                No Video Available
+              </h4>
+              <p className="text-sm text-muted max-w-sm">
+                A video for this track has not been added yet.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 2. FULL SCREEN IMMERSIVE LYRICS VIEW (?view=lyrics)
+  if (viewMode === "lyrics") {
+    return (
+      <div
+        className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
+        style={{
+          background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)},0.05) 45%, var(--canvas) 100%)`,
+        }}
+      >
+        <div className="p-6 flex items-center justify-between z-40">
+          <button
+            onClick={() => router.back()}
+            className="p-1.5 md:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+            title="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Font Size Controls */}
+            <div className="flex items-center bg-card-hover/80 backdrop-blur-sm border border-line/40 rounded-full p-0.5 shadow-sm h-8 md:h-9 overflow-hidden shrink-0">
+              <button
+                onClick={decreaseFontSize}
+                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-[11px]"
+                title="Decrease Font Size"
+              >
+                A
+              </button>
+              <button
+                onClick={increaseFontSize}
+                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-sm md:text-base"
+                title="Increase Font Size"
+              >
+                A
+              </button>
+            </div>
+
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+              title="Share song"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            {/* Copy Lyrics Button */}
+            <button
+              onClick={handleCopyLyrics}
+              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+              title="Copy lyrics to clipboard"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+
+            <LanguageSegmented
+              selected={selectedLanguage}
+              onChange={setSelectedLanguage}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
+          <SongLyrics
+            song={song}
+            isImmersive={true}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+            fontSizeMultiplier={fontSizeMultiplier}
+          />
+        </div>
+
+        {/* Share/Copy Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-24 right-8 bg-[#D4A32A] text-black px-4 py-2.5 rounded-xl text-xs font-black shadow-2xl flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-3">
+            <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. MAIN SONG DETAILS VIEW (DEFAULT)
+  return (
+    <div
+      className="relative flex-1 min-h-0 flex flex-col overflow-y-auto bg-canvas text-copy min-w-0 font-lato"
+      style={{
+        background: isLight
+          ? "none"
+          : `radial-gradient(140% 80% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, transparent 80%)`,
+      }}
+    >
+      {/* Sticky Action Header Bar */}
+      <div className="sticky top-0 z-30 flex items-center justify-between px-6 md:px-8 py-3 bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm">
+        {/* Left Side: Back button + Titles */}
+        <div className="flex items-center gap-3.5 min-w-0">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+            title="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex flex-col leading-tight min-w-0">
+            <h1
+              className="text-title text-base md:text-lg font-bold truncate font-song-title"
+            >
+              {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
+            </h1>
+            {song.artist && (
+              <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
+                {selectedLanguage === "english"
+                  ? (song.artistNameEnglish || song.artist)
+                  : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Action Icons Group */}
+        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
+          <button
+            onClick={handlePlayClick}
+            className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
+            title={isThisPlaying ? "Pause" : "Play"}
+          >
+            {isThisPlaying ? (
+              <Pause className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            )}
+          </button>
+
+          {/* 2. Favorite Button */}
+          <ProtectedAction action={() => toggleFavorite(song.id)}>
+            <button
+              onClick={() => toggleFavorite(song.id)}
+              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
+                isFavorited
+                  ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                  : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
+              }`}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart
+                className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`}
+              />
+            </button>
+          </ProtectedAction>
+
+          {/* 3. Add to Playlist Icon with Dropdown */}
+          <div className="relative" ref={playlistDropdownRef}>
+            <ProtectedAction
+              action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+            >
+              <button
+                onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                title="Add to playlist"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </ProtectedAction>
+            {showPlaylistDropdown && (
+              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
+                  Select Playlist
+                </div>
+                {playlists.length > 0 ? (
+                  playlists.map((list) => {
+                    const isInPlaylist = list.songIds.includes(song.id);
+                    return (
+                      <button
+                        key={list.id}
+                        onClick={() => {
+                          if (isInPlaylist) {
+                            removeSongFromPlaylist(list.id, song.id);
+                          } else {
+                            addSongToPlaylist(list.id, song.id);
+                          }
+                          setShowPlaylistDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
+                      >
+                        <span className="truncate">{list.name}</span>
+                        {isInPlaylist ? (
+                          <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
+                            Added
+                          </span>
+                        ) : (
+                          <Plus className="w-3.5 h-3.5 text-muted" />
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-3 py-2 text-xs text-muted italic text-center">
+                    No custom playlists
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 4. Watch Video Button */}
+          {rawVideoUrl && embedUrl && (
+            <Link
+              href={`/song/${encodeURIComponent(song.slug || song.id)}?view=video`}
+              onClick={() => {
+                if (currentSong?.id !== song.id) playSong(song);
+              }}
+              className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
+              title="Watch Video"
+            >
+              <Video className="w-4 h-4 text-red-400" />
+            </Link>
+          )}
+
+          {/* 5. Share Button — uses native share sheet or copies link */}
+          <div className="relative" ref={shareDropdownRef}>
+            <button
+              onClick={() => {
+                // On mobile, try native share directly without showing dropdown
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  handleShare();
+                } else {
+                  setShowShareDropdown(!showShareDropdown);
+                }
+              }}
+              className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+              title="Share song"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            {showShareDropdown && (
+              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 font-sans animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
+                  Share
+                </div>
+                {/* Share via native sheet */}
+                <button
+                  onClick={handleShare}
+                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4 text-muted shrink-0" />
+                  <span className="font-semibold text-title">Share</span>
+                </button>
+                {/* Copy Link */}
+                <button
+                  onClick={() => handleCopyLink()}
+                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
+                >
+                  <LinkIcon className="w-4 h-4 text-muted shrink-0" />
+                  <span className="font-semibold text-title">Copy Link</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 6. Copy Icon (Copies full lyrics text) */}
+          <button
+            onClick={handleCopyLyrics}
+            className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+            title="Copy lyrics to clipboard"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
+        {/* Lyrics Section */}
+        <div className="space-y-4 pt-2 flex-1 flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-[0.25em]">
+              Lyrics
+            </h3>
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <LanguageSegmented
+                selected={selectedLanguage}
+                onChange={setSelectedLanguage}
+              />
+
+              {/* Size & Full Screen Controls */}
+              <div className="flex items-center bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm h-9 md:h-11 overflow-hidden shrink-0">
+                {/* A- (Decrease Font Size) */}
+                <button
+                  onClick={decreaseFontSize}
+                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-xs"
+                  title="Decrease Font Size"
+                >
+                  A
+                </button>
+                {/* A+ (Increase Font Size) */}
+                <button
+                  onClick={increaseFontSize}
+                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-base"
+                  title="Increase Font Size"
+                >
+                  A
+                </button>
+                <div className="w-[1px] h-4 bg-line/30 mx-1 shrink-0" />
+                {/* Full Screen Toggle */}
+                <button
+                  onClick={toggleFullscreenLyrics}
+                  className={`px-3 h-full flex items-center justify-center transition-all cursor-pointer rounded-full hover:bg-card/45 ${
+                    isFullscreenLyrics
+                      ? "text-amber-500 font-bold"
+                      : "text-muted hover:text-title"
+                  }`}
+                  title="Toggle Fullscreen Lyrics"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Up Next column */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-sm flex flex-col space-y-4">
-            <div className="flex items-center gap-2">
-              <ListMusic className="w-4 h-4 text-indigo-500" />
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-                Up Next / Suggestions
-              </h3>
-            </div>
-            <div className="flex-1 space-y-3">
-              {upNextList.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => playSong(item)}
-                  className="flex items-center gap-3 p-2 hover:bg-gray-50 border border-transparent hover:border-gray-200 rounded-lg cursor-pointer transition-all duration-200"
-                >
-                  <img
-                    src={item.coverUrl}
-                    alt={item.title}
-                    className="w-10 h-10 object-cover rounded border border-gray-150"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="font-semibold text-xs text-gray-800 block truncate">
-                      {item.title}
-                    </span>
-                    <span className="text-[10px] text-gray-400 block truncate">
-                      {item.artist}
-                    </span>
-                  </div>
-                  <button className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
-                    {currentSong?.id === item.id && isPlaying ? (
-                      <Pause className="w-3.5 h-3.5 text-gray-700 fill-current" />
-                    ) : (
-                      <Play className="w-3.5 h-3.5 text-gray-400 fill-current ml-0.5" />
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
+          <div
+            ref={lyricsContainerRef}
+            className={`relative flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden border border-line bg-card shadow-sm transition-all ${
+              isFullscreenLyrics ? "p-6 md:p-12 bg-card" : ""
+            }`}
+          >
+            {isFullscreenLyrics && (
+              <button
+                onClick={toggleFullscreenLyrics}
+                className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-card/90 backdrop-blur-md border border-line/60 hover:bg-card-hover text-dim hover:text-title text-[11px] font-bold rounded-full px-3 py-1.5 shadow-lg transition-all cursor-pointer active:scale-95"
+                title="Exit Fullscreen"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exit Fullscreen</span>
+              </button>
+            )}
+            <SongLyrics
+              song={song}
+              isImmersive={true}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+              fontSizeMultiplier={fontSizeMultiplier}
+            />
           </div>
         </div>
       </div>
+
+      {/* Share/Copy Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-24 right-8 bg-[#D4A32A] text-black px-4 py-2.5 rounded-xl text-xs font-black shadow-2xl flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-3">
+          <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function SongPage({ params }) {
+  return (
+    <Suspense fallback={<SongPageSkeleton />}>
+      <SongPageContent params={params} />
+    </Suspense>
   );
 }

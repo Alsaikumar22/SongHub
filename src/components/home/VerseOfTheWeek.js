@@ -1,0 +1,135 @@
+"use client";
+
+import React, { useState, useCallback } from "react";
+import { Share2, Check } from "lucide-react";
+import useDailyVerse from "@/hooks/useDailyVerse";
+import { VerseSkeleton } from "@/components/ui/SongSkeleton";
+
+export default function VerseOfTheWeek() {
+  const { verse, reference, referenceTelugu, loading } = useDailyVerse();
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    const currentVerse = verse;
+    if (!currentVerse) return;
+
+    const verseUrl = "https://youworship.world";
+
+    const shareText = `${currentVerse.textEnglish}
+
+— ${reference}
+
+${currentVerse.textTelugu}
+— ${referenceTelugu}
+
+${verseUrl}
+YouWorship — Daily Bible Verse`;
+
+    // Try native Web Share API first (mobile & modern desktop)
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: `YouWorship - ${reference}`,
+          text: shareText,
+          url: verseUrl,
+        });
+        return;
+      } catch (err) {
+        // User cancelled or share failed — fall through to clipboard
+        if (err.name !== "AbortError") {
+          console.debug("Web Share API error:", err);
+        }
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+      } else {
+        // Older fallback for browsers without Clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = shareText;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.debug("Clipboard API error:", err);
+    }
+  }, [verse, reference, referenceTelugu]);
+
+  if (loading || !verse) {
+    return <VerseSkeleton />;
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-card-hover/20 via-card/10 to-card-hover/20 border border-line/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-title/30 transition-all duration-500 group">
+      {/* Ambient Background Glows */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-title/5 rounded-full blur-[60px] pointer-events-none group-hover:bg-title/8 transition-all duration-700" />
+      <div className="absolute bottom-0 left-0 w-36 h-36 bg-white/2 rounded-full blur-2xl pointer-events-none" />
+
+      {/* Left Accent Bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-title via-title/50 to-transparent" />
+
+      {/* Content Column */}
+      <div className="relative z-10 flex-1 space-y-4 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-title uppercase tracking-widest bg-title/10 px-2.5 py-1 rounded-full">
+            Verse of the Day
+          </span>
+          <span className="h-px w-8 bg-line" />
+          <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
+            {reference}
+          </span>
+        </div>
+        <div className="space-y-3">
+          {/* Telugu verse */}
+          <p className="text-title text-xl md:text-2xl font-bold leading-[1.6] font-telugu text-left drop-shadow-sm group-hover:text-title transition-colors duration-300">
+            &ldquo;{verse.textTelugu}&rdquo;
+          </p>
+          {/* English verse */}
+          <p className="text-muted/80 text-sm md:text-base italic font-medium leading-relaxed text-left">
+            &ldquo;{verse.textEnglish}&rdquo;
+          </p>
+        </div>
+      </div>
+
+      {/* Right Citation block */}
+      <div className="relative z-10 flex flex-col items-end justify-between shrink-0 self-stretch text-right md:border-l md:border-line/20 md:pl-6 pt-2 md:pt-0">
+        {/* Share icon-only button */}
+        <button
+          onClick={handleShare}
+          className="relative w-8 h-8 rounded-lg bg-card-hover hover:bg-card border border-line transition-all duration-200 text-dim hover:text-title flex items-center justify-center group/btn"
+          title={copied ? "Copied!" : "Share this verse"}
+          aria-label="Share verse"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-green-400" />
+          ) : (
+            <Share2 className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform duration-200" />
+          )}
+          {copied && (
+            <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-green-400 bg-card border border-line rounded px-1.5 py-0.5 whitespace-nowrap shadow-sm">
+              Copied!
+            </span>
+          )}
+        </button>
+
+        <div className="mt-auto space-y-1">
+          <span className="text-xs font-bold text-title block">
+            {referenceTelugu}
+          </span>
+          <span className="text-[10px] text-dim block tracking-wider uppercase font-semibold">
+            Bible Verse Daily
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
