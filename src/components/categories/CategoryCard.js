@@ -7,7 +7,7 @@ import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 export default function CategoryCard({ category, language, onClick }) {
   const { songs } = useAudio();
-  const name = language === "telugu" ? category.nameTe : category.nameEn;
+  const name = category.nameEn;
   const songIds = language === "telugu" ? category.songIdsTe : category.songIdsEn;
   const songCount = (songs || []).filter((song) => {
     // Verify language matches the selected tab language strictly

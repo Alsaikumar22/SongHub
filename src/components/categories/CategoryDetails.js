@@ -34,8 +34,16 @@ export default function CategoryDetails({ category, language, onBack }) {
 
     // 1. Match by database category array or string
     const matchByCategoryField = Array.isArray(song.categoryArr)
-      ? song.categoryArr.some(cat => cat.toLowerCase() === category.nameEn.toLowerCase() || cat.toLowerCase() === category.nameTe.toLowerCase())
-      : (typeof song.category === "string" && (song.category.toLowerCase() === category.nameEn.toLowerCase() || song.category.toLowerCase() === category.nameTe.toLowerCase()));
+      ? song.categoryArr.some(cat => 
+          cat.toLowerCase() === category.nameEn.toLowerCase() || 
+          cat.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === cat.toLowerCase()))
+        )
+      : (typeof song.category === "string" && (
+          song.category.toLowerCase() === category.nameEn.toLowerCase() || 
+          song.category.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === song.category.toLowerCase()))
+        ));
 
     // 2. Fallback: match by the hardcoded list in categoryData.js
     const matchByHardcodedList = songIds.includes(song.id);

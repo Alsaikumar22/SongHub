@@ -33,13 +33,12 @@ import {
 } from "lucide-react";
 import NextImage from "next/image";
 
-// ─── Constants ─────────────────────────────────────────────────────
 const CATEGORIES = [
-  "Morning Worship", "Prayer Songs", "Worship Songs", "Praise Songs",
-  "Salvation Songs", "Faith & Hope Songs", "Repentance Songs", "Holy Spirit Songs",
-  "Healing & Miracle Songs", "Bible-Based Songs", "Youth Songs", "Communion Songs",
-  "Christmas Songs", "Good Friday Songs", "Easter Songs", "Baptism Songs",
-  "Marriage Songs", "Thanksgiving Songs",
+  "Praise Songs", "Worship Songs", "Encouraging Songs", "Hope Songs", "Gospel Songs", "Prayer Songs", 
+  "Commitment Songs", "Comfort Songs", "Christmas Songs", "Repentance Songs", "Thanksgiving Songs", 
+  "Correction Songs", "Good Friday Songs", "Second Coming Songs", "Marriage Songs",
+  "Morning Worship Songs", "Salvation Songs", "Holy Spirit Songs", "Healing & Miracles Songs", 
+  "Bible-Based Songs", "Youth Songs", "Communion Songs", "Easter Songs", "Baptism Songs",
 ];
 
 const LANGUAGES = [

@@ -14,7 +14,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   const [sharedSongId, setSharedSongId] = useState(null);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
 
-  const categoryName = language === "telugu" ? category.nameTe : category.nameEn;
+  const categoryName = category.nameEn;
 
   // Auto-close options dropdown on outside clicks
   useEffect(() => {
