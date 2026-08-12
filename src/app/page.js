@@ -1,7 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import EnterAppButton from "@/components/landing/EnterAppButton";
 
 /**
  * Landing / Welcome screen — shown at the root URL (youworship.world).
@@ -10,14 +9,34 @@ import { ArrowRight } from "lucide-react";
  *   subtitle, tagline and a glassmorphism "Explore Songs" CTA that
  *   opens the application at /home.
  *
+ * The landing gate (src/middleware.js) sends every public app URL here with a
+ * `redirect` param (e.g. a shared song link → /?redirect=%2Fsong%2Fxyz), so the
+ * CTA opens the visitor's intended destination after they click through.
+ *
  * Legacy deep links (e.g. /?tab=..., /?q=..., /?auth=...) that the app
  * previously generated are forwarded to /home so bookmarks, shared links
  * and the auth modal keep working after the move.
  */
-const APP_PARAMS = ["tab", "q", "category", "playlistId", "auth", "redirect"];
+const APP_PARAMS = ["tab", "q", "category", "playlistId", "auth"];
 
 export default async function LandingPage({ searchParams }) {
   const params = await searchParams;
+
+  // Destination the visitor was originally heading to (set by the landing
+  // gate). Decode first, then only accept same-origin paths (no protocol-
+  // relative / absolute URLs) to avoid open-redirect tricks.
+  let redirectTo = null;
+  if (typeof params?.redirect === "string" && params.redirect) {
+    try {
+      const decoded = decodeURIComponent(params.redirect);
+      if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+        redirectTo = decoded;
+      }
+    } catch {
+      // Malformed encoding → ignore.
+    }
+  }
+
   if (params && APP_PARAMS.some((key) => params[key] !== undefined)) {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -113,13 +132,12 @@ export default async function LandingPage({ searchParams }) {
           className="landing-fade-up mt-7 md:mt-9"
           style={{ animationDelay: "0.6s" }}
         >
-          <Link
-            href="/home"
-            className="landing-cta group relative inline-flex items-center justify-center gap-2.5 md:gap-3 rounded-[30px] px-7 py-3.5 md:px-11 md:py-[18px] text-[clamp(0.95rem,min(2vh,4.2vw),1.35rem)] font-serif font-bold text-white bg-white/[0.06] backdrop-blur-xl border border-[#D9A544]/50 shadow-[0_0_30px_rgba(242,193,78,0.22),inset_0_1px_0_rgba(255,255,255,0.14)] cursor-pointer"
-          >
-            <span>Explore Songs</span>
-            <ArrowRight className="w-4 h-4 md:w-6 md:h-6 text-[#F2C14E] transition-transform duration-300 group-hover:translate-x-1.5" />
-          </Link>
+          <EnterAppButton href={redirectTo || "/home"} />
+          {redirectTo && (
+            <p className="mt-4 text-xs md:text-sm text-[#8A93A8]/90 tracking-wide">
+              You were sent to a song — open it after entering.
+            </p>
+          )}
         </div>
       </div>
     </div>

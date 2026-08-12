@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Music,
-  Video,
   FileText,
   Plus,
   Share2,
@@ -768,7 +767,7 @@ function SongPageContent({ params }) {
               className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
               title="Watch Video"
             >
-              <Video className="w-4 h-4 text-red-400" />
+              <YouTubeIcon className="w-4 h-4 text-red-400" />
             </Link>
           )}
 

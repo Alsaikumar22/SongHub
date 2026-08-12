@@ -21,7 +21,10 @@ const {
 const ytdl = require("@distube/ytdl-core");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -57,7 +60,9 @@ function getYoutubeUrl(data) {
 }
 
 async function fetchDuration(youtubeId) {
-  const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${youtubeId}`);
+  const info = await ytdl.getInfo(
+    `https://www.youtube.com/watch?v=${youtubeId}`,
+  );
   const seconds = Number(info.videoDetails.lengthSeconds);
   return seconds && seconds > 0 ? seconds : null;
 }
@@ -75,7 +80,10 @@ async function fetchDurations() {
     const needsDuration = [];
     for (const docSnap of snap.docs) {
       const data = docSnap.data();
-      const hasDuration = data.duration !== undefined && data.duration !== null && Number(data.duration) > 0;
+      const hasDuration =
+        data.duration !== undefined &&
+        data.duration !== null &&
+        Number(data.duration) > 0;
       if (hasDuration) continue;
 
       const youtubeUrl = getYoutubeUrl(data);
@@ -106,13 +114,17 @@ async function fetchDurations() {
       const start = b * CONCURRENT_BATCH;
       const chunk = needsDuration.slice(start, start + CONCURRENT_BATCH);
 
-      console.log(`─── Batch ${b + 1}/${batchCount} (${chunk.length} songs) ───`);
+      console.log(
+        `─── Batch ${b + 1}/${batchCount} (${chunk.length} songs) ───`,
+      );
 
       const results = await Promise.allSettled(
         chunk.map((song) =>
-          fetchDuration(song.youtubeId)
-            .then((seconds) => ({ ...song, seconds }))
-        )
+          fetchDuration(song.youtubeId).then((seconds) => ({
+            ...song,
+            seconds,
+          })),
+        ),
       );
 
       const fbBatch = writeBatch(db);

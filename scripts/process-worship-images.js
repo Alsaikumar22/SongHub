@@ -15,7 +15,8 @@
  *    c. Update `imageUrl` and `media.image` for matched songs in Firestore.
  */
 
-require("dotenv").config({ path: ".env.local" });
+require("dotenv").config({ path: ".env" });
+require("dotenv").config({ path: ".env.local", override: true });
 
 const fs = require("fs");
 const path = require("path");
@@ -23,7 +24,11 @@ const sharp = require("sharp");
 const { createClient } = require("@supabase/supabase-js");
 const adminModule = require("firebase-admin");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const admin = adminModule.getApps ? adminModule : (adminModule.apps ? adminModule : (adminModule.default || adminModule));
+const admin = adminModule.getApps
+  ? adminModule
+  : adminModule.apps
+    ? adminModule
+    : adminModule.default || adminModule;
 
 // ─── Configuration & Directories ──────────────────────────────────────────────
 const inputFolder = "./public/song pictures";
@@ -37,36 +42,43 @@ const WEBP_EFFORT = 4;
 
 // ─── Supabase Client Initialization ──────────────────────────────────────────
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseSecretKey =
+  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseSecretKey) {
-  console.error("❌ Supabase credentials missing in .env.local!");
+  console.error("❌ Supabase credentials missing in env files!");
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseSecretKey);
 
 // ─── Firebase Admin Initialization ───────────────────────────────────────────
 let db = null;
-const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+const firebaseProjectId =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 let firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
 if (firebasePrivateKey) {
   firebasePrivateKey = firebasePrivateKey.trim();
-  firebasePrivateKey = firebasePrivateKey.replace(/^[^a-zA-Z0-9+\/=_-]+|[^a-zA-Z0-9+\/=_-]+$/g, '');
-  if (firebasePrivateKey.startsWith('nMII')) {
-    firebasePrivateKey = '-----BEGIN PRIVATE KEY-----\n' + firebasePrivateKey.substring(1);
+  firebasePrivateKey = firebasePrivateKey.replace(
+    /^[^a-zA-Z0-9+\/=_-]+|[^a-zA-Z0-9+\/=_-]+$/g,
+    "",
+  );
+  if (firebasePrivateKey.startsWith("nMII")) {
+    firebasePrivateKey =
+      "-----BEGIN PRIVATE KEY-----\n" + firebasePrivateKey.substring(1);
   }
-  if (!firebasePrivateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
-    firebasePrivateKey = '-----BEGIN PRIVATE KEY-----\n' + firebasePrivateKey;
+  if (!firebasePrivateKey.startsWith("-----BEGIN PRIVATE KEY-----")) {
+    firebasePrivateKey = "-----BEGIN PRIVATE KEY-----\n" + firebasePrivateKey;
   }
-  if (!firebasePrivateKey.endsWith('-----END PRIVATE KEY-----')) {
-    firebasePrivateKey = firebasePrivateKey + '\n-----END PRIVATE KEY-----';
+  if (!firebasePrivateKey.endsWith("-----END PRIVATE KEY-----")) {
+    firebasePrivateKey = firebasePrivateKey + "\n-----END PRIVATE KEY-----";
   }
   firebasePrivateKey = firebasePrivateKey.replace(/\\n/g, "\n");
 }
 
-const apps = admin.getApps ? admin.getApps() : (admin.apps || []);
+const apps = admin.getApps ? admin.getApps() : admin.apps || [];
 if (apps.length === 0) {
   if (firebaseProjectId && firebaseClientEmail && firebasePrivateKey) {
     try {
@@ -83,7 +95,7 @@ if (apps.length === 0) {
       process.exit(1);
     }
   } else {
-    console.error("❌ Firebase Admin credentials missing in .env.local!");
+    console.error("❌ Firebase Admin credentials missing in env files!");
     process.exit(1);
   }
 } else {
@@ -145,9 +157,7 @@ async function uploadToSupabase(buffer, storagePath) {
 
 function getPublicUrl(storagePath) {
   const safeKey = getSafeStorageKey(storagePath);
-  const { data } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(safeKey);
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(safeKey);
   return data.publicUrl;
 }
 
@@ -180,16 +190,28 @@ async function run() {
       metadataList = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
       console.log(`Loaded ${metadataList.length} existing metadata items.`);
     } catch (err) {
-      console.warn(`⚠️ Error reading metadata file: ${err.message}. Starting fresh.`);
+      console.warn(
+        `⚠️ Error reading metadata file: ${err.message}. Starting fresh.`,
+      );
     }
   }
 
-  const files = fs.readdirSync(inputFolder)
-    .filter(f => f.endsWith(".png") || f.endsWith(".jpg") || f.endsWith(".jpeg") || f.endsWith(".webp"));
+  const files = fs
+    .readdirSync(inputFolder)
+    .filter(
+      (f) =>
+        f.endsWith(".png") ||
+        f.endsWith(".jpg") ||
+        f.endsWith(".jpeg") ||
+        f.endsWith(".webp"),
+    );
 
   console.log(`Found ${files.length} images in "${inputFolder}"`);
 
-  let nextId = metadataList.length > 0 ? Math.max(...metadataList.map(item => item.id)) + 1 : 1;
+  let nextId =
+    metadataList.length > 0
+      ? Math.max(...metadataList.map((item) => item.id)) + 1
+      : 1;
   const imageMap = {}; // original filename -> publicUrl
 
   // 1. Process local images
@@ -201,7 +223,9 @@ async function run() {
     const uploadedFileName = title + ".webp";
 
     // Check if already in metadata
-    let existingItem = metadataList.find(item => item.originalFileName === file);
+    let existingItem = metadataList.find(
+      (item) => item.originalFileName === file,
+    );
 
     if (existingItem && existingItem.uploaded && existingItem.publicUrl) {
       console.log(`[${i + 1}/${files.length}] Already processed: ${file}`);
@@ -213,7 +237,9 @@ async function run() {
     try {
       // Compress to WebP
       const compRes = await compressToWebP(inputPath);
-      console.log(`  Compressed: ${formatBytes(compRes.originalSize)} -> ${formatBytes(compRes.compressedSize)}`);
+      console.log(
+        `  Compressed: ${formatBytes(compRes.originalSize)} -> ${formatBytes(compRes.compressedSize)}`,
+      );
 
       // Upload to Supabase
       const storagePath = uploadedFileName;
@@ -230,7 +256,7 @@ async function run() {
         bucket: BUCKET_NAME,
         path: storagePath,
         publicUrl: publicUrl,
-        uploaded: true
+        uploaded: true,
       };
 
       if (existingItem) {
@@ -244,8 +270,11 @@ async function run() {
       imageMap[file] = publicUrl;
 
       // Save metadata JSON on every iteration to be safe
-      fs.writeFileSync(metadataPath, JSON.stringify(metadataList, null, 2), "utf-8");
-
+      fs.writeFileSync(
+        metadataPath,
+        JSON.stringify(metadataList, null, 2),
+        "utf-8",
+      );
     } catch (err) {
       console.error(`  ❌ Error processing ${file}: ${err.message}`);
     }
@@ -254,15 +283,17 @@ async function run() {
   console.log("\n📄 Metadata JSON file saved.");
 
   // 2. Fetch all songs from Youworship_songs and sync URLs
-  console.log("\n📥 Fetching all songs from Firestore collection 'Youworship_songs'...");
+  console.log(
+    "\n📥 Fetching all songs from Firestore collection 'Youworship_songs'...",
+  );
   const songsSnap = await db.collection(FIRESTORE_COLLECTION).get();
   console.log(`Loaded ${songsSnap.docs.length} song documents from Firestore.`);
 
-  const dbSongs = songsSnap.docs.map(doc => ({
+  const dbSongs = songsSnap.docs.map((doc) => ({
     id: doc.id,
     ref: doc.ref,
     title: doc.data().title,
-    media: doc.data().media || {}
+    media: doc.data().media || {},
   }));
 
   console.log("\n🔄 Syncing image URLs to Firestore documents...");
@@ -277,24 +308,32 @@ async function run() {
     const normalizedFile = normalizeTitle(fileTitle);
 
     // Look for exact normalized title match
-    const match = dbSongs.find(s => normalizeTitle(s.title) === normalizedFile);
+    const match = dbSongs.find(
+      (s) => normalizeTitle(s.title) === normalizedFile,
+    );
 
     if (match) {
       matchedCount++;
       // Check if document already has the same URL to avoid redundant writes
       if (match.media.image === publicUrl) {
-        console.log(`✨ Song "${match.title}" (ID: ${match.id}) already has correct image URL in Firestore.`);
+        console.log(
+          `✨ Song "${match.title}" (ID: ${match.id}) already has correct image URL in Firestore.`,
+        );
         continue;
       }
 
-      console.log(`🛠️ Updating Firestore for "${match.title}" (ID: ${match.id})`);
+      console.log(
+        `🛠️ Updating Firestore for "${match.title}" (ID: ${match.id})`,
+      );
       await match.ref.update({
         imageUrl: publicUrl,
-        "media.image": publicUrl
+        "media.image": publicUrl,
       });
       updatedCount++;
     } else {
-      console.warn(`⚠️ No matching song found in Youworship_songs for image file: "${fileTitle}"`);
+      console.warn(
+        `⚠️ No matching song found in Youworship_songs for image file: "${fileTitle}"`,
+      );
     }
   }
 

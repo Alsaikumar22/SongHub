@@ -11,7 +11,11 @@ import {
 } from "firebase/firestore";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -41,9 +45,18 @@ async function fixImageUrls() {
       const updatedFields = {};
 
       // 1. Check and fix missing .webp extension in Supabase image URLs
-      if (data.media && typeof data.media === "object" && typeof data.media.image === "string") {
+      if (
+        data.media &&
+        typeof data.media === "object" &&
+        typeof data.media.image === "string"
+      ) {
         const img = data.media.image;
-        if (img.includes("supabase.co") && !img.endsWith(".webp") && !img.endsWith(".png") && !img.endsWith(".jpg")) {
+        if (
+          img.includes("supabase.co") &&
+          !img.endsWith(".webp") &&
+          !img.endsWith(".png") &&
+          !img.endsWith(".jpg")
+        ) {
           const fixedImg = img + ".webp";
           updatedFields["media.image"] = fixedImg;
           needsUpdate = true;
@@ -54,9 +67,17 @@ async function fixImageUrls() {
       }
 
       // 2. Check and clear Unsplash 404 images
-      if (data.media && typeof data.media === "object" && typeof data.media.image === "string") {
+      if (
+        data.media &&
+        typeof data.media === "object" &&
+        typeof data.media.image === "string"
+      ) {
         const img = data.media.image;
-        if (img.includes("unsplash.com") && (img.includes("photo-1594979222473") || img.includes("photo-1593011378399"))) {
+        if (
+          img.includes("unsplash.com") &&
+          (img.includes("photo-1594979222473") ||
+            img.includes("photo-1593011378399"))
+        ) {
           updatedFields["media.image"] = "";
           needsUpdate = true;
           console.log(`🧹 Clearing 404 Unsplash image for "${data.title}":`);
@@ -72,9 +93,13 @@ async function fixImageUrls() {
 
     if (updateCount > 0) {
       await batch.commit();
-      console.log(`\n✅ Successfully committed ${updateCount} document updates to Firestore.`);
+      console.log(
+        `\n✅ Successfully committed ${updateCount} document updates to Firestore.`,
+      );
     } else {
-      console.log("\n✨ No malformed image URLs were found. Everything is clean!");
+      console.log(
+        "\n✨ No malformed image URLs were found. Everything is clean!",
+      );
     }
   } catch (error) {
     console.error("❌ Error running repair script:", error);

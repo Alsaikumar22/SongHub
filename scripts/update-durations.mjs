@@ -8,7 +8,7 @@
  * Run: node scripts/update-durations.mjs
  *
  * Prerequisites:
- *   1. Update SongHub/.env.local with real Firebase credentials
+ *   1. Update SongHub/.env.local or SongHub/.env with real Firebase credentials
  *   2. music-metadata & ytdl-core packages installed
  */
 
@@ -18,16 +18,15 @@ import path from "path";
 import { setTimeout as sleep } from "timers/promises";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const { initializeApp } = await import("firebase/app");
-const {
-  getFirestore,
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-} = await import("firebase/firestore");
+const { getFirestore, collection, getDocs, doc, updateDoc } =
+  await import("firebase/firestore");
 const { parseFile } = await import("music-metadata");
 const ytdlCore = await import("ytdl-core");
 const ytdl = ytdlCore.default || ytdlCore;
@@ -46,7 +45,10 @@ const missing = Object.entries(firebaseConfig)
   .filter(([, v]) => !v || v.startsWith("AIzaSyDummy"))
   .map(([k]) => k);
 if (missing.length > 0) {
-  console.error("❌ Firebase credentials not configured.\nMissing:", missing.join(", "));
+  console.error(
+    "❌ Firebase credentials not configured.\nMissing:",
+    missing.join(", "),
+  );
   process.exit(1);
 }
 
@@ -60,7 +62,10 @@ function formatDuration(seconds) {
   const secs = Math.round(seconds);
   const m = Math.floor(secs / 60);
   const s = secs % 60;
-  return { duration: secs, durationFormatted: `${m}:${s.toString().padStart(2, "0")}` };
+  return {
+    duration: secs,
+    durationFormatted: `${m}:${s.toString().padStart(2, "0")}`,
+  };
 }
 
 function extractYouTubeId(url) {
@@ -112,14 +117,19 @@ async function getAudioDuration(audioUrl) {
       });
       if (response.ok) {
         const buffer = Buffer.from(await response.arrayBuffer());
-        const metadata = await parseFile(buffer, path.extname(audioUrl) || ".mp3");
+        const metadata = await parseFile(
+          buffer,
+          path.extname(audioUrl) || ".mp3",
+        );
         const seconds = metadata.format.duration;
         if (seconds && seconds > 0) {
           return formatDuration(seconds);
         }
       }
     } catch (streamErr) {
-      console.warn(`  ⚠️  Audio metadata failed: ${streamErr.message.slice(0, 80)}`);
+      console.warn(
+        `  ⚠️  Audio metadata failed: ${streamErr.message.slice(0, 80)}`,
+      );
     }
   }
   return null;
@@ -144,7 +154,8 @@ async function updateDurations() {
   for (let i = 0; i < songs.length; i++) {
     const song = songs[i];
     const rawAudio = song.media?.audio || song.audioUrl || "";
-    const rawVideo = song.media?.video || song.videoUrl || song.youtubeUrl || "";
+    const rawVideo =
+      song.media?.video || song.videoUrl || song.youtubeUrl || "";
 
     // Skip if already has a valid duration (number or formatted string)
     const existingDuration = song.duration;
@@ -155,7 +166,9 @@ async function updateDurations() {
         existingDuration !== "0:00");
 
     if (hasValidDuration) {
-      console.log(`  ⏭️  [${i + 1}/${songs.length}] ${song.title || song.id} — already has duration (${existingDuration})`);
+      console.log(
+        `  ⏭️  [${i + 1}/${songs.length}] ${song.title || song.id} — already has duration (${existingDuration})`,
+      );
       skipped++;
       continue;
     }
@@ -164,12 +177,16 @@ async function updateDurations() {
     const mediaUrl = rawAudio || rawVideo;
 
     if (!mediaUrl) {
-      console.log(`  ⏭️  [${i + 1}/${songs.length}] ${song.title || song.id} — no media URL`);
+      console.log(
+        `  ⏭️  [${i + 1}/${songs.length}] ${song.title || song.id} — no media URL`,
+      );
       skipped++;
       continue;
     }
 
-    process.stdout.write(`  🔍 [${i + 1}/${songs.length}] ${song.title || song.id}... `);
+    process.stdout.write(
+      `  🔍 [${i + 1}/${songs.length}] ${song.title || song.id}... `,
+    );
 
     let result = null;
 
@@ -218,7 +235,9 @@ async function updateDurations() {
   console.log(`   📝 Total:   ${songs.length}\n`);
 
   if (errors > 0) {
-    console.log("⚠️  Some songs could not be processed. Check the logs above for details.\n");
+    console.log(
+      "⚠️  Some songs could not be processed. Check the logs above for details.\n",
+    );
     process.exit(1);
   }
 

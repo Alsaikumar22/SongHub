@@ -50,6 +50,15 @@ export function getFirebaseAdmin() {
       privateKey = privateKey.slice(1, -1);
     }
     privateKey = privateKey.replace(/\\n/g, "\n").trim();
+
+    // Some env exports lose the PEM header/footer markers. Re-wrap the raw key
+    // body so the Admin SDK still receives a valid PEM string.
+    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
+      privateKey = "-----BEGIN PRIVATE KEY-----\n" + privateKey;
+    }
+    if (!privateKey.includes("-----END PRIVATE KEY-----")) {
+      privateKey = privateKey + "\n-----END PRIVATE KEY-----";
+    }
   }
 
   // Singleton guard: never call initializeApp() more than once.

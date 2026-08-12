@@ -17,12 +17,16 @@ import {
   collection,
   getDocs,
   doc,
-  writeBatch
+  writeBatch,
 } from "firebase/firestore";
 
-// Load environment variables from .env.local
+// Load environment variables from .env and .env.local
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 // ─── Firebase Configuration ──────────────────────────────────────────────────
 const firebaseConfig = {
@@ -66,7 +70,7 @@ function transformLyrics(rawTeluguLyrics, rawEnglishLyrics) {
       format: "original",
       title: "తెలుగు",
       content: rawTeluguLyrics.trim(),
-      isDefault: true
+      isDefault: true,
     });
   }
 
@@ -76,7 +80,7 @@ function transformLyrics(rawTeluguLyrics, rawEnglishLyrics) {
       format: "transliteration",
       title: "Romanized",
       content: rawEnglishLyrics.trim(),
-      isDefault: lyricsArr.length === 0
+      isDefault: lyricsArr.length === 0,
     });
   }
 
@@ -86,7 +90,7 @@ function transformLyrics(rawTeluguLyrics, rawEnglishLyrics) {
       format: "original",
       title: "తెలుగు",
       content: "",
-      isDefault: true
+      isDefault: true,
     });
   }
 
@@ -98,10 +102,11 @@ function transformLyrics(rawTeluguLyrics, rawEnglishLyrics) {
  */
 function transformToNewStructuredSchema(docId, oldData) {
   const now = new Date().toISOString();
-  
-  const artistName = typeof oldData.artist === "object"
-    ? oldData.artist?.name || "Unknown Artist"
-    : (oldData.artist || "Unknown Artist");
+
+  const artistName =
+    typeof oldData.artist === "object"
+      ? oldData.artist?.name || "Unknown Artist"
+      : oldData.artist || "Unknown Artist";
 
   const title = oldData.title || "";
   const slug = oldData.slug || generateSlug(title, artistName, docId);
@@ -121,7 +126,10 @@ function transformToNewStructuredSchema(docId, oldData) {
   if (Array.isArray(oldData.tags)) {
     tagsArr = oldData.tags;
   } else if (typeof oldData.tags === "string") {
-    tagsArr = oldData.tags.split(",").map(t => t.trim()).filter(Boolean);
+    tagsArr = oldData.tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
   } else {
     tagsArr = ["Worship", "Devotional"];
   }
@@ -143,7 +151,10 @@ function transformToNewStructuredSchema(docId, oldData) {
   };
 
   // Year
-  const year = oldData.year !== undefined && oldData.year !== null ? Number(oldData.year) : 2026;
+  const year =
+    oldData.year !== undefined && oldData.year !== null
+      ? Number(oldData.year)
+      : 2026;
 
   // Duration in seconds
   const durationSec = parseDurationToSeconds(oldData.duration);
@@ -154,7 +165,8 @@ function transformToNewStructuredSchema(docId, oldData) {
     lyricsArr = oldData.lyrics;
   } else {
     const rawTe = typeof oldData.lyrics === "string" ? oldData.lyrics : "";
-    const rawEn = typeof oldData.englishLyrics === "string" ? oldData.englishLyrics : "";
+    const rawEn =
+      typeof oldData.englishLyrics === "string" ? oldData.englishLyrics : "";
     lyricsArr = transformLyrics(rawTe, rawEn);
   }
 
@@ -164,7 +176,7 @@ function transformToNewStructuredSchema(docId, oldData) {
     slug,
     artist: {
       id: oldData.artist?.id || null,
-      name: artistName
+      name: artistName,
     },
     language: langCode,
     category: categoryArr,
@@ -175,14 +187,16 @@ function transformToNewStructuredSchema(docId, oldData) {
     lyrics: lyricsArr,
     media: mediaObj,
     createdAt: oldData.createdAt || now,
-    updatedAt: now
+    updatedAt: now,
   };
 }
 
 // ─── Main Migration Function ─────────────────────────────────────────────────
 
 async function updateCollectionToNewSchema() {
-  console.log("🚀 Updating 'Youworship_songs' to the NEW Structured Schema...\n");
+  console.log(
+    "🚀 Updating 'Youworship_songs' to the NEW Structured Schema...\n",
+  );
 
   try {
     const app = initializeApp(firebaseConfig);
@@ -194,7 +208,9 @@ async function updateCollectionToNewSchema() {
     const snapshot = await getDocs(songsRef);
 
     if (snapshot.empty) {
-      console.log("⚠️ Collection 'Youworship_songs' is empty. Trying fallback 'songs' collection...");
+      console.log(
+        "⚠️ Collection 'Youworship_songs' is empty. Trying fallback 'songs' collection...",
+      );
       const oldSnap = await getDocs(collection(db, "songs"));
       if (oldSnap.empty) {
         console.log("⚠️ No documents found in 'songs' either.");
@@ -216,7 +232,10 @@ async function updateCollectionToNewSchema() {
       const oldData = docSnap.data();
 
       const targetDocId = oldData.id || docSnap.id;
-      const newSchemaData = transformToNewStructuredSchema(targetDocId, oldData);
+      const newSchemaData = transformToNewStructuredSchema(
+        targetDocId,
+        oldData,
+      );
 
       const targetRef = doc(db, "Youworship_songs", targetDocId);
       batch.set(targetRef, newSchemaData, { merge: false });
@@ -224,7 +243,9 @@ async function updateCollectionToNewSchema() {
       operationCount++;
       successCount++;
 
-      console.log(`[${i + 1}/${totalDocs}] Updated schema for: "${targetDocId}"`);
+      console.log(
+        `[${i + 1}/${totalDocs}] Updated schema for: "${targetDocId}"`,
+      );
 
       if (operationCount === BATCH_SIZE) {
         console.log(`\n💾 Committing batch of ${operationCount} documents...`);
@@ -236,15 +257,18 @@ async function updateCollectionToNewSchema() {
     }
 
     if (operationCount > 0) {
-      console.log(`\n💾 Committing final batch of ${operationCount} documents...`);
+      console.log(
+        `\n💾 Committing final batch of ${operationCount} documents...`,
+      );
       await batch.commit();
       console.log("✅ Final batch commit successful.\n");
     }
 
     console.log("==================================================");
-    console.log(`🎉 SUCCESS: Updated ${successCount} document(s) to NEW Schema in 'Youworship_songs'!`);
+    console.log(
+      `🎉 SUCCESS: Updated ${successCount} document(s) to NEW Schema in 'Youworship_songs'!`,
+    );
     console.log("==================================================");
-
   } catch (error) {
     console.error("\n❌ Schema update failed with error:", error);
     process.exit(1);

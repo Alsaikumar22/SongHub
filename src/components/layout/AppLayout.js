@@ -197,30 +197,10 @@ function AppLayoutInner({
     return <>{children}</>;
   }
 
-  // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
-  if (authLoading) {
-    return (
-      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans items-center justify-center">
-        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
-          {/* Logo */}
-          <Image
-            src="/youworship-logo.png"
-            alt="YouWorship"
-            width={80}
-            height={80}
-            className="w-20 h-20 object-contain"
-            priority
-          />
-          {/* App Name */}
-          <h1 className="text-2xl font-black text-title tracking-tight">
-            YouWorship
-          </h1>
-          {/* Loading Spinner */}
-          <div className="w-6 h-6 border-2 border-[#D4A32A]/30 border-t-[#D4A32A] rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  // ─── AUTH LOADING: no splash screen ──────────────────────────────────────
+  // The app renders immediately while Firebase resolves the auth state in the
+  // background (isAuthenticated flips a moment later). Removing the branded
+  // splash avoids the jarring logo + spinner flash after "Explore Songs".
 
   // ─── AUTH GATE: for non-authenticated users, show content but block interaction ───
   // The home page content is fully visible. An invisible overlay catches all clicks

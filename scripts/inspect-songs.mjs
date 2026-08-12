@@ -2,10 +2,20 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path from "path";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, limit, query } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  limit,
+  query,
+} from "firebase/firestore";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -26,7 +36,9 @@ async function main() {
 
   for (const doc of snap.docs) {
     const data = doc.data();
-    const urls = [data.imageUrl, data.coverUrl, data.media?.image].filter(Boolean);
+    const urls = [data.imageUrl, data.coverUrl, data.media?.image].filter(
+      Boolean,
+    );
 
     for (const url of urls) {
       if (url.includes("unsplash.com")) {
@@ -43,5 +55,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
-

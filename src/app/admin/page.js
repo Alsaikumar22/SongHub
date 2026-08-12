@@ -29,6 +29,7 @@ import {
   Edit3,
   ListMusic,
   RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
 import NextImage from "next/image";
 
@@ -531,13 +532,55 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
   );
 }
 
+// ─── Sort timestamp helper ─────────────────────────────────────────
+// Firestore timestamps arrive from the admin API as serialized
+// { _seconds, _nanoseconds } objects (or ISO strings). Normalize to ms.
+function toTimeMs(val) {
+  if (!val) return 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const t = Date.parse(val);
+    return Number.isNaN(t) ? 0 : t;
+  }
+  if (typeof val === "object") {
+    if (typeof val._seconds === "number") return val._seconds * 1000;
+    if (typeof val.seconds === "number") return val.seconds * 1000;
+    if (typeof val.toMillis === "function") return val.toMillis();
+  }
+  return 0;
+}
+
+// Format a timestamp (same inputs as toTimeMs) into a short readable date.
+function formatDate(val) {
+  const ms = toTimeMs(val);
+  if (!ms) return "";
+  try {
+    return new Date(ms).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch (e) {
+    return "";
+  }
+}
+
 // ─── Main Admin Dashboard ──────────────────────────────────────────
 export default function AdminPage() {
   const { user, isAuthenticated, loading, firestoreData } = useAuth();
   const router = useRouter();
   const mountedRef = useRef(true);
+  const songsLoadedRef = useRef(false);
+  const songsFetchPromiseRef = useRef(null);
+  const songsRef = useRef([]);
 
-  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => {
+    // StrictMode in dev mounts -> unmounts -> remounts, so we must reset
+    // the flag to true on every mount. Otherwise mountedRef stays false and
+    // fetchSongs() silently skips its state updates (infinite loading).
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const scrollToTop = () => {
     if (typeof window !== "undefined") {
@@ -555,6 +598,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [sortBy, setSortBy] = useState("title-asc"); // "title-asc" | "recent" | "title-desc" | "year-desc" | "year-asc" | "artist-asc"
   const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null); // string message
@@ -599,37 +643,57 @@ export default function AdminPage() {
     return user.getIdToken();
   }, [user]);
 
-  const fetchSongs = useCallback(async () => {
-    if (!user) return;
-    setSongsLoading(true);
-    setError(null);
-    try {
-      const token = await getIdToken();
-      const res = await fetchWithTimeout("/api/admin/songs", {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      const data = await safeParseResponse(res, "Failed to fetch songs");
-      if (mountedRef.current) {
-        setSongs(data.songs || []);
-      }
-    } catch (err) {
-      console.error("Error fetching songs:", err);
-      if (mountedRef.current) {
-        setError(err.message);
-      }
-    } finally {
-      if (mountedRef.current) {
-        setSongsLoading(false);
-      }
-    }
-  }, [user, getIdToken]);
+  const fetchSongs = useCallback(async (options = {}) => {
+    if (!user) return [];
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchSongs();
+    const { force = false } = options;
+    if (!force && songsLoadedRef.current) {
+      return songsRef.current;
     }
-  }, [isAuthenticated, fetchSongs]);
+
+    if (songsFetchPromiseRef.current) {
+      return songsFetchPromiseRef.current;
+    }
+
+    const requestPromise = (async () => {
+      setSongsLoading(true);
+      setError(null);
+      try {
+        const token = await getIdToken();
+        const res = await fetchWithTimeout("/api/admin/songs", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const data = await safeParseResponse(res, "Failed to fetch songs");
+        const nextSongs = Array.isArray(data?.songs)
+          ? data.songs
+          : Array.isArray(data)
+            ? data
+            : [];
+
+        if (mountedRef.current) {
+          setSongs(nextSongs);
+        }
+        songsRef.current = nextSongs;
+        songsLoadedRef.current = true;
+        return nextSongs;
+      } catch (err) {
+        console.error("Error fetching songs:", err);
+        if (mountedRef.current) {
+          setError(err.message);
+        }
+        return [];
+      } finally {
+        songsFetchPromiseRef.current = null;
+        if (mountedRef.current) {
+          setSongsLoading(false);
+        }
+      }
+    })();
+
+    songsFetchPromiseRef.current = requestPromise;
+    return requestPromise;
+  }, [user, getIdToken]);
 
   // ─── Build Song Data from Form ──────────────────────────────────
   const buildSongData = () => {
@@ -748,7 +812,7 @@ export default function AdminPage() {
       resetForm();
       setSuccess(editingId ? "Song updated successfully!" : "Song added successfully!");
       setActiveTab("list");
-      fetchSongs();
+      fetchSongs({ force: true });
       scrollToTop();
       setTimeout(() => { if (mountedRef.current) setSuccess(null); }, 5000);
     } catch (err) {
@@ -772,7 +836,7 @@ export default function AdminPage() {
       await safeParseResponse(res, "Failed to delete song");
       setDeleteTarget(null);
       setSuccess("Song deleted successfully!");
-      fetchSongs();
+      fetchSongs({ force: true });
       setTimeout(() => { if (mountedRef.current) setSuccess(null); }, 5000);
     } catch (err) {
       setError(err.message);
@@ -787,7 +851,7 @@ export default function AdminPage() {
   // ─── Filtered Songs & Pagination ───────────────────────────────
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedLanguage, selectedCategory]);
+  }, [searchQuery, selectedLanguage, selectedCategory, sortBy]);
 
   const filteredSongs = songs.filter((s) => {
     if (searchQuery.trim()) {
@@ -807,9 +871,31 @@ export default function AdminPage() {
     return true;
   });
 
+  // Sort the filtered list based on the selected sort option
+  const sortedSongs = [...filteredSongs].sort((a, b) => {
+    switch (sortBy) {
+      case "title-asc":
+        return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+      case "title-desc":
+        return (b.title || "").localeCompare(a.title || "", undefined, { sensitivity: "base" });
+      case "year-desc":
+        return (Number(b.year) || 0) - (Number(a.year) || 0);
+      case "year-asc":
+        return (Number(a.year) || 0) - (Number(b.year) || 0);
+      case "artist-asc":
+        return (a.artist?.name || "").localeCompare(b.artist?.name || "", undefined, { sensitivity: "base" });
+      case "recent":
+      default:
+        return (
+          toTimeMs(b.updatedAt) - toTimeMs(a.updatedAt) ||
+          toTimeMs(b.createdAt) - toTimeMs(a.createdAt)
+        );
+    }
+  });
+
   const itemsPerPage = 15;
-  const totalPages = Math.ceil(filteredSongs.length / itemsPerPage);
-  const paginatedSongs = filteredSongs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(sortedSongs.length / itemsPerPage);
+  const paginatedSongs = sortedSongs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // ─── Auth Guards ────────────────────────────────────────────────
   if (loading) return <div className="min-h-screen bg-[#070707] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#D4A32A] animate-spin" /></div>;
@@ -850,7 +936,7 @@ export default function AdminPage() {
           <button onClick={() => { setActiveTab("add"); resetForm(); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "add" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
             <Plus className="w-3.5 h-3.5 inline mr-1.5" />Add Song
           </button>
-          <button onClick={() => { setActiveTab("list"); fetchSongs(); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "list" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
+          <button onClick={() => { setActiveTab("list"); fetchSongs({ force: true }); scrollToTop(); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === "list" ? "bg-[#D4A32A] text-black shadow-sm" : "text-[#727272] hover:text-white"}`}>
             <ListMusic className="w-3.5 h-3.5 inline mr-1.5" />All Songs ({songs.length})
           </button>
         </div>
@@ -1090,6 +1176,18 @@ export default function AdminPage() {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+                {/* Sort By */}
+                <div className="relative">
+                  <ArrowUpDown className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#727272]" />
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="pl-9 pr-4 py-3 bg-[#0a0a0a] border border-[rgba(255,255,255,0.06)] rounded-xl text-sm text-white focus:outline-none focus:border-[#D4A32A] transition-all cursor-pointer max-w-[180px] md:max-w-[200px]">
+                    <option value="recent">Recently Updated</option>
+                    <option value="title-asc">Title (A–Z)</option>
+                    <option value="title-desc">Title (Z–A)</option>
+                    <option value="year-desc">Year (Newest First)</option>
+                    <option value="year-asc">Year (Oldest First)</option>
+                    <option value="artist-asc">Artist (A–Z)</option>
+                  </select>
+                </div>
                 <button onClick={() => { resetForm(); setActiveTab("add"); scrollToTop(); }} className="px-5 py-3 rounded-xl bg-[#D4A32A]/10 border border-[#D4A32A]/20 text-[#D4A32A] text-sm font-bold hover:bg-[#D4A32A]/20 transition-all cursor-pointer whitespace-nowrap"><Plus className="w-4 h-4 inline mr-1.5" />New Song</button>
               </div>
             </div>
@@ -1097,7 +1195,7 @@ export default function AdminPage() {
             {/* Library Section Header (Mockup Style) */}
             <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.06)] pb-4 mt-8">
               <h2 className="text-xs font-black tracking-widest text-[#a7a7a7] uppercase">CURRENT LIBRARY ({songs.length})</h2>
-              <button onClick={fetchSongs} className="text-xs font-bold text-[#D4A32A] hover:text-[#f3be3e] hover:underline transition-all cursor-pointer flex items-center gap-1.5">
+              <button onClick={() => fetchSongs({ force: true })} className="text-xs font-bold text-[#D4A32A] hover:text-[#f3be3e] hover:underline transition-all cursor-pointer flex items-center gap-1.5">
                 <RefreshCw className={`w-3.5 h-3.5 ${songsLoading ? "animate-spin" : ""}`} />
                 <span>Refresh</span>
               </button>
@@ -1120,6 +1218,7 @@ export default function AdminPage() {
                   const yearInfo = song.year ? ` - ${song.year}` : "";
                   const langLabel = LANGUAGES.find(l => l.value === song.language)?.label || song.language?.toUpperCase() || "Telugu";
                   const subtitle = `${artist}${yearInfo} • ${langLabel}`;
+                  const updatedLabel = sortBy === "recent" ? formatDate(song.updatedAt || song.createdAt) : "";
                   return (
                     <div key={song.id} className="group bg-transparent hover:bg-[rgba(255,255,255,0.03)] border-b border-[rgba(255,255,255,0.03)] rounded-lg p-4 flex items-center gap-4 transition-all">
                       {/* Thumbnail */}
@@ -1135,6 +1234,12 @@ export default function AdminPage() {
                         <p className="text-base font-bold text-white truncate group-hover:text-[#D4A32A] transition-colors">{song.title}</p>
                         <p className="text-xs text-[#727272] font-medium mt-0.5 truncate">{subtitle}</p>
                       </div>
+                      {/* Updated date (visible proof for the Recently Updated sort) */}
+                      {updatedLabel && (
+                        <span className="text-[10px] text-[#D4A32A]/80 font-semibold shrink-0 hidden sm:block" title="Last updated">
+                          {updatedLabel}
+                        </span>
+                      )}
                       {/* Duration */}
                       <span className="text-xs text-[#727272] font-mono shrink-0 hidden sm:block">
                         {song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, "0")}` : ""}
@@ -1182,7 +1287,7 @@ export default function AdminPage() {
           song={editingSongForModal}
           onClose={() => setEditingSongForModal(null)}
           onSaveSuccess={() => {
-            fetchSongs();
+            fetchSongs({ force: true });
             setEditingSongForModal(null);
             setSuccess("Song updated successfully!");
             setTimeout(() => { if (mountedRef.current) setSuccess(null); }, 5000);
