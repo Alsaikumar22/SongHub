@@ -20,7 +20,7 @@ import * as admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const COLLECTION_NAME = "Youworship_songs";
+const COLLECTION_NAME = "youworship_songs";
 
 // Singleton cache. globalThis survives hot reloads and repeated imports so the
 // Admin SDK is never initialized more than once per serverless instance.

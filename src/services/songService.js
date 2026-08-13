@@ -6,7 +6,7 @@ import {
   getDoc,
   query,
   where,
-  orderBy
+  orderBy,
 } from "firebase/firestore";
 
 /**
@@ -81,34 +81,54 @@ export function transformSongDoc(docSnap) {
   }
 
   const cleanArtist = rawArtistName.trim();
-  const invalidArtistValues = ["na", "n/a", "unknown", "none", "null", "undefined", ""];
-  const artistName = (!cleanArtist || invalidArtistValues.includes(cleanArtist.toLowerCase()))
-    ? "Unknown Artist"
-    : cleanArtist;
+  const invalidArtistValues = [
+    "na",
+    "n/a",
+    "unknown",
+    "none",
+    "null",
+    "undefined",
+    "",
+  ];
+  const artistName =
+    !cleanArtist || invalidArtistValues.includes(cleanArtist.toLowerCase())
+      ? "Unknown Artist"
+      : cleanArtist;
 
   const cleanArtistEnglish = rawArtistNameEnglish.trim();
-  const artistNameEnglish = (!cleanArtistEnglish || invalidArtistValues.includes(cleanArtistEnglish.toLowerCase()))
-    ? "Unknown Artist"
-    : cleanArtistEnglish;
+  const artistNameEnglish =
+    !cleanArtistEnglish ||
+    invalidArtistValues.includes(cleanArtistEnglish.toLowerCase())
+      ? "Unknown Artist"
+      : cleanArtistEnglish;
 
-  const artistObj = { id: artistId, name: artistName, nameEnglish: artistNameEnglish };
+  const artistObj = {
+    id: artistId,
+    name: artistName,
+    nameEnglish: artistNameEnglish,
+  };
 
   // 3. Categories & Tags
   const categoryArr = Array.isArray(data.category)
     ? data.category
-    : (data.category ? [data.category] : ["Praise & Worship"]);
+    : data.category
+      ? [data.category]
+      : ["Praise & Worship"];
   const categoryPrimary = categoryArr[0] || "Praise & Worship";
 
   const tagsArr = Array.isArray(data.tags)
     ? data.tags
-    : (typeof data.tags === "string" ? data.tags.split(",").map((t) => t.trim()) : []);
+    : typeof data.tags === "string"
+      ? data.tags.split(",").map((t) => t.trim())
+      : [];
 
   // 4. Duration
-  const durationSec = typeof data.duration === "number"
-    ? data.duration
-    : (typeof data.duration === "string" && data.duration.includes(":")
-        ? data.duration.split(":").reduce((acc, time) => (60 * acc) + +time, 0)
-        : Number(data.duration) || 0);
+  const durationSec =
+    typeof data.duration === "number"
+      ? data.duration
+      : typeof data.duration === "string" && data.duration.includes(":")
+        ? data.duration.split(":").reduce((acc, time) => 60 * acc + +time, 0)
+        : Number(data.duration) || 0;
   const durationDisplay = formatSecondsToDisplay(durationSec);
 
   // 5. Media Object
@@ -121,17 +141,17 @@ export function transformSongDoc(docSnap) {
   let videoUrl = rawVideo;
 
   // If audio field contains a YouTube URL or fake placeholder with YouTube video present, route to video & clear audioUrl
-  if (rawAudio.includes("youtube.com") || rawAudio.includes("youtu.be") || (youtubeId && rawAudio.includes("soundhelix.com"))) {
+  if (
+    rawAudio.includes("youtube.com") ||
+    rawAudio.includes("youtu.be") ||
+    (youtubeId && rawAudio.includes("soundhelix.com"))
+  ) {
     if (!videoUrl) videoUrl = rawAudio;
     audioUrl = "";
   }
 
   const mediaObj = {
-    image:
-      data.media?.image ||
-      data.imageUrl ||
-      data.coverUrl ||
-      "",
+    image: data.media?.image || data.imageUrl || data.coverUrl || "",
     audio: audioUrl ? audioUrl.trim() : "",
     video: videoUrl ? videoUrl.trim() : "",
     youtubeId: youtubeId || null,
@@ -152,8 +172,19 @@ export function transformSongDoc(docSnap) {
     teluguLyricsText = data.lyrics;
     englishLyricsText = data.englishLyrics || "";
     lyricsArray = [
-      { language: "te", format: "original", title: "తెలుగు", content: teluguLyricsText, isDefault: true },
-      { language: "en", format: "transliteration", title: "Romanized", content: englishLyricsText }
+      {
+        language: "te",
+        format: "original",
+        title: "తెలుగు",
+        content: teluguLyricsText,
+        isDefault: true,
+      },
+      {
+        language: "en",
+        format: "transliteration",
+        title: "Romanized",
+        content: englishLyricsText,
+      },
     ];
   }
 
@@ -174,7 +205,8 @@ export function transformSongDoc(docSnap) {
     categoryPrimary: categoryPrimary,
     genre: categoryPrimary,
     album: data.album || null,
-    year: data.year !== undefined && data.year !== null ? Number(data.year) : 2026,
+    year:
+      data.year !== undefined && data.year !== null ? Number(data.year) : 2026,
     releaseYear: data.year || 2026,
     duration: durationDisplay,
     durationSec,
@@ -198,11 +230,11 @@ export function transformSongDoc(docSnap) {
 }
 
 /**
- * Song Service — Manages Firestore operations for Youworship_songs
+ * Song Service — Manages Firestore operations for youworship_songs
  */
 export const songService = {
   /**
-   * Fetch all songs from 'Youworship_songs' collection sorted alphabetically by title.
+   * Fetch all songs from 'youworship_songs' collection sorted alphabetically by title.
    * Uses client-side fallback sorting to handle mixed language characters smoothly.
    *
    * @returns {Promise<Array>} List of transformed song objects with document IDs
@@ -213,19 +245,28 @@ export const songService = {
       const snapshot = await getDocs(songsRef);
 
       if (snapshot.empty) {
-        console.warn("⚠️ No songs found in 'Youworship_songs' collection.");
+        console.warn("⚠️ No songs found in 'youworship_songs' collection.");
         return [];
       }
 
       const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap));
 
       // Sort alphabetically by title
-      songs.sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+      songs.sort((a, b) =>
+        (a.title || "").localeCompare(b.title || "", undefined, {
+          sensitivity: "base",
+        }),
+      );
 
-      console.log(`🎵 [songService] Loaded ${songs.length} songs from Youworship_songs.`);
+      console.log(
+        `🍟 [songService] Loaded ${songs.length} songs from youworship_songs.`,
+      );
       return songs;
     } catch (error) {
-      console.error("❌ [songService.getAllSongs] Error fetching songs:", error);
+      console.error(
+        "❌ [songService.getAllSongs] Error fetching songs:",
+        error,
+      );
       throw error;
     }
   },
@@ -285,7 +326,10 @@ export const songService = {
       console.warn(`⚠️ Song document with ID/Slug '${songId}' not found.`);
       return null;
     } catch (error) {
-      console.error(`❌ [songService.getSongById] Error fetching song '${songId}':`, error);
+      console.error(
+        `❌ [songService.getSongById] Error fetching song '${songId}':`,
+        error,
+      );
       throw error;
     }
   },
@@ -331,7 +375,7 @@ export const songService = {
       return allSongs.filter(
         (s) =>
           (s.firstLetter && s.firstLetter.toLowerCase() === targetLetter) ||
-          (s.title && s.title.trim().startsWith(letter))
+          (s.title && s.title.trim().startsWith(letter)),
       );
     } catch (error) {
       console.error(`❌ [songService.getSongsByFirstLetter] Error:`, error);
@@ -350,7 +394,9 @@ export const songService = {
     const q = searchQuery.trim().toLowerCase();
     const allSongs = await this.getAllSongs();
     return allSongs.filter((s) => {
-      const lyricsStr = Array.isArray(s.lyrics) ? s.lyrics.join(" ") : (s.lyrics || "");
+      const lyricsStr = Array.isArray(s.lyrics)
+        ? s.lyrics.join(" ")
+        : s.lyrics || "";
       return (
         s.title.toLowerCase().includes(q) ||
         s.titleEnglish.toLowerCase().includes(q) ||
@@ -359,5 +405,5 @@ export const songService = {
         lyricsStr.toLowerCase().includes(q)
       );
     });
-  }
+  },
 };

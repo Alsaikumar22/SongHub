@@ -31,7 +31,7 @@ const db = getFirestore(app);
 
 async function main() {
   console.log("🔍 Scanning all songs for Supabase image URL issues...");
-  const snap = await getDocs(collection(db, "Youworship_songs"));
+  const snap = await getDocs(collection(db, "youworship_songs"));
   console.log(`Loaded ${snap.docs.length} documents.`);
 
   for (const doc of snap.docs) {

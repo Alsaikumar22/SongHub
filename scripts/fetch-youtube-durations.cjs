@@ -68,13 +68,13 @@ async function fetchDuration(youtubeId) {
 }
 
 async function fetchDurations() {
-  console.log("⏱️  Fetching YouTube durations for Youworship_songs...\n");
+  console.log("⏱️  Fetching YouTube durations for youworship_songs...\n");
 
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const snap = await getDocs(collection(db, "Youworship_songs"));
+    const snap = await getDocs(collection(db, "youworship_songs"));
     console.log(`📦 Found ${snap.docs.length} documents.`);
 
     const needsDuration = [];
@@ -133,7 +133,7 @@ async function fetchDurations() {
       for (const result of results) {
         if (result.status === "fulfilled" && result.value.seconds) {
           const { id, title, seconds } = result.value;
-          const ref = doc(db, "Youworship_songs", id);
+          const ref = doc(db, "youworship_songs", id);
           fbBatch.update(ref, {
             duration: seconds,
             updatedAt: new Date().toISOString(),

@@ -27,12 +27,12 @@ const firebaseConfig = {
 };
 
 async function fixImageUrls() {
-  console.log("🔍 Scanning and repairing Youworship_songs image URLs...\n");
+  console.log("🔍 Scanning and repairing youworship_songs image URLs...\n");
 
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const colRef = collection(db, "Youworship_songs");
+    const colRef = collection(db, "youworship_songs");
     const querySnapshot = await getDocs(colRef);
 
     const batch = writeBatch(db);
@@ -40,7 +40,7 @@ async function fixImageUrls() {
 
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const docRef = doc(db, "Youworship_songs", docSnap.id);
+      const docRef = doc(db, "youworship_songs", docSnap.id);
       let needsUpdate = false;
       const updatedFields = {};
 

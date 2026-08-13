@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/songs
- * Optional server-side API route returning all songs from Youworship_songs
+ * Optional server-side API route returning all songs from youworship_songs
  */
 export async function GET() {
   try {
@@ -13,8 +13,8 @@ export async function GET() {
   } catch (error) {
     console.error("GET /api/songs error:", error);
     return Response.json(
-      { error: error.message || "Failed to fetch songs from Youworship_songs" },
-      { status: 500 }
+      { error: error.message || "Failed to fetch songs from youworship_songs" },
+      { status: 500 },
     );
   }
 }

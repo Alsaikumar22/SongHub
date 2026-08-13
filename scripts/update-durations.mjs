@@ -1,7 +1,7 @@
 /**
  * Update Durations Script
  *
- * Fetches every song from Firebase Youworship_songs, detects the actual
+ * Fetches every song from Firebase youworship_songs, detects the actual
  * duration from YouTube videos or direct audio files, and updates the
  * Firestore document with the correct duration in seconds.
  *
@@ -141,11 +141,11 @@ async function updateDurations() {
   console.log("⏱️  Updating song durations from media files...\n");
 
   // Fetch all songs
-  const songsRef = collection(db, "Youworship_songs");
+  const songsRef = collection(db, "youworship_songs");
   const snapshot = await getDocs(songsRef);
   const songs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-  console.log(`📥 Found ${songs.length} song(s) in Youworship_songs.\n`);
+  console.log(`📥 Found ${songs.length} song(s) in youworship_songs.\n`);
 
   let updated = 0;
   let skipped = 0;
@@ -208,7 +208,7 @@ async function updateDurations() {
 
     if (result) {
       try {
-        const songRef = doc(db, "Youworship_songs", song.id);
+        const songRef = doc(db, "youworship_songs", song.id);
         await updateDoc(songRef, {
           duration: result.duration,
           updatedAt: new Date().toISOString(),

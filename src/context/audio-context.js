@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { useAuth } from "./auth-context";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/config";
@@ -25,7 +32,11 @@ function getDisplayArtist(song) {
     return song.artistObj.name.trim();
   }
 
-  if (typeof song?.artist === "object" && typeof song.artist?.name === "string" && song.artist.name.trim()) {
+  if (
+    typeof song?.artist === "object" &&
+    typeof song.artist?.name === "string" &&
+    song.artist.name.trim()
+  ) {
     return song.artist.name.trim();
   }
 
@@ -106,20 +117,25 @@ export const AudioProvider = ({ children }) => {
   const getCurrentContextSongs = (currentPlayingSong) => {
     let contextSongs = songs;
     if (activeTab === "favorites") {
-      contextSongs = songs.filter(s => favorites.includes(s.id));
+      contextSongs = songs.filter((s) => favorites.includes(s.id));
     } else if (activeTab === "playlist" && activePlaylistId) {
-      const pl = playlists.find(p => p.id === activePlaylistId);
+      const pl = playlists.find((p) => p.id === activePlaylistId);
       if (pl) {
-        contextSongs = songs.filter(s => pl.songIds.includes(s.id));
+        contextSongs = songs.filter((s) => pl.songIds.includes(s.id));
       } else {
         contextSongs = [];
       }
     } else if (activeTab === "recently-played") {
-      contextSongs = recentlyPlayed.map(id => songs.find(s => s.id === id)).filter(Boolean);
+      contextSongs = recentlyPlayed
+        .map((id) => songs.find((s) => s.id === id))
+        .filter(Boolean);
     }
 
     // Ensure the playing song is part of the queue
-    if (currentPlayingSong && !contextSongs.some(s => s.id === currentPlayingSong.id)) {
+    if (
+      currentPlayingSong &&
+      !contextSongs.some((s) => s.id === currentPlayingSong.id)
+    ) {
       return songs;
     }
     return contextSongs;
@@ -128,9 +144,9 @@ export const AudioProvider = ({ children }) => {
   const handleSetIsShuffled = (shuffledVal) => {
     setIsShuffled(shuffledVal);
     if (shuffledVal) {
-      const remaining = originalQueue.filter(s => s.id !== currentSong?.id);
-      const shuffled = currentSong 
-        ? [currentSong, ...shuffleArray(remaining)] 
+      const remaining = originalQueue.filter((s) => s.id !== currentSong?.id);
+      const shuffled = currentSong
+        ? [currentSong, ...shuffleArray(remaining)]
         : shuffleArray(originalQueue);
       setQueue(shuffled);
     } else {
@@ -144,7 +160,9 @@ export const AudioProvider = ({ children }) => {
 
     let nextIndex = 0;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      const currentIndex = currentQueue.findIndex(
+        (s) => s.id === currentSongRef.current.id,
+      );
       if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
         nextIndex = currentIndex + 1;
       }
@@ -161,7 +179,9 @@ export const AudioProvider = ({ children }) => {
 
     let prevIndex = 0;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
+      const currentIndex = currentQueue.findIndex(
+        (s) => s.id === currentSongRef.current.id,
+      );
       if (currentIndex !== -1) {
         if (currentIndex > 0) {
           prevIndex = currentIndex - 1;
@@ -192,7 +212,10 @@ export const AudioProvider = ({ children }) => {
         audioRef.current.pause();
         audioRef.current.removeAttribute("src");
       }
-      if (youtubePlayerRef.current && typeof youtubePlayerRef.current.pauseVideo === "function") {
+      if (
+        youtubePlayerRef.current &&
+        typeof youtubePlayerRef.current.pauseVideo === "function"
+      ) {
         try {
           youtubePlayerRef.current.pauseVideo();
         } catch (e) {}
@@ -207,7 +230,11 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     if (!firestoreData) return;
 
-    const { favorites: favs, playlists: pls, recentlyPlayed: recent } = firestoreData;
+    const {
+      favorites: favs,
+      playlists: pls,
+      recentlyPlayed: recent,
+    } = firestoreData;
 
     if (Array.isArray(favs) && favs.length > 0) {
       setFavorites(favs);
@@ -224,7 +251,7 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     setSongsLoading(true);
-    
+
     fetch("/api/songs", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -246,8 +273,10 @@ export const AudioProvider = ({ children }) => {
         console.error("❌ Failed to fetch songs from API:", err);
         setSongsLoading(false);
       });
-    
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync native looping property of the HTML5 Audio element
@@ -316,7 +345,7 @@ export const AudioProvider = ({ children }) => {
       // Handles auto-play next
       if (isLoopingRef.current) {
         audio.currentTime = 0;
-        audio.play().catch(err => console.log("Playback error: ", err));
+        audio.play().catch((err) => console.log("Playback error: ", err));
       } else {
         handleNextSong();
       }
@@ -340,7 +369,7 @@ export const AudioProvider = ({ children }) => {
 
     if (currentSong) {
       const srcToPlay = currentSong.audioUrl || currentSong.media?.audio || "";
-      
+
       if (srcToPlay) {
         const isSameSrc = audioRef.current.src === srcToPlay;
         if (!isSameSrc) {
@@ -351,10 +380,14 @@ export const AudioProvider = ({ children }) => {
         if (isPlaying) {
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
-            playPromise.catch(err => {
+            playPromise.catch((err) => {
               console.warn("Audio playback attempted for src:", srcToPlay, err);
               // If play() was interrupted by load() or buffering, auto-play once audio is ready
-              if (err.name === "AbortError" || err.name === "NotAllowedError" || err.name === "NotSupportedError") {
+              if (
+                err.name === "AbortError" ||
+                err.name === "NotAllowedError" ||
+                err.name === "NotSupportedError"
+              ) {
                 const onCanPlay = () => {
                   audioRef.current?.play().catch(() => setIsPlaying(false));
                   audioRef.current?.removeEventListener("canplay", onCanPlay);
@@ -375,8 +408,8 @@ export const AudioProvider = ({ children }) => {
 
       // Add to recently played + sync to Firestore if logged in
       setTimeout(() => {
-        setRecentlyPlayed(prev => {
-          const filtered = prev.filter(id => id !== currentSong.id);
+        setRecentlyPlayed((prev) => {
+          const filtered = prev.filter((id) => id !== currentSong.id);
           const updated = [currentSong.id, ...filtered].slice(0, 10);
           localStorage.setItem("songhub_recently", JSON.stringify(updated));
           // Sync to Firestore if authenticated
@@ -402,7 +435,7 @@ export const AudioProvider = ({ children }) => {
     if (isPlaying) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(err => {
+        playPromise.catch((err) => {
           console.log("Play failed: ", err);
           if (err.name === "AbortError") {
             const onCanPlay = () => {
@@ -421,7 +454,9 @@ export const AudioProvider = ({ children }) => {
   }, [isPlaying]);
 
   // Keep refs in sync
-  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Handle volume and mute
   useEffect(() => {
@@ -447,7 +482,9 @@ export const AudioProvider = ({ children }) => {
     const youtubeId = currentSong.youtubeId;
 
     if (youtubePlayerRef.current) {
-      try { youtubePlayerRef.current.destroy(); } catch (e) {}
+      try {
+        youtubePlayerRef.current.destroy();
+      } catch (e) {}
       youtubePlayerRef.current = null;
     }
     if (youtubeProgressRef.current) {
@@ -474,7 +511,12 @@ export const AudioProvider = ({ children }) => {
           height: "200",
           width: "200",
           videoId: youtubeId,
-          playerVars: { autoplay: 0, controls: 0, modestbranding: 1, enablejsapi: 1 },
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+          },
           events: {
             onReady: () => {
               if (!isMounted) return;
@@ -490,25 +532,41 @@ export const AudioProvider = ({ children }) => {
                 const mins = Math.floor(detectedSec / 60);
                 const secs = Math.floor(detectedSec % 60);
                 const formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
-                setCurrentSong(prev => prev ? { ...prev, duration: formatted, durationSec: detectedSec } : prev);
-                setSongs(prev => prev.map(s =>
-                  s.id === currentSong?.id ? { ...s, duration: formatted, durationSec: detectedSec } : s
-                ));
-                const songRef = doc(db, "Youworship_songs", currentSong.id);
+                setCurrentSong((prev) =>
+                  prev
+                    ? { ...prev, duration: formatted, durationSec: detectedSec }
+                    : prev,
+                );
+                setSongs((prev) =>
+                  prev.map((s) =>
+                    s.id === currentSong?.id
+                      ? { ...s, duration: formatted, durationSec: detectedSec }
+                      : s,
+                  ),
+                );
+                const songRef = doc(db, "youworship_songs", currentSong.id);
                 updateDoc(songRef, {
                   duration: detectedSec,
                   updatedAt: new Date().toISOString(),
                 }).catch(() => {});
               }
 
-              if (isPlayingRef.current && typeof player?.playVideo === "function") {
-                try { player.playVideo(); } catch (e) {}
+              if (
+                isPlayingRef.current &&
+                typeof player?.playVideo === "function"
+              ) {
+                try {
+                  player.playVideo();
+                } catch (e) {}
               }
 
               youtubeProgressRef.current = setInterval(() => {
                 if (!youtubePlayerRef.current || !isMounted) return;
                 try {
-                  if (typeof youtubePlayerRef.current.getCurrentTime === "function") {
+                  if (
+                    typeof youtubePlayerRef.current.getCurrentTime ===
+                    "function"
+                  ) {
                     const time = youtubePlayerRef.current.getCurrentTime();
                     if (time !== undefined) setProgress(time);
                   }
@@ -519,8 +577,14 @@ export const AudioProvider = ({ children }) => {
               if (!isMounted) return;
               if (event.data === 0) {
                 if (isLoopingRef.current) {
-                  if (typeof player?.seekTo === "function") try { player.seekTo(0); } catch (e) {}
-                  if (typeof player?.playVideo === "function") try { player.playVideo(); } catch (e) {}
+                  if (typeof player?.seekTo === "function")
+                    try {
+                      player.seekTo(0);
+                    } catch (e) {}
+                  if (typeof player?.playVideo === "function")
+                    try {
+                      player.playVideo();
+                    } catch (e) {}
                 } else {
                   handleNextSong();
                 }
@@ -556,7 +620,10 @@ export const AudioProvider = ({ children }) => {
 
     return () => {
       isMounted = false;
-      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
       if (youtubeProgressRef.current) {
         clearInterval(youtubeProgressRef.current);
         youtubeProgressRef.current = null;
@@ -611,7 +678,8 @@ export const AudioProvider = ({ children }) => {
         iframe.style.zIndex = "9999";
         iframe.style.borderRadius = "12px";
         iframe.style.border = "2px solid rgba(255, 255, 255, 0.15)";
-        iframe.style.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
+        iframe.style.boxShadow =
+          "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
         if (typeof player.setSize === "function") {
           player.setSize(320, 180);
         }
@@ -628,8 +696,6 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isMiniPlayerActive, currentSong?.id]);
 
-
-
   const playSong = (song) => {
     if (!song) return;
 
@@ -640,7 +706,7 @@ export const AudioProvider = ({ children }) => {
       } else {
         setIsPlaying(true);
         if (audioRef.current && audioRef.current.src) {
-          audioRef.current.play().catch(e => console.warn("Play error:", e));
+          audioRef.current.play().catch((e) => console.warn("Play error:", e));
         }
       }
     } else {
@@ -654,7 +720,7 @@ export const AudioProvider = ({ children }) => {
       setOriginalQueue(contextSongs);
 
       if (isShuffled) {
-        const remaining = contextSongs.filter(s => s.id !== song.id);
+        const remaining = contextSongs.filter((s) => s.id !== song.id);
         const shuffled = [song, ...shuffleArray(remaining)];
         setQueue(shuffled);
       } else {
@@ -666,7 +732,7 @@ export const AudioProvider = ({ children }) => {
         if (srcToPlay) {
           audioRef.current.src = srcToPlay;
           audioRef.current.load();
-          audioRef.current.play().catch(err => {
+          audioRef.current.play().catch((err) => {
             console.warn("Direct click play error:", err);
           });
         } else {
@@ -687,7 +753,9 @@ export const AudioProvider = ({ children }) => {
       } else {
         setIsPlaying(true);
         if (audioRef.current && audioRef.current.src) {
-          audioRef.current.play().catch(e => console.warn("Toggle play error:", e));
+          audioRef.current
+            .play()
+            .catch((e) => console.warn("Toggle play error:", e));
         }
       }
     }
@@ -697,7 +765,10 @@ export const AudioProvider = ({ children }) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
-    if (youtubePlayerRef.current && typeof youtubePlayerRef.current.seekTo === "function") {
+    if (
+      youtubePlayerRef.current &&
+      typeof youtubePlayerRef.current.seekTo === "function"
+    ) {
       try {
         youtubePlayerRef.current.seekTo(time, true);
       } catch (e) {}
@@ -714,13 +785,13 @@ export const AudioProvider = ({ children }) => {
   };
 
   const toggleMute = () => {
-    setIsMuted(prev => !prev);
+    setIsMuted((prev) => !prev);
   };
 
   const toggleFavorite = (songId) => {
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const updated = prev.includes(songId)
-        ? prev.filter(id => id !== songId)
+        ? prev.filter((id) => id !== songId)
         : [...prev, songId];
       localStorage.setItem("songhub_favorites", JSON.stringify(updated));
 
@@ -739,9 +810,9 @@ export const AudioProvider = ({ children }) => {
     const newPlaylist = {
       id: Date.now().toString(),
       name: name.trim(),
-      songIds: []
+      songIds: [],
     };
-    setPlaylists(prev => {
+    setPlaylists((prev) => {
       const updated = [...prev, newPlaylist];
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
       // Sync to Firestore if authenticated
@@ -754,8 +825,8 @@ export const AudioProvider = ({ children }) => {
   };
 
   const deletePlaylist = (playlistId) => {
-    setPlaylists(prev => {
-      const updated = prev.filter(list => list.id !== playlistId);
+    setPlaylists((prev) => {
+      const updated = prev.filter((list) => list.id !== playlistId);
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
       // Sync to Firestore if authenticated
       const uid = userRef.current?.uid;
@@ -767,8 +838,8 @@ export const AudioProvider = ({ children }) => {
   };
 
   const addSongToPlaylist = (playlistId, songId) => {
-    setPlaylists(prev => {
-      const updated = prev.map(list => {
+    setPlaylists((prev) => {
+      const updated = prev.map((list) => {
         if (list.id === playlistId && !list.songIds.includes(songId)) {
           return { ...list, songIds: [...list.songIds, songId] };
         }
@@ -785,10 +856,13 @@ export const AudioProvider = ({ children }) => {
   };
 
   const removeSongFromPlaylist = (playlistId, songId) => {
-    setPlaylists(prev => {
-      const updated = prev.map(list => {
+    setPlaylists((prev) => {
+      const updated = prev.map((list) => {
         if (list.id === playlistId) {
-          return { ...list, songIds: list.songIds.filter(id => id !== songId) };
+          return {
+            ...list,
+            songIds: list.songIds.filter((id) => id !== songId),
+          };
         }
         return list;
       });

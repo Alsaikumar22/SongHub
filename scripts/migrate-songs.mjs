@@ -1,7 +1,7 @@
 /**
- * Firestore Youworship_songs Schema Migration Script
+ * Firestore youworship_songs Schema Migration Script
  *
- * Migrates documents in 'Youworship_songs' (or from 'songs')
+ * Migrates documents in 'youworship_songs' (or from 'songs')
  * to the NEW structured schema format.
  *
  * Usage:
@@ -195,21 +195,20 @@ function transformToNewStructuredSchema(docId, oldData) {
 
 async function updateCollectionToNewSchema() {
   console.log(
-    "🚀 Updating 'Youworship_songs' to the NEW Structured Schema...\n",
-  );
+      "🚀 Updating 'youworship_songs' to the NEW Structured Schema...\n",
 
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Fetch all documents from Youworship_songs
-    console.log("📥 Reading documents from 'Youworship_songs'...");
-    const songsRef = collection(db, "Youworship_songs");
+    // Fetch all documents from youworship_songs
+    console.log("📥 Reading documents from 'youworship_songs'...");
+    const songsRef = collection(db, "youworship_songs");
     const snapshot = await getDocs(songsRef);
 
     if (snapshot.empty) {
       console.log(
-        "⚠️ Collection 'Youworship_songs' is empty. Trying fallback 'songs' collection...",
+        "⚠️ Collection 'youworship_songs' is empty. Trying fallback 'songs' collection...",
       );
       const oldSnap = await getDocs(collection(db, "songs"));
       if (oldSnap.empty) {
@@ -237,7 +236,7 @@ async function updateCollectionToNewSchema() {
         oldData,
       );
 
-      const targetRef = doc(db, "Youworship_songs", targetDocId);
+      const targetRef = doc(db, "youworship_songs", targetDocId);
       batch.set(targetRef, newSchemaData, { merge: false });
 
       operationCount++;
@@ -266,7 +265,7 @@ async function updateCollectionToNewSchema() {
 
     console.log("==================================================");
     console.log(
-      `🎉 SUCCESS: Updated ${successCount} document(s) to NEW Schema in 'Youworship_songs'!`,
+      `🎉 SUCCESS: Updated ${successCount} document(s) to NEW Schema in 'youworship_songs'!`,
     );
     console.log("==================================================");
   } catch (error) {

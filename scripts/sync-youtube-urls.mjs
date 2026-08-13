@@ -1,7 +1,7 @@
 /**
- * Sync YouTube URLs from legacy 'songs' collection to active 'Youworship_songs'
+ * Sync YouTube URLs from legacy 'songs' collection to active 'youworship_songs'
  *
- * For each song in Youworship_songs missing a YouTube URL, looks up the
+ * For each song in youworship_songs missing a YouTube URL, looks up the
  * matching song in the legacy 'songs' collection and copies it over.
  *
  * Matching strategy:
@@ -57,7 +57,7 @@ function getArtistName(data) {
 
 async function syncYoutubeUrls() {
   console.log(
-    "🎵 Syncing YouTube URLs from legacy 'songs' → 'Youworship_songs'\n",
+    "🎵 Syncing YouTube URLs from legacy 'songs' → 'youworship_songs'\n",
   );
 
   try {
@@ -94,9 +94,9 @@ async function syncYoutubeUrls() {
       `   Legacy lookup built: ${legacyById.size} by ID, ${legacyByTitleArtist.size} by title+artist\n`,
     );
 
-    // ── 2. Read active 'Youworship_songs' collection ──────────────────
-    console.log("📥 Reading active 'Youworship_songs' collection...");
-    const activeSnap = await getDocs(collection(db, "Youworship_songs"));
+    // ── 2. Read active 'youworship_songs' collection ────────────
+    console.log("📥 Reading active 'youworship_songs' collection...");
+    const activeSnap = await getDocs(collection(db, "youworship_songs"));
     console.log(`   Found ${activeSnap.docs.length} active documents.\n`);
 
     // ── 3. Find songs that need a YouTube URL and have a legacy match ──
@@ -159,7 +159,7 @@ async function syncYoutubeUrls() {
 
     for (let i = 0; i < needsSync.length; i++) {
       const { id, url, data, method } = needsSync[i];
-      const ref = doc(db, "Youworship_songs", id);
+      const ref = doc(db, "youworship_songs", id);
 
       batch.update(ref, {
         "media.video": url,

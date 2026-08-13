@@ -9,8 +9,8 @@
  *    b. Upload to Supabase Storage bucket (`song-images`) with upsert: true.
  *    c. Retrieve public URL.
  *    d. Append to image-metadata.json.
- * 3. Sync public URLs back to Firestore collection `Youworship_songs`:
- *    a. Query all documents in `Youworship_songs`.
+ * 3. Sync public URLs back to Firestore collection `youworship_songs`:
+ *    a. Query all documents in `youworship_songs`.
  *    b. Normalize titles for accurate matching.
  *    c. Update `imageUrl` and `media.image` for matched songs in Firestore.
  */
@@ -34,7 +34,7 @@ const admin = adminModule.getApps
 const inputFolder = "./public/song pictures";
 const BUCKET_NAME = "song-images";
 const METADATA_FILE = "image-metadata.json";
-const FIRESTORE_COLLECTION = "Youworship_songs";
+const FIRESTORE_COLLECTION = "youworship_songs";
 
 // WebP Compression Settings
 const WEBP_QUALITY = 80;
@@ -282,9 +282,9 @@ async function run() {
 
   console.log("\n📄 Metadata JSON file saved.");
 
-  // 2. Fetch all songs from Youworship_songs and sync URLs
+  // 2. Fetch all songs from youworship_songs and sync URLs
   console.log(
-    "\n📥 Fetching all songs from Firestore collection 'Youworship_songs'...",
+    "\n📥 Fetching all songs from Firestore collection 'youworship_songs'...",
   );
   const songsSnap = await db.collection(FIRESTORE_COLLECTION).get();
   console.log(`Loaded ${songsSnap.docs.length} song documents from Firestore.`);
@@ -332,7 +332,7 @@ async function run() {
       updatedCount++;
     } else {
       console.warn(
-        `⚠️ No matching song found in Youworship_songs for image file: "${fileTitle}"`,
+        `⚠️ No matching song found in youworship_songs for image file: "${fileTitle}"`,
       );
     }
   }

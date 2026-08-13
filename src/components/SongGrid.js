@@ -13,7 +13,7 @@ export default function SongGrid({
   loading = false,
   error = null,
   onPlaySong,
-  onRetry
+  onRetry,
 }) {
   if (loading) {
     return <SongsSectionSkeleton />;
@@ -33,7 +33,7 @@ export default function SongGrid({
     return (
       <EmptyState
         title="No Songs Available"
-        message="No documents were found in the Youworship_songs collection."
+        message="No documents were found in the youworship_songs collection."
         onRetry={onRetry}
       />
     );
