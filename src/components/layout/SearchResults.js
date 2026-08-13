@@ -114,7 +114,10 @@ export default function SearchResults({
                       >
                         <span className="truncate">{song.teluguTitle || song.title}</span>
                         {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
-                          <VolumeX className="w-3.5 h-3.5 text-red-500/60 shrink-0" title="Lyrics only — No audio available" />
+                          <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+                        )}
+                        {!(song.youtubeId || song.media?.video) && (
+                          <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
                         )}
                       </span>
                       <span className="text-[10px] text-dim truncate block leading-tight mt-0.5">

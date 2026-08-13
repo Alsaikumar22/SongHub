@@ -475,7 +475,10 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     const hasYoutube = currentSong?.youtubeId;
     const hasAudio = currentSong?.audioUrl || currentSong?.media?.audio;
-    if (!hasYoutube || hasAudio) return;
+    if (!hasYoutube || hasAudio) {
+      setIsMiniPlayerActive(false);
+      return;
+    }
 
     let isMounted = true;
     let pollTimer = null;
@@ -673,6 +676,10 @@ export const AudioProvider = ({ children }) => {
         iframe.style.position = "fixed";
         iframe.style.bottom = "100px";
         iframe.style.right = "24px";
+        iframe.style.left = "auto";
+        iframe.style.top = "auto";
+        iframe.style.opacity = "1";
+        iframe.style.pointerEvents = "auto";
         iframe.style.width = "320px";
         iframe.style.height = "180px";
         iframe.style.zIndex = "9999";
@@ -684,11 +691,20 @@ export const AudioProvider = ({ children }) => {
           player.setSize(320, 180);
         }
       } else {
-        iframe.style.display = "none";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
+        iframe.style.display = "block";
+        iframe.style.position = "absolute";
+        iframe.style.left = "-9999px";
+        iframe.style.top = "-9999px";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.style.width = "200px";
+        iframe.style.height = "200px";
+        iframe.style.zIndex = "-1";
+        iframe.style.borderRadius = "0px";
+        iframe.style.border = "none";
+        iframe.style.boxShadow = "none";
         if (typeof player.setSize === "function") {
-          player.setSize(1, 1);
+          player.setSize(200, 200);
         }
       }
     } catch (e) {

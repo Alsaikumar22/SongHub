@@ -111,6 +111,9 @@ export default function PlayerBar() {
   const volumeBtnRef = useRef(null);
   const volumePopoverRef = useRef(null);
 
+  const hasAudio = !!(currentSong && (currentSong.audioUrl || currentSong.media?.audio || currentSong.youtubeId));
+  const hasVideo = !!(currentSong && (currentSong.youtubeId || currentSong.media?.video || currentSong.videoUrl || currentSong.youtubeUrl));
+
   const isLyricsPage = isClient && currentSong && (pathname === `/song/${currentSong.id}` || (currentSong.slug && pathname === `/song/${encodeURIComponent(currentSong.slug)}`) || (currentSong.slug && decodeURIComponent(pathname) === `/song/${currentSong.slug}`)) && searchParams?.get("view") === "lyrics";
 
   useEffect(() => {
@@ -227,36 +230,38 @@ export default function PlayerBar() {
           style={{ bottom: `calc(52px + env(safe-area-inset-bottom, 0px))` }}
         >
           {/* Seek Bar */}
-          <div
-            className="shrink-0 h-2 group cursor-pointer touch-pan-y"
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const pct = x / rect.width;
-              const targetTime = pct * (duration || 100);
-              setSliderVal(targetTime);
-              seekTo(targetTime);
-            }}
-          >
-            <div className="relative w-full h-full bg-line">
-              <div
-                className="absolute inset-y-0 left-0 bg-title/70 group-active:bg-title transition-all duration-75"
-                style={{ width: `${(sliderVal / (duration || 100)) * 100}%` }}
-              />
-              {/* Moving cursor/thumb — follows the playhead position */}
-              <div
-                className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-title rounded-full shadow-md transition-opacity duration-75 ${
-                  sliderVal > 0 && duration > 0
-                    ? "opacity-50 group-active:opacity-100 group-hover:opacity-80"
-                    : "opacity-0"
-                }`}
-                style={{
-                  left: `calc(${(sliderVal / (duration || 100)) * 100}% - 7px)`,
-                }}
-              />
+          {hasAudio && (
+            <div
+              className="shrink-0 h-2 group cursor-pointer touch-pan-y"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const pct = x / rect.width;
+                const targetTime = pct * (duration || 100);
+                setSliderVal(targetTime);
+                seekTo(targetTime);
+              }}
+            >
+              <div className="relative w-full h-full bg-line">
+                <div
+                  className="absolute inset-y-0 left-0 bg-title/70 group-active:bg-title transition-all duration-75"
+                  style={{ width: `${(sliderVal / (duration || 100)) * 100}%` }}
+                />
+                {/* Moving cursor/thumb — follows the playhead position */}
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-title rounded-full shadow-md transition-opacity duration-75 ${
+                    sliderVal > 0 && duration > 0
+                      ? "opacity-50 group-active:opacity-100 group-hover:opacity-80"
+                      : "opacity-0"
+                  }`}
+                  style={{
+                    left: `calc(${(sliderVal / (duration || 100)) * 100}% - 7px)`,
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Content row */}
           <div
@@ -313,79 +318,83 @@ export default function PlayerBar() {
               </ProtectedAction>
 
               {/* Volume (Speaker) control with slider popover */}
-              <div className="relative">
+              {hasAudio && (
+                <div className="relative">
+                  <button
+                    ref={volumeBtnRef}
+                    onClick={toggleVolumePopover}
+                    className={`p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer ${
+                      isVolumeOpen
+                        ? "text-title bg-white/5"
+                        : "text-muted hover:text-title"
+                    }`}
+                    aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                    aria-haspopup="dialog"
+                    aria-expanded={isVolumeOpen}
+                    title="Volume"
+                  >
+                    {isMuted || volume === 0 ? (
+                      <VolumeX className="w-4.5 h-4.5" />
+                    ) : (
+                      <Volume2 className="w-4.5 h-4.5" />
+                    )}
+                  </button>
+
+                  {/* Volume popover — anchored above the speaker icon */}
+                  {isVolumeOpen && (
+                    <div
+                      ref={volumePopoverRef}
+                      role="dialog"
+                      aria-label="Volume"
+                      className="absolute bottom-full right-0 mb-2 z-50 w-44 rounded-2xl border border-line bg-card/95 backdrop-blur-xl shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          onClick={toggleMute}
+                          className="text-muted hover:text-title cursor-pointer active:scale-90 transition-transform shrink-0 p-0.5"
+                          aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                          title={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                        >
+                          {isMuted || volume === 0 ? (
+                            <VolumeX className="w-4 h-4" />
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                        </button>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={isMuted ? 0 : volume}
+                          onChange={(e) => adjustVolume(parseFloat(e.target.value))}
+                          className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-[#D4A32A] focus:outline-none"
+                          style={{
+                            background: `linear-gradient(to right, #D4A32A 0%, #D4A32A ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) 100%)`,
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-muted tabular-nums w-8 text-right shrink-0">
+                          {Math.round((isMuted ? 0 : volume) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {hasAudio && (
                 <button
-                  ref={volumeBtnRef}
-                  onClick={toggleVolumePopover}
-                  className={`p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer ${
-                    isVolumeOpen
-                      ? "text-title bg-white/5"
-                      : "text-muted hover:text-title"
-                  }`}
-                  aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                  aria-haspopup="dialog"
-                  aria-expanded={isVolumeOpen}
-                  title="Volume"
+                  onClick={togglePlay}
+                  className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer"
                 >
-                  {isMuted || volume === 0 ? (
-                    <VolumeX className="w-4.5 h-4.5" />
+                  {isPlaying ? (
+                    <Pause className="w-3.5 h-3.5 fill-current" />
                   ) : (
-                    <Volume2 className="w-4.5 h-4.5" />
+                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                   )}
                 </button>
-
-                {/* Volume popover — anchored above the speaker icon */}
-                {isVolumeOpen && (
-                  <div
-                    ref={volumePopoverRef}
-                    role="dialog"
-                    aria-label="Volume"
-                    className="absolute bottom-full right-0 mb-2 z-50 w-44 rounded-2xl border border-line bg-card/95 backdrop-blur-xl shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        onClick={toggleMute}
-                        className="text-muted hover:text-title cursor-pointer active:scale-90 transition-transform shrink-0 p-0.5"
-                        aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                        title={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                      >
-                        {isMuted || volume === 0 ? (
-                          <VolumeX className="w-4 h-4" />
-                        ) : (
-                          <Volume2 className="w-4 h-4" />
-                        )}
-                      </button>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                        className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-[#D4A32A] focus:outline-none"
-                        style={{
-                          background: `linear-gradient(to right, #D4A32A 0%, #D4A32A ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) 100%)`,
-                        }}
-                      />
-                      <span className="text-[10px] font-bold text-muted tabular-nums w-8 text-right shrink-0">
-                        {Math.round((isMuted ? 0 : volume) * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={togglePlay}
-                className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer"
-              >
-                {isPlaying ? (
-                  <Pause className="w-3.5 h-3.5 fill-current" />
-                ) : (
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                )}
-              </button>
+              )}
             </div>
           </div>
         </div>
@@ -455,114 +464,118 @@ export default function PlayerBar() {
 
         {/* Middle section: Playback Controls */}
         <div className="flex flex-col items-center gap-1 w-[40%] max-w-[500px]">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsShuffled(!isShuffled)}
-              className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                isShuffled
-                  ? "text-title bg-card-hover font-semibold"
-                  : "text-dim hover:text-handle"
-              }`}
-              title="Shuffle"
-              disabled={!currentSong}
-            >
-              <Shuffle className="w-3.5 h-3.5" />
-            </button>
+          {hasAudio && (
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsShuffled(!isShuffled)}
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                  isShuffled
+                    ? "text-title bg-card-hover font-semibold"
+                    : "text-dim hover:text-handle"
+                }`}
+                title="Shuffle"
+                disabled={!currentSong}
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+              </button>
 
-            <button
-              onClick={prevSong}
-              className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
-              title="Previous Song"
-              disabled={!currentSong}
-            >
-              <SkipBack className="w-4 h-4" />
-            </button>
+              <button
+                onClick={prevSong}
+                className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
+                title="Previous Song"
+                disabled={!currentSong}
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={togglePlay}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm cursor-pointer ${
-                isPlaying
-                  ? "bg-card text-title hover:bg-card-hover"
-                  : "bg-card-hover text-title hover:bg-line border border-line"
-              }`}
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? (
-                <Pause className="w-4 h-4 fill-current" />
-              ) : (
-                <Play className="w-4 h-4 fill-current ml-0.5" />
-              )}
-            </button>
+              <button
+                onClick={togglePlay}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm cursor-pointer ${
+                  isPlaying
+                    ? "bg-card text-title hover:bg-card-hover"
+                    : "bg-card-hover text-title hover:bg-line border border-line"
+                }`}
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? (
+                  <Pause className="w-4 h-4 fill-current" />
+                ) : (
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                )}
+              </button>
 
-            <button
-              onClick={nextSong}
-              className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
-              title="Next Song"
-              disabled={!currentSong}
-            >
-              <SkipForward className="w-4 h-4" />
-            </button>
+              <button
+                onClick={nextSong}
+                className="p-1.5 rounded-full text-muted hover:text-copy hover:bg-card-hover transition-colors active:scale-95 cursor-pointer"
+                title="Next Song"
+                disabled={!currentSong}
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={() => setIsLooping(!isLooping)}
-              className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                isLooping
-                  ? "text-title bg-card-hover font-semibold"
-                  : "text-dim hover:text-handle"
-              }`}
-              title="Loop"
-              disabled={!currentSong}
-            >
-              <Repeat className="w-3.5 h-3.5" />
-            </button>
-          </div>
+              <button
+                onClick={() => setIsLooping(!isLooping)}
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                  isLooping
+                    ? "text-title bg-card-hover font-semibold"
+                    : "text-dim hover:text-handle"
+                }`}
+                title="Loop"
+                disabled={!currentSong}
+              >
+                <Repeat className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Timeline Slider */}
-          <div className="w-full flex items-center gap-2">
-            <span className="text-[10px] text-muted tabular-nums w-8 text-right">
-              {formatTime(sliderVal)}
-            </span>
-            <div className="relative flex-1 group py-1.5 cursor-pointer">
-              <input
-                type="range"
-                min="0"
-                max={duration || 100}
-                value={sliderVal}
-                onInput={handleProgressInput}
-                onChange={handleProgressChange}
-                onMouseDown={() => setIsDragging(true)}
-                onTouchStart={() => setIsDragging(true)}
-                disabled={!currentSong}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="h-1 w-full bg-line rounded-full overflow-hidden">
+          {hasAudio && (
+            <div className="w-full flex items-center gap-2">
+              <span className="text-[10px] text-muted tabular-nums w-8 text-right">
+                {formatTime(sliderVal)}
+              </span>
+              <div className="relative flex-1 group py-1.5 cursor-pointer">
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  value={sliderVal}
+                  onInput={handleProgressInput}
+                  onChange={handleProgressChange}
+                  onMouseDown={() => setIsDragging(true)}
+                  onTouchStart={() => setIsDragging(true)}
+                  disabled={!currentSong}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="h-1 w-full bg-line rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-dim group-hover:bg-handle rounded-full transition-all duration-75"
+                    style={{
+                      width: `${(sliderVal / (duration || 100)) * 100}%`,
+                    }}
+                  />
+                </div>
                 <div
-                  className="h-full bg-dim group-hover:bg-handle rounded-full transition-all duration-75"
+                  className={`absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 transition-opacity duration-75 z-20 ${
+                    sliderVal > 0 && duration > 0
+                      ? "opacity-60 group-hover:opacity-100"
+                      : "opacity-0"
+                  }`}
                   style={{
-                    width: `${(sliderVal / (duration || 100)) * 100}%`,
+                    left: `calc(${(sliderVal / (duration || 100)) * 100}% - 5px)`,
                   }}
                 />
               </div>
-              <div
-                className={`absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 transition-opacity duration-75 z-20 ${
-                  sliderVal > 0 && duration > 0
-                    ? "opacity-60 group-hover:opacity-100"
-                    : "opacity-0"
-                }`}
-                style={{
-                  left: `calc(${(sliderVal / (duration || 100)) * 100}% - 5px)`,
-                }}
-              />
+              <span className="text-[10px] text-muted tabular-nums w-8">
+                {formatTime(duration)}
+              </span>
             </div>
-            <span className="text-[10px] text-muted tabular-nums w-8">
-              {formatTime(duration)}
-            </span>
-          </div>
+          )}
         </div>
 
           {/* Right section: Volume & Options */}
           <div className="flex items-center gap-2 w-[30%] justify-end min-w-0">
-            {currentSong?.id && (
+            {hasVideo && (
               <button
                 onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`)}
                 className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
@@ -600,48 +613,50 @@ export default function PlayerBar() {
               </span>
             )}
 
-
-
-          <button
-            onClick={toggleMute}
-            className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
-            title={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
+            {hasAudio && (
+              <button
+                onClick={toggleMute}
+                className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted || volume === 0 ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+              </button>
             )}
-          </button>
 
-            <div className="relative group w-16 lg:w-20 py-2 cursor-pointer">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={isMuted ? 0 : volume}
-                onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="h-1 w-full bg-line rounded-full overflow-hidden">
+            {hasAudio && (
+              <div className="relative group w-16 lg:w-20 py-2 cursor-pointer">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => adjustVolume(parseFloat(e.target.value))}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="h-1 w-full bg-line rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-muted group-hover:bg-handle rounded-full"
+                    style={{
+                      width: `${(isMuted ? 0 : volume) * 100}%`
+                    }}
+                  />
+                </div>
                 <div
-                  className="h-full bg-muted group-hover:bg-handle rounded-full"
+                  className="absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                   style={{
-                    width: `${(isMuted ? 0 : volume) * 100}%`
+                    left: `calc(${(isMuted ? 0 : volume) * 100}% - 5px)`
                   }}
                 />
               </div>
-              <div
-                className="absolute w-2.5 h-2.5 bg-handle border border-canvas rounded-full top-1/2 -mt-1.25 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                style={{
-                  left: `calc(${(isMuted ? 0 : volume) * 100}% - 5px)`
-                }}
-              />
-            </div>
+            )}
 
             {/* Open Mini Player Button */}
-            {currentSong ? (
+            {hasVideo && (
               <button
                 onClick={() => setIsMiniPlayerActive(!isMiniPlayerActive)}
                 className={`p-1.5 rounded-full transition-all cursor-pointer ${
@@ -653,10 +668,6 @@ export default function PlayerBar() {
               >
                 <PipIcon className="w-4 h-4" />
               </button>
-            ) : (
-              <span className="p-1.5 text-muted opacity-40 cursor-not-allowed" title="Play a song to use Mini Player">
-                <PipIcon className="w-4 h-4" />
-              </span>
             )}
 
             {/* Full Screen Button */}
@@ -667,7 +678,7 @@ export default function PlayerBar() {
             >
               <Maximize2 className="w-4 h-4" />
             </button>
-        </div>
+          </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────── */}
@@ -731,7 +742,7 @@ export default function PlayerBar() {
               >
                 <MicIcon className="w-5.5 h-5.5" />
               </button>
-              {currentSong?.media?.video || currentSong?.videoUrl || currentSong?.youtubeUrl ? (
+              {hasVideo ? (
                 <button
                   onClick={() => {
                     setIsExpanded(false);
@@ -793,101 +804,107 @@ export default function PlayerBar() {
             </div>
 
             {/* Timeline Progress Scrubber */}
-            <div className="space-y-2">
-              <div className="relative group py-1.5 cursor-pointer">
+            {hasAudio && (
+              <div className="space-y-2">
+                <div className="relative group py-1.5 cursor-pointer">
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration || 100}
+                    value={sliderVal}
+                    onChange={handleProgressChange}
+                    className="w-full h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
+                    style={{
+                      background: `linear-gradient(to right, #fff 0%, #fff ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] font-semibold text-muted/80 tabular-nums">
+                  <span>{formatTime(sliderVal)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Core Media Transport Controls */}
+            {hasAudio && (
+              <div className="flex items-center justify-between px-2">
+                <button
+                  onClick={() => setIsShuffled(!isShuffled)}
+                  className={`p-2.5 rounded-full transition-colors cursor-pointer active:scale-90 ${
+                    isShuffled ? "text-accent" : "text-white/40 hover:text-white"
+                  }`}
+                  title="Shuffle"
+                >
+                  <Shuffle className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={prevSong}
+                  className="p-2.5 rounded-full text-white/80 hover:text-white active:scale-90 transition-colors cursor-pointer"
+                  title="Previous track"
+                >
+                  <SkipBack className="w-6 h-6 fill-current" />
+                </button>
+
+                <button
+                  onClick={togglePlay}
+                  className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-[0_4px_20px_rgba(255,255,255,0.25)] cursor-pointer"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-6 h-6 fill-current text-black" />
+                  ) : (
+                    <Play className="w-6 h-6 fill-current text-black ml-1" />
+                  )}
+                </button>
+
+                <button
+                  onClick={nextSong}
+                  className="p-2.5 rounded-full text-white/80 hover:text-white active:scale-90 transition-colors cursor-pointer"
+                  title="Next track"
+                >
+                  <SkipForward className="w-6 h-6 fill-current" />
+                </button>
+
+                <button
+                  onClick={() => setIsLooping(!isLooping)}
+                  className={`p-2.5 rounded-full transition-colors cursor-pointer active:scale-90 ${
+                    isLooping ? "text-accent" : "text-white/40 hover:text-white"
+                  }`}
+                  title="Repeat"
+                >
+                  <Repeat className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {/* Volume Control Slider */}
+            {hasAudio && (
+              <div className="flex items-center gap-3 px-1.5 pt-2">
+                <button
+                  onClick={toggleMute}
+                  className="text-white/40 hover:text-white cursor-pointer active:scale-90 transition-transform"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-4.5 h-4.5" />
+                  ) : (
+                    <Volume2 className="w-4.5 h-4.5" />
+                  )}
+                </button>
                 <input
                   type="range"
                   min="0"
-                  max={duration || 100}
-                  value={sliderVal}
-                  onChange={handleProgressChange}
-                  className="w-full h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
+                  max="1"
+                  step="0.01"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => adjustVolume(parseFloat(e.target.value))}
+                  className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
                   style={{
-                    background: `linear-gradient(to right, #fff 0%, #fff ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) ${(sliderVal / (duration || 100)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+                    background: `linear-gradient(to right, #b3b3b3 0%, #b3b3b3 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) 100%)`,
                   }}
                 />
               </div>
-              <div className="flex justify-between text-[11px] font-semibold text-muted/80 tabular-nums">
-                <span>{formatTime(sliderVal)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* Core Media Transport Controls */}
-            <div className="flex items-center justify-between px-2">
-              <button
-                onClick={() => setIsShuffled(!isShuffled)}
-                className={`p-2.5 rounded-full transition-colors cursor-pointer active:scale-90 ${
-                  isShuffled ? "text-accent" : "text-white/40 hover:text-white"
-                }`}
-                title="Shuffle"
-              >
-                <Shuffle className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={prevSong}
-                className="p-2.5 rounded-full text-white/80 hover:text-white active:scale-90 transition-colors cursor-pointer"
-                title="Previous track"
-              >
-                <SkipBack className="w-6 h-6 fill-current" />
-              </button>
-
-              <button
-                onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-all shadow-[0_4px_20px_rgba(255,255,255,0.25)] cursor-pointer"
-              >
-                {isPlaying ? (
-                  <Pause className="w-6 h-6 fill-current text-black" />
-                ) : (
-                  <Play className="w-6 h-6 fill-current text-black ml-1" />
-                )}
-              </button>
-
-              <button
-                onClick={nextSong}
-                className="p-2.5 rounded-full text-white/80 hover:text-white active:scale-90 transition-colors cursor-pointer"
-                title="Next track"
-              >
-                <SkipForward className="w-6 h-6 fill-current" />
-              </button>
-
-              <button
-                onClick={() => setIsLooping(!isLooping)}
-                className={`p-2.5 rounded-full transition-colors cursor-pointer active:scale-90 ${
-                  isLooping ? "text-accent" : "text-white/40 hover:text-white"
-                }`}
-                title="Repeat"
-              >
-                <Repeat className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Volume Control Slider */}
-            <div className="flex items-center gap-3 px-1.5 pt-2">
-              <button
-                onClick={toggleMute}
-                className="text-white/40 hover:text-white cursor-pointer active:scale-90 transition-transform"
-              >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-4.5 h-4.5" />
-                ) : (
-                  <Volume2 className="w-4.5 h-4.5" />
-                )}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={isMuted ? 0 : volume}
-                onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-white focus:outline-none"
-                style={{
-                  background: `linear-gradient(to right, #b3b3b3 0%, #b3b3b3 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.1) 100%)`,
-                }}
-              />
-            </div>
+            )}
           </div>
         </div>
       )}

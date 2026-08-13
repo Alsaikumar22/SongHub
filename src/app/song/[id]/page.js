@@ -160,6 +160,22 @@ function SongPageContent({ params }) {
   const [song, setSong] = useState(null);
   const selectedLanguage = lyricsLanguage;
   const setSelectedLanguage = setLyricsLanguage;
+
+  useEffect(() => {
+    if (song) {
+      const songLanguage = (song.language || "").toLowerCase();
+      const isHi = songLanguage === "hi" || songLanguage === "hindi";
+      const isTa = songLanguage === "ta" || songLanguage === "tamil";
+      
+      if (isHi && lyricsLanguage !== "hindi" && lyricsLanguage !== "english") {
+        setLyricsLanguage("hindi");
+      } else if (isTa && lyricsLanguage !== "tamil" && lyricsLanguage !== "english") {
+        setLyricsLanguage("tamil");
+      } else if (!isHi && !isTa && lyricsLanguage !== "telugu" && lyricsLanguage !== "english") {
+        setLyricsLanguage("telugu");
+      }
+    }
+  }, [song, lyricsLanguage, setLyricsLanguage]);
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const fetchingRef = useRef(false);
   const prevIdRef = useRef(id);
@@ -610,6 +626,7 @@ function SongPageContent({ params }) {
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
+              songLanguage={(song?.language || "").toLowerCase()}
             />
           </div>
         </div>
@@ -835,6 +852,7 @@ function SongPageContent({ params }) {
               <LanguageSegmented
                 selected={selectedLanguage}
                 onChange={setSelectedLanguage}
+                songLanguage={(song?.language || "").toLowerCase()}
               />
 
               {/* Size & Full Screen Controls */}

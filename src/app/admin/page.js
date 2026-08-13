@@ -286,7 +286,7 @@ function EditSongModal({ song, onClose, onSaveSuccess, getIdToken }) {
         nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
-      category: form.categories.length > 0 ? form.categories : ["Praise Songs"],
+      category: form.categories.length > 0 ? form.categories : ["Praise"],
       album: form.album.trim() || null,
       year: parseInt(form.year, 10) || new Date().getFullYear(),
       duration: durationNum,
@@ -735,7 +735,7 @@ export default function AdminPage() {
         nameEnglish: form.artistNameEnglish.trim() || "Unknown Artist"
       },
       language: form.language === "te" ? "Telugu" : (form.language === "hi" ? "Hindi" : "English"),
-      category: form.categories.length > 0 ? form.categories : ["Praise Songs"],
+      category: form.categories.length > 0 ? form.categories : ["Praise"],
       album: form.album.trim() || null,
       year: parseInt(form.year, 10) || new Date().getFullYear(),
       duration: durationNum,
@@ -859,7 +859,15 @@ export default function AdminPage() {
     }
     if (selectedCategory) {
       const categories = Array.isArray(s.category) ? s.category : (s.category ? [s.category] : []);
-      const matched = categories.some(cat => cat.toLowerCase() === selectedCategory.toLowerCase());
+      const catObj = CATEGORIES_DATA.find(c => c.nameEn === selectedCategory);
+      const matched = categories.some(cat => {
+        if (cat.toLowerCase() === selectedCategory.toLowerCase()) return true;
+        if (catObj) {
+          if (catObj.nameTe && cat.toLowerCase() === catObj.nameTe.toLowerCase()) return true;
+          if (Array.isArray(catObj.legacyNames) && catObj.legacyNames.some(ln => ln.toLowerCase() === cat.toLowerCase())) return true;
+        }
+        return false;
+      });
       if (!matched) return false;
     }
     return true;
@@ -1225,7 +1233,15 @@ export default function AdminPage() {
                       </div>
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-bold text-white truncate group-hover:text-[#D4A32A] transition-colors">{song.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-base font-bold text-white truncate group-hover:text-[#D4A32A] transition-colors">{song.title}</p>
+                          {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                            <span title="Audio not available" className="text-xs select-none">🔇</span>
+                          )}
+                          {!(song.youtubeId || song.media?.video) && (
+                            <span title="Video not available" className="text-xs select-none">🚫🎥</span>
+                          )}
+                        </div>
                         <p className="text-xs text-[#727272] font-medium mt-0.5 truncate">{subtitle}</p>
                       </div>
                       {/* Updated date (visible proof for the Recently Updated sort) */}

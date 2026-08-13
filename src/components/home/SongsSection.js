@@ -94,6 +94,32 @@ function teluguSort(a, b) {
   return a.localeCompare(b);
 }
 
+const HINDI_ALPHABET_ORDER = [
+  "अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ", "औ", "अं", "अः",
+  "क", "ख", "ग", "घ", "ङ",
+  "च", "छ", "ज", "झ", "ञ",
+  "ट", "ठ", "ड", "ढ", "ण",
+  "त", "थ", "द", "ध", "न",
+  "प", "फ", "ब", "भ", "म",
+  "य", "र", "ल", "व",
+  "श", "ष", "स", "ह",
+  "क्ष", "त्र", "ज्ञ"
+];
+
+function hindiSort(a, b) {
+  const o = HINDI_ALPHABET_ORDER;
+  const idxA = o.indexOf(a);
+  const idxB = o.indexOf(b);
+
+  if (idxA !== -1 && idxB !== -1) {
+    return idxA - idxB;
+  }
+  if (idxA !== -1) return -1;
+  if (idxB !== -1) return 1;
+
+  return a.localeCompare(b);
+}
+
 export default function SongsSection({
   songs,
   songsLoading,
@@ -151,30 +177,52 @@ export default function SongsSection({
     const groups = {};
     const safeSongs = Array.isArray(songs) ? songs : [];
     safeSongs.forEach((song) => {
-      // 1. Group under Telugu letter
-      if (song.teluguFirstLetter) {
-        const tLetter = song.teluguFirstLetter;
-        if (!groups[tLetter]) groups[tLetter] = [];
-        groups[tLetter].push(song);
+      const songLanguage = (song.language || "").toLowerCase();
+      let matchesLang = false;
+      if (scriptLang === "telugu") {
+        matchesLang = songLanguage === "te" || songLanguage === "telugu";
+      } else if (scriptLang === "english") {
+        matchesLang = songLanguage === "en" || songLanguage === "english";
+      } else if (scriptLang === "hindi") {
+        matchesLang = songLanguage === "hi" || songLanguage === "hindi";
+      } else if (scriptLang === "tamil") {
+        matchesLang = songLanguage === "ta" || songLanguage === "tamil";
       }
 
+      if (!matchesLang) return;
 
-      // 2. Group under English letter if the title starts with an English character
-      const firstChar = song.title ? song.title.charAt(0).toUpperCase() : "";
-      if (/[A-Z]/.test(firstChar)) {
-        if (!groups[firstChar]) groups[firstChar] = [];
-        if (!groups[firstChar].includes(song)) {
-          groups[firstChar].push(song);
+      if (scriptLang === "telugu" && song.teluguFirstLetter) {
+        const tLetter = song.teluguFirstLetter;
+        if (!groups[tLetter]) groups[tLetter] = [];
+        if (!groups[tLetter].includes(song)) {
+          groups[tLetter].push(song);
+        }
+      } else if (scriptLang === "hindi" && song.teluguFirstLetter) {
+        const hLetter = song.teluguFirstLetter;
+        if (!groups[hLetter]) groups[hLetter] = [];
+        if (!groups[hLetter].includes(song)) {
+          groups[hLetter].push(song);
+        }
+      } else if (scriptLang === "english" || scriptLang === "tamil") {
+        const titleEn = song.titleEnglish || song.title || "";
+        const firstChar = titleEn ? titleEn.charAt(0).toUpperCase() : "";
+        if (/[A-Z]/.test(firstChar)) {
+          if (!groups[firstChar]) groups[firstChar] = [];
+          if (!groups[firstChar].includes(song)) {
+            groups[firstChar].push(song);
+          }
         }
       }
     });
     return groups;
-  }, [songs]);
+  }, [songs, scriptLang]);
 
   const availableLetters = useMemo(() => {
     const activeKeys = Object.keys(letterGroups);
     if (scriptLang === "telugu") {
       return activeKeys.filter((k) => !/[A-Z]/.test(k)).sort(teluguSort);
+    } else if (scriptLang === "hindi") {
+      return activeKeys.filter((k) => !/[A-Z]/.test(k)).sort(hindiSort);
     } else {
       return activeKeys.filter((k) => /[A-Z]/.test(k)).sort();
     }
@@ -279,6 +327,26 @@ export default function SongsSection({
             >
               English (A-Z)
             </button>
+            <button
+              onClick={() => setScriptLang("hindi")}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                scriptLang === "hindi"
+                  ? "bg-white text-black shadow-sm font-black"
+                  : "text-muted hover:text-title"
+              }`}
+            >
+              Hindi (हिन्दी)
+            </button>
+            <button
+              onClick={() => { /* Do nothing for Tamil until updated */ }}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                scriptLang === "tamil"
+                  ? "bg-white text-black shadow-sm font-black"
+                  : "text-muted hover:text-title"
+              }`}
+            >
+              Tamil (தமிழ்)
+            </button>
           </div>
 
           {/* Letters Scroll List */}
@@ -288,7 +356,7 @@ export default function SongsSection({
                 key={letter}
                 onClick={() => handleLetterClick(letter)}
                 className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm md:text-base font-black transition-all shrink-0 cursor-pointer ${
-                  /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+                  /[A-Z]/.test(letter) ? "font-sans" : (typeof letter === "string" && /[\u0C00-\u0C7F]/.test(letter) ? "font-telugu" : "")
                 } ${
                   activeLetter === letter
                     ? "bg-title text-canvas scale-105 shadow-sm"
@@ -327,7 +395,7 @@ export default function SongsSection({
                 Alphabet Browser
               </span>
               <h1
-                className={`text-title text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${/[A-Z]/.test(selectedLetter) ? "" : "font-telugu"}`}
+                className={`text-title text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-3 drop-shadow-md ${/[A-Z]/.test(selectedLetter) ? "" : (typeof selectedLetter === "string" && /[\u0C00-\u0C7F]/.test(selectedLetter) ? "font-telugu" : "")}`}
               >
                 Songs starting with &ldquo;{selectedLetter}&rdquo;
               </h1>
@@ -468,6 +536,7 @@ export default function SongsSection({
                       currentSong={currentSong}
                       isPlaying={isPlaying}
                       playSong={playSong}
+                      language={scriptLang}
                     />
                   ))}
                 </motion.div>
@@ -510,7 +579,7 @@ export default function SongsSection({
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-2xl font-bold text-title ${
-                          /[A-Z]/.test(letter) ? "font-sans" : "font-telugu"
+                          /[A-Z]/.test(letter) ? "font-sans" : (typeof letter === "string" && /[\u0C00-\u0C7F]/.test(letter) ? "font-telugu" : "")
                         }`}
                       >
                         {letter}
@@ -555,6 +624,7 @@ export default function SongsSection({
                           isPlaying={isPlaying}
                           playSong={playSong}
                           size="md"
+                          language={scriptLang}
                         />
                       ))}
                     </div>
@@ -635,16 +705,24 @@ export default function SongsSection({
 
                           {/* Middle: Titles */}
                           <div className="flex-1 min-w-0 pr-4">
-                            <span
-                              className={`font-semibold text-sm text-title block truncate ${
-                                /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu text-base leading-snug" : ""
-                              }`}
-                            >
-                              {song.teluguTitle || song.title}
-                            </span>
-                            {(song.titleEnglish || song.title) && (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span
+                                className={`font-semibold text-sm text-title truncate ${
+                                  scriptLang !== "english" && /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu text-base leading-snug" : ""
+                                }`}
+                              >
+                                {scriptLang !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title)}
+                              </span>
+                              {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                                <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+                              )}
+                              {!(song.youtubeId || song.media?.video) && (
+                                <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
+                              )}
+                            </div>
+                            {song.titleEnglish && (
                               <span className="text-[11px] text-muted block truncate mt-0.5 font-medium">
-                                {song.titleEnglish || song.title}
+                                {song.titleEnglish}
                               </span>
                             )}
                           </div>

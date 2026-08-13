@@ -5,7 +5,7 @@ import { Play, Pause } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 
-export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md" }) {
+export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md", language }) {
   const isCurrent = currentSong?.id === song.id;
   const isThisPlaying = isCurrent && isPlaying;
 
@@ -53,12 +53,16 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           isSmall ? "text-sm" : "text-base"
         } font-song-title`}
       >
-        {song.teluguTitle || song.title}
+        {language
+          ? (language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title))
+          : (song.teluguTitle || song.title)}
       </span>
 
-      <span className={`text-muted block truncate mt-0.5 font-bold font-song-title ${isSmall ? "text-xs" : "text-sm"}`}>
-        {song.titleEnglish}
-      </span>
+      {song.titleEnglish && (
+        <span className={`text-muted block truncate mt-0.5 font-bold font-song-title ${isSmall ? "text-xs" : "text-sm"}`}>
+          {song.titleEnglish}
+        </span>
+      )}
     </div>
   );
 }

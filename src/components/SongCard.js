@@ -48,20 +48,28 @@ export default function SongCard({ song, onPlay }) {
         {/* Muted/Lyrics-Only Badge */}
         {!hasAudio && (
           <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/75 backdrop-blur-sm text-red-400 rounded-md flex items-center gap-1 text-[9px] font-black uppercase tracking-wider z-10 border border-red-500/20 shadow-sm" title="No audio available">
-            <VolumeX className="w-3 h-3 text-red-400" />
+            <span className="text-xs select-none">🔇</span>
             <span>Lyrics Only</span>
           </div>
         )}
       </div>
-
+ 
       {/* Info Header */}
       <div className="space-y-1 min-w-0">
-        <Link
-          href={`/song/${encodeURIComponent(song.slug || song.id)}`}
-          className="font-bold text-sm text-title hover:text-title block truncate tracking-tight"
-        >
-          {song.title}
-        </Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link
+            href={`/song/${encodeURIComponent(song.slug || song.id)}`}
+            className="font-bold text-sm text-title hover:text-title truncate tracking-tight"
+          >
+            {song.title}
+          </Link>
+          {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+            <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+          )}
+          {!(song.youtubeId || song.media?.video) && (
+            <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
+          )}
+        </div>
         {song.titleEnglish && (
           <span className="text-[11px] text-muted block truncate italic">
             {song.titleEnglish}

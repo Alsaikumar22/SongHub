@@ -2,10 +2,24 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 
-export function LanguageSegmented({ selected, onChange }) {
+export function LanguageSegmented({ selected, onChange, songLanguage }) {
   const langs = [];
-  langs.push({ id: "telugu", label: "తెలుగు" });
-  langs.push({ id: "english", label: "English" });
+  const isHi = songLanguage === "hi" || songLanguage === "hindi";
+  const isTa = songLanguage === "ta" || songLanguage === "tamil";
+  const isEn = songLanguage === "en" || songLanguage === "english";
+
+  if (isHi) {
+    langs.push({ id: "hindi", label: "हिन्दी" });
+    langs.push({ id: "english", label: "English" });
+  } else if (isTa) {
+    langs.push({ id: "tamil", label: "தமிழ்" });
+    langs.push({ id: "english", label: "English" });
+  } else if (isEn) {
+    langs.push({ id: "english", label: "English" });
+  } else {
+    langs.push({ id: "telugu", label: "తెలుగు" });
+    langs.push({ id: "english", label: "English" });
+  }
 
   return (
     <div className="flex h-9 md:h-11 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm w-fit">
@@ -86,11 +100,22 @@ export default function SongLyrics({
 
   useEffect(() => {
     if (song) {
-      const hasTelugu = !!(
+      const songLanguage = (song.language || "").toLowerCase();
+      const isHi = songLanguage === "hi" || songLanguage === "hindi";
+      const isTa = songLanguage === "ta" || songLanguage === "tamil";
+
+      const hasNative = !!(
         song.lyricsTelugu ||
-        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te" || l.isDefault))
+        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te" || l.language === "hi" || l.language === "ta" || l.isDefault))
       );
-      setInternalLanguage(hasTelugu ? "telugu" : "english");
+
+      let defaultLang = "english";
+      if (hasNative) {
+        if (isHi) defaultLang = "hindi";
+        else if (isTa) defaultLang = "tamil";
+        else defaultLang = "telugu";
+      }
+      setInternalLanguage(defaultLang);
     }
   }, [song]);
 
@@ -346,6 +371,7 @@ export default function SongLyrics({
         <LanguageSegmented
           selected={selectedLanguage}
           onChange={setSelectedLanguage}
+          songLanguage={(song?.language || "").toLowerCase()}
         />
       </div>
       {lyricsContent}

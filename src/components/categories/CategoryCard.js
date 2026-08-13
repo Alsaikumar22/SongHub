@@ -7,14 +7,21 @@ import ImageWithFallback from "@/components/ui/ImageWithFallback";
 
 export default function CategoryCard({ category, language, onClick }) {
   const { songs } = useAudio();
-  const name = category.nameEn;
+  const name = language === "telugu" ? category.nameTe : category.nameEn;
   const songIds = language === "telugu" ? category.songIdsTe : category.songIdsEn;
   const songCount = (songs || []).filter((song) => {
     // Verify language matches the selected tab language strictly
     const songLanguage = (song.language || "").toLowerCase();
-    const matchesLanguage = language === "telugu"
-      ? (songLanguage === "te" || songLanguage === "telugu")
-      : (songLanguage === "en" || songLanguage === "english");
+    let matchesLanguage = false;
+    if (language === "telugu") {
+      matchesLanguage = songLanguage === "te" || songLanguage === "telugu";
+    } else if (language === "english") {
+      matchesLanguage = songLanguage === "en" || songLanguage === "english";
+    } else if (language === "hindi") {
+      matchesLanguage = songLanguage === "hi" || songLanguage === "hindi";
+    } else if (language === "tamil") {
+      matchesLanguage = songLanguage === "ta" || songLanguage === "tamil";
+    }
 
     if (!matchesLanguage) return false;
 
@@ -26,15 +33,27 @@ export default function CategoryCard({ category, language, onClick }) {
 
     // 1. Match by database category array or string
     const matchByCategoryField = Array.isArray(song.categoryArr)
-      ? song.categoryArr.some(cat => cat.toLowerCase() === category.nameEn.toLowerCase() || cat.toLowerCase() === category.nameTe.toLowerCase())
-      : (typeof song.category === "string" && (song.category.toLowerCase() === category.nameEn.toLowerCase() || song.category.toLowerCase() === category.nameTe.toLowerCase()));
+      ? song.categoryArr.some(cat => 
+          cat.toLowerCase() === category.nameEn.toLowerCase() || 
+          cat.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === cat.toLowerCase()))
+        )
+      : (typeof song.category === "string" && (
+          song.category.toLowerCase() === category.nameEn.toLowerCase() || 
+          song.category.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === song.category.toLowerCase()))
+        ));
 
     // 2. Fallback: match by the hardcoded list in categoryData.js
     const matchByHardcodedList = songIds.includes(song.id);
 
     return matchByCategoryField || matchByHardcodedList;
   }).length;
-  const langLabel = language === "telugu" ? "Telugu" : "English";
+
+  let langLabel = "English";
+  if (language === "telugu") langLabel = "Telugu";
+  else if (language === "hindi") langLabel = "Hindi";
+  else if (language === "tamil") langLabel = "Tamil";
 
   return (
     <motion.div
