@@ -13,6 +13,7 @@ import RecentlyPlayed from "@/components/home/RecentlyPlayed";
 import SearchResults from "@/components/layout/SearchResults";
 import SongArtwork from "@/components/ui/SongArtwork";
 import CategoryExplorer from "@/components/categories/CategoryExplorer";
+import Footer from "@/components/layout/Footer";
 import { FullAppSkeleton } from "@/components/ui/SongSkeleton";
 
 import {
@@ -834,6 +835,9 @@ function HomeContent() {
           </div>
         )}
       </div>
+
+      {/* APP FOOTER */}
+      <Footer />
     </div>
   );
 }

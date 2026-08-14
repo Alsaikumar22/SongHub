@@ -156,6 +156,18 @@ function AppLayoutInner({
   const isLanding = pathname === "/";
   const isDiscover = pathname === "/home";
 
+  // Footer links open the Talk to Us drawer / About modal via custom events
+  useEffect(() => {
+    const openTalkToUs = () => setShowTalkToUs(true);
+    const openAbout = () => setShowAboutModal(true);
+    window.addEventListener("youworship:open-talk-to-us", openTalkToUs);
+    window.addEventListener("youworship:open-about", openAbout);
+    return () => {
+      window.removeEventListener("youworship:open-talk-to-us", openTalkToUs);
+      window.removeEventListener("youworship:open-about", openAbout);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Disable the hotkey on the landing page (no player chrome there).
@@ -211,7 +223,7 @@ function AppLayoutInner({
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
       <div
-        className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
+        className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0"
       >
         {/* SIDEBAR — production-grade navigation */}
         <aside

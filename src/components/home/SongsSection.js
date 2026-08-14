@@ -120,6 +120,26 @@ function hindiSort(a, b) {
   return a.localeCompare(b);
 }
 
+const TAMIL_ALPHABET_ORDER = [
+  "அ", "ஆ", "இ", "ஈ", "உ", "ஊ", "எ", "ஏ", "ஐ", "ஒ", "ஓ", "ஔ",
+  "க", "ச", "ஜ", "ஞ", "ட", "த", "ந", "ப", "ம", "ய", "ர", "ற", "ல", "வ", "ஷ", "ஸ", "ஹ"
+];
+
+function tamilSort(a, b) {
+  const o = TAMIL_ALPHABET_ORDER;
+  const idxA = o.indexOf(a);
+  const idxB = o.indexOf(b);
+
+  if (idxA !== -1 && idxB !== -1) {
+    return idxA - idxB;
+  }
+  if (idxA !== -1) return -1;
+  if (idxB !== -1) return 1;
+
+  return a.localeCompare(b);
+}
+
+
 export default function SongsSection({
   songs,
   songsLoading,
@@ -203,7 +223,13 @@ export default function SongsSection({
         if (!groups[hLetter].includes(song)) {
           groups[hLetter].push(song);
         }
-      } else if (scriptLang === "english" || scriptLang === "tamil") {
+      } else if (scriptLang === "tamil" && song.teluguFirstLetter) {
+        const taLetter = song.teluguFirstLetter;
+        if (!groups[taLetter]) groups[taLetter] = [];
+        if (!groups[taLetter].includes(song)) {
+          groups[taLetter].push(song);
+        }
+      } else if (scriptLang === "english") {
         const titleEn = song.titleEnglish || song.title || "";
         const firstChar = titleEn ? titleEn.charAt(0).toUpperCase() : "";
         if (/[A-Z]/.test(firstChar)) {
@@ -223,6 +249,8 @@ export default function SongsSection({
       return activeKeys.filter((k) => !/[A-Z]/.test(k)).sort(teluguSort);
     } else if (scriptLang === "hindi") {
       return activeKeys.filter((k) => !/[A-Z]/.test(k)).sort(hindiSort);
+    } else if (scriptLang === "tamil") {
+      return activeKeys.filter((k) => !/[A-Z]/.test(k)).sort(tamilSort);
     } else {
       return activeKeys.filter((k) => /[A-Z]/.test(k)).sort();
     }
@@ -336,16 +364,6 @@ export default function SongsSection({
               }`}
             >
               Hindi (हिन्दी)
-            </button>
-            <button
-              onClick={() => { /* Do nothing for Tamil until updated */ }}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                scriptLang === "tamil"
-                  ? "bg-white text-black shadow-sm font-black"
-                  : "text-muted hover:text-title"
-              }`}
-            >
-              Tamil (தமிழ்)
             </button>
           </div>
 
@@ -535,7 +553,7 @@ export default function SongsSection({
                       song={song}
                       currentSong={currentSong}
                       isPlaying={isPlaying}
-                      playSong={playSong}
+                      playSong={(s) => playSong(s, letterGroups[selectedLetter])}
                       language={scriptLang}
                     />
                   ))}
@@ -622,7 +640,7 @@ export default function SongsSection({
                           song={song}
                           currentSong={currentSong}
                           isPlaying={isPlaying}
-                          playSong={playSong}
+                          playSong={(s) => playSong(s, letterGroups[letter])}
                           size="md"
                           language={scriptLang}
                         />
@@ -711,7 +729,7 @@ export default function SongsSection({
                                   scriptLang !== "english" && /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu text-base leading-snug" : ""
                                 }`}
                               >
-                                {scriptLang !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title)}
+                                {scriptLang === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
                               </span>
                               {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
                                 <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
@@ -720,9 +738,11 @@ export default function SongsSection({
                                 <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
                               )}
                             </div>
-                            {song.titleEnglish && (
+                            {((scriptLang === "english"
+                              ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)
+                              : (song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? song.titleEnglish : null))) && (
                               <span className="text-[11px] text-muted block truncate mt-0.5 font-medium">
-                                {song.titleEnglish}
+                                {scriptLang === "english" ? song.teluguTitle : song.titleEnglish}
                               </span>
                             )}
                           </div>
@@ -735,7 +755,7 @@ export default function SongsSection({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  playSong(song);
+                                  playSong(song, letterGroups[letter]);
                                 }}
                                 className={`p-1.5 rounded-full transition-all hover:bg-card-hover ${
                                   isCurrent ? "text-[#D4A32A]" : "text-dim hover:text-copy"

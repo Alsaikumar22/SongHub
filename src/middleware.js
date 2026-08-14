@@ -25,6 +25,7 @@ const BOT_RE =
 const ENTERED_COOKIE = "yw_entered";
 
 export function middleware(request) {
+  return NextResponse.next();
   const { pathname } = request.nextUrl;
 
   // The landing page itself is never redirected.

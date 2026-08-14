@@ -28,6 +28,7 @@ import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import { extractDominantColor } from "@/utils/extract-color";
 import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+import Footer from "@/components/layout/Footer";
 import { songService } from "@/services/songService";
 import {
   getShareableSongUrl,
@@ -171,7 +172,7 @@ function SongPageContent({ params }) {
         setLyricsLanguage("hindi");
       } else if (isTa && lyricsLanguage !== "tamil" && lyricsLanguage !== "english") {
         setLyricsLanguage("tamil");
-      } else if (!isHi && !isTa && lyricsLanguage !== "telugu" && lyricsLanguage !== "english") {
+      } else if (!isHi && !isTa && lyricsLanguage !== "telugu" && lyricsLanguage !== "english" && lyricsLanguage !== "chords") {
         setLyricsLanguage("telugu");
       }
     }
@@ -372,11 +373,14 @@ function SongPageContent({ params }) {
       songs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
+        const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
         return (
           sIdNFC === targetNFC ||
           sIdNFC === rawNFC ||
           sSlugNFC === targetNFC ||
           sSlugNFC === rawNFC ||
+          sSlugEnglishNFC === targetNFC ||
+          sSlugEnglishNFC === rawNFC ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
@@ -385,7 +389,9 @@ function SongPageContent({ params }) {
       ((currentSong.id || "").normalize("NFC") === targetNFC ||
         (currentSong.id || "").normalize("NFC") === rawNFC ||
         (currentSong.slug || "").normalize("NFC") === targetNFC ||
-        (currentSong.slug || "").normalize("NFC") === rawNFC)
+        (currentSong.slug || "").normalize("NFC") === rawNFC ||
+        (currentSong.slugEnglish || "").normalize("NFC") === targetNFC ||
+        (currentSong.slugEnglish || "").normalize("NFC") === rawNFC)
         ? currentSong
         : null);
 
@@ -543,6 +549,13 @@ function SongPageContent({ params }) {
                 >
                   {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
                 </h2>
+                {((selectedLanguage === "english"
+                  ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)
+                  : (song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? song.titleEnglish : null))) && (
+                  <p className="text-xs text-muted/80 italic mt-0.5">
+                    {selectedLanguage === "english" ? song.teluguTitle : song.titleEnglish}
+                  </p>
+                )}
                 <p className="text-xs text-muted mt-1">
                   {selectedLanguage === "english"
                     ? (song.artistNameEnglish || song.artist)
@@ -682,8 +695,8 @@ function SongPageContent({ params }) {
             {song.artist && (
               <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
                 {selectedLanguage === "english"
-                  ? (song.artistNameEnglish || song.artist)
-                  : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
+                  ? `${song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? `${song.teluguTitle} • ` : ""}${song.artistNameEnglish || song.artist}`
+                  : `${song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}${song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist)}`}
               </p>
             )}
           </div>
@@ -924,6 +937,9 @@ function SongPageContent({ params }) {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* APP FOOTER */}
+      <Footer />
     </div>
   );
 }

@@ -265,7 +265,7 @@ export default function HeroCarousel() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Play / Pause Button */}
           <button
-            onClick={() => playSong(current.originalSong)}
+            onClick={() => playSong(current.originalSong, weeklySongs)}
             className="px-4 sm:px-7 h-10 sm:h-12 bg-title text-card font-black text-[11px] sm:text-sm rounded-full shadow-xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             {isCurrentPlaying ? (

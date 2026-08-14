@@ -68,6 +68,13 @@ function normalizeSongForUi(song) {
   };
 }
 
+function isSongPlayable(song) {
+  if (!song) return false;
+  const audioUrl = song.audioUrl || song.media?.audio;
+  const youtubeId = song.youtubeId;
+  return !!(audioUrl || youtubeId);
+}
+
 export const AudioProvider = ({ children }) => {
   const { user, firestoreData, setFirestoreData } = useAuth();
   const userRef = useRef(user);
@@ -97,6 +104,7 @@ export const AudioProvider = ({ children }) => {
   const isShuffledRef = useRef(isShuffled);
   const queueRef = useRef(queue);
   const currentSongRef = useRef(currentSong);
+  const consecutiveErrorsRef = useRef(0);
 
   useEffect(() => {
     isLoopingRef.current = isLooping;
@@ -158,42 +166,66 @@ export const AudioProvider = ({ children }) => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) return;
 
-    let nextIndex = 0;
+    let currentIndex = -1;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(
+      currentIndex = currentQueue.findIndex(
         (s) => s.id === currentSongRef.current.id,
       );
-      if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
-        nextIndex = currentIndex + 1;
-      }
     }
 
-    setCurrentSong(currentQueue[nextIndex]);
-    setIsPlaying(true);
-    setProgress(0);
+    let nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % currentQueue.length;
+    let checkedCount = 0;
+
+    // Skip songs that do not have audio
+    while (
+      checkedCount < currentQueue.length &&
+      !isSongPlayable(currentQueue[nextIndex])
+    ) {
+      nextIndex = (nextIndex + 1) % currentQueue.length;
+      checkedCount++;
+    }
+
+    if (checkedCount < currentQueue.length) {
+      setCurrentSong(currentQueue[nextIndex]);
+      setIsPlaying(true);
+      setProgress(0);
+    } else {
+      setIsPlaying(false);
+    }
   }, []);
 
   const handlePrevSong = useCallback(() => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) return;
 
-    let prevIndex = 0;
+    let currentIndex = -1;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(
+      currentIndex = currentQueue.findIndex(
         (s) => s.id === currentSongRef.current.id,
       );
-      if (currentIndex !== -1) {
-        if (currentIndex > 0) {
-          prevIndex = currentIndex - 1;
-        } else {
-          prevIndex = currentQueue.length - 1; // loop back to end
-        }
-      }
     }
 
-    setCurrentSong(currentQueue[prevIndex]);
-    setIsPlaying(true);
-    setProgress(0);
+    let prevIndex = currentIndex === -1
+      ? currentQueue.length - 1
+      : (currentIndex - 1 + currentQueue.length) % currentQueue.length;
+    let checkedCount = 0;
+
+    // Skip songs that do not have audio
+    while (
+      checkedCount < currentQueue.length &&
+      !isSongPlayable(currentQueue[prevIndex])
+    ) {
+      prevIndex = (prevIndex - 1 + currentQueue.length) % currentQueue.length;
+      checkedCount++;
+    }
+
+    if (checkedCount < currentQueue.length) {
+      setCurrentSong(currentQueue[prevIndex]);
+      setIsPlaying(true);
+      setProgress(0);
+    } else {
+      setIsPlaying(false);
+    }
   }, []);
 
   const audioRef = useRef(null);
@@ -339,6 +371,7 @@ export const AudioProvider = ({ children }) => {
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration || 0);
+      consecutiveErrorsRef.current = 0; // Reset error count on successful load
     };
 
     const handleEnded = () => {
@@ -351,14 +384,29 @@ export const AudioProvider = ({ children }) => {
       }
     };
 
+    const handleError = (e) => {
+      console.warn("Audio element error, skipping to next song:", e);
+      consecutiveErrorsRef.current += 1;
+      const currentQueue = queueRef.current;
+      if (consecutiveErrorsRef.current >= Math.max(5, currentQueue.length)) {
+        console.error("Too many consecutive audio playback errors. Stopping.");
+        setIsPlaying(false);
+        consecutiveErrorsRef.current = 0;
+      } else {
+        handleNextSong();
+      }
+    };
+
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
       audio.pause();
     };
   }, []);
@@ -524,6 +572,7 @@ export const AudioProvider = ({ children }) => {
             onReady: () => {
               if (!isMounted) return;
               youtubePlayerRef.current = player;
+              consecutiveErrorsRef.current = 0; // Reset error count on successful YouTube ready
 
               if (typeof player.setVolume === "function") {
                 player.setVolume(isMuted ? 0 : volume * 100);
@@ -591,6 +640,18 @@ export const AudioProvider = ({ children }) => {
                 } else {
                   handleNextSong();
                 }
+              }
+            },
+            onError: (event) => {
+              console.warn("YouTube player error:", event.data);
+              consecutiveErrorsRef.current += 1;
+              const currentQueue = queueRef.current;
+              if (consecutiveErrorsRef.current >= Math.max(5, currentQueue.length)) {
+                console.error("Too many consecutive YouTube playback errors. Stopping.");
+                setIsPlaying(false);
+                consecutiveErrorsRef.current = 0;
+              } else {
+                handleNextSong();
               }
             },
           },
@@ -712,7 +773,7 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isMiniPlayerActive, currentSong?.id]);
 
-  const playSong = (song) => {
+  const playSong = (song, customQueue = null) => {
     if (!song) return;
 
     if (currentSong && currentSong.id === song.id) {
@@ -726,13 +787,34 @@ export const AudioProvider = ({ children }) => {
         }
       }
     } else {
+      const contextSongs = customQueue || getCurrentContextSongs(song);
+
+      if (!isSongPlayable(song)) {
+        // If the song is statically unplayable, search for the next playable one
+        const currentIndex = contextSongs.findIndex((s) => s.id === song.id);
+        if (currentIndex !== -1) {
+          let nextIndex = (currentIndex + 1) % contextSongs.length;
+          let checkedCount = 0;
+          while (
+            checkedCount < contextSongs.length &&
+            !isSongPlayable(contextSongs[nextIndex])
+          ) {
+            nextIndex = (nextIndex + 1) % contextSongs.length;
+            checkedCount++;
+          }
+          if (checkedCount < contextSongs.length) {
+            playSong(contextSongs[nextIndex], contextSongs);
+            return;
+          }
+        }
+      }
+
       const srcToPlay = song.audioUrl || song.media?.audio || "";
       setCurrentSong(song);
       setIsPlaying(true);
       setProgress(0);
 
       // Set queue and originalQueue for this context
-      const contextSongs = getCurrentContextSongs(song);
       setOriginalQueue(contextSongs);
 
       if (isShuffled) {

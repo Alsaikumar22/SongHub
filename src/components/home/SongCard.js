@@ -53,14 +53,16 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           isSmall ? "text-sm" : "text-base"
         } font-song-title`}
       >
-        {language
-          ? (language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title))
+        {language === "english"
+          ? (song.titleEnglish || song.title)
           : (song.teluguTitle || song.title)}
       </span>
 
-      {song.titleEnglish && (
+      {((language === "english"
+        ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)
+        : (song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? song.titleEnglish : null))) && (
         <span className={`text-muted block truncate mt-0.5 font-bold font-song-title ${isSmall ? "text-xs" : "text-sm"}`}>
-          {song.titleEnglish}
+          {language === "english" ? song.teluguTitle : song.titleEnglish}
         </span>
       )}
     </div>

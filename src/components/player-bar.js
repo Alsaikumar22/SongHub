@@ -209,6 +209,7 @@ export default function PlayerBar() {
   const handleContainerClick = (e) => {
     // Prevent expansion when clicking action buttons
     if (e.target.closest("button") || e.target.closest("a")) return;
+    if (!currentSong) return; // nothing to expand when no track is selected
     setIsExpanded(true);
     setIsVolumeOpen(false);
   };
@@ -224,7 +225,7 @@ export default function PlayerBar() {
   return (
     <>
       {/* ─── MOBILE MINI PLAYER — fixed above MobileNav ─── */}
-      {currentSong && !isExpanded && (
+      {!isExpanded && (
         <div
           className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none"
           style={{ bottom: `calc(52px + env(safe-area-inset-bottom, 0px))` }}
@@ -270,21 +271,39 @@ export default function PlayerBar() {
           >
             {/* Left: Artwork + Titles */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <SongArtwork
-                song={currentSong}
-                className="w-9 h-9 object-cover rounded-md border border-line shrink-0"
-                iconSize="w-4.5 h-4.5"
-              />
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
-                  {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
-                </span>
-                <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
-                  {lyricsLanguage === "english"
-                    ? (currentSong.artistNameEnglish || currentSong.artist)
-                    : (currentSong.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (currentSong.artistName || currentSong.artist))}
-                </span>
-              </div>
+              {currentSong ? (
+                <>
+                  <SongArtwork
+                    song={currentSong}
+                    className="w-9 h-9 object-cover rounded-md border border-line shrink-0"
+                    iconSize="w-4.5 h-4.5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
+                      {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
+                    </span>
+                    <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
+                      {lyricsLanguage === "english"
+                        ? (currentSong.artistNameEnglish || currentSong.artist)
+                        : (currentSong.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (currentSong.artistName || currentSong.artist))}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-9 h-9 rounded-md bg-card-hover border border-line flex items-center justify-center text-dim shrink-0">
+                    <Music className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-bold text-title block truncate leading-tight">
+                      No Track Selected
+                    </span>
+                    <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
+                      Select a song to start
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right: Controls */}
@@ -302,20 +321,22 @@ export default function PlayerBar() {
                   <MicIcon className="w-4.5 h-4.5" />
                 </button>
               )}
-              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-                <button
-                  className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
-                  aria-label="Add to favorites"
-                >
-                  <Heart
-                    className={`w-4.5 h-4.5 ${
-                      isFavorited
-                        ? "fill-red-500 text-red-500"
-                        : "text-dim hover:text-title"
-                    }`}
-                  />
-                </button>
-              </ProtectedAction>
+              {currentSong && (
+                <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
+                  <button
+                    className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
+                    aria-label="Add to favorites"
+                  >
+                    <Heart
+                      className={`w-4.5 h-4.5 ${
+                        isFavorited
+                          ? "fill-red-500 text-red-500"
+                          : "text-dim hover:text-title"
+                      }`}
+                    />
+                  </button>
+                </ProtectedAction>
+              )}
 
               {/* Volume (Speaker) control with slider popover */}
               {hasAudio && (
@@ -400,8 +421,8 @@ export default function PlayerBar() {
         </div>
       )}
 
-        {/* ─── DESKTOP PLAYER BAR (lg+) ─── */}
-        <div className="hidden lg:flex items-center justify-between w-full h-20 shrink-0 px-8 border-t border-line-muted bg-canvas/95">
+        {/* ─── DESKTOP PLAYER BAR (lg+) — floating over content ─── */}
+        <div className="hidden lg:flex fixed bottom-0 left-0 right-0 z-40 items-center justify-between w-full h-20 px-8 border-t border-line-muted bg-canvas/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
           {/* Left section: Song Details */}
           <div className="flex items-center gap-3 w-[30%] min-w-0">
             {currentSong ? (

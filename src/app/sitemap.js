@@ -12,5 +12,17 @@ export default function sitemap() {
       changeFrequency: "daily",
       priority: 0.9,
     },
+    {
+      url: "https://youworship.world/privacy",
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    {
+      url: "https://youworship.world/terms",
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
   ];
 }

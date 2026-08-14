@@ -111,7 +111,10 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const isHovered = hoveredRowId === song.id;
 
           const displayTitle = language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
-          const subtitle = language !== "english" ? (song.titleEnglish || null) : (song.titleEnglish || song.title || null);
+          const subtitle =
+            language !== "english"
+              ? (song.titleEnglish && song.titleEnglish !== song.teluguTitle ? song.titleEnglish : null)
+              : (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null);
 
           // Mock date added based on releaseYear or ID
           const year = song.releaseYear || 2024;
@@ -124,7 +127,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 if (isCurrent) {
                   togglePlay();
                 } else {
-                  playSong(song);
+                  playSong(song, songs);
                 }
               }}
               variants={itemVariants}

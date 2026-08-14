@@ -8,6 +8,7 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
+import { getEnglishSlug } from "@/utils/songSlug";
 
 /**
  * Parses raw lyrics text into an array of verse lines/paragraphs
@@ -189,12 +190,35 @@ export function transformSongDoc(docSnap) {
   }
 
   const firstLetter = title ? title.charAt(0).toUpperCase() : "";
+  let titleEnglish = (data.titleEnglish || "").replace(/-/g, " ");
+
+  // If the language is Tamil and titleEnglish is empty or contains Tamil characters,
+  // extract the English transliteration from the first line of the English lyrics block.
+  const isTamil = (data.language || "").toLowerCase() === "ta" || (data.language || "").toLowerCase() === "tamil" || /[\u0B80-\u0BFF]/.test(title);
+  if (isTamil && (!titleEnglish || /[\u0B80-\u0BFF]/.test(titleEnglish))) {
+    let enContent = "";
+    if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
+      const enBlock = data.lyrics.find((l) => l.language === "en");
+      enContent = enBlock?.content || "";
+    } else if (typeof data.englishLyrics === "string") {
+      enContent = data.englishLyrics;
+    } else if (typeof data.lyrics === "string") {
+      enContent = data.englishLyrics || "";
+    }
+    if (enContent) {
+      const firstLine = enContent.split("\n").map(line => line.trim()).filter(Boolean)[0];
+      if (firstLine && !/[\u0B80-\u0BFF]/.test(firstLine)) {
+        titleEnglish = firstLine;
+      }
+    }
+  }
 
   return {
     id: docId,
     title,
-    titleEnglish: (data.titleEnglish || "").replace(/-/g, " "),
+    titleEnglish,
     slug: slug || docId,
+    slugEnglish: getEnglishSlug(titleEnglish),
     artist: artistName,
     artistObj: artistObj,
     artistName: artistName,
@@ -224,9 +248,26 @@ export function transformSongDoc(docSnap) {
     teluguTitle: title,
     firstLetter,
     teluguFirstLetter: firstLetter,
+    chords: Array.isArray(data.chords) ? data.chords : [],
+    chordCredits: data.chordCredits || "",
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
   };
+}
+
+/**
+ * True when a song is Tamil. Tamil songs are temporarily excluded from the
+ * app (the owner will re-add Tamil content later); remove this filter once
+ * Tamil songs are ready.
+ */
+function isTamilSong(song) {
+  if (!song) return false;
+  const lang = (song.language || "").toLowerCase();
+  return (
+    lang === "ta" ||
+    lang === "tamil" ||
+    /[\u0B80-\u0BFF]/.test(song.title || "")
+  );
 }
 
 /**
@@ -249,7 +290,9 @@ export const songService = {
         return [];
       }
 
-      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap));
+      const songs = snapshot.docs
+        .map((docSnap) => transformSongDoc(docSnap))
+        .filter((song) => song && !isTamilSong(song)); // exclude Tamil songs for now
 
       // Sort alphabetically by title
       songs.sort((a, b) =>
@@ -291,7 +334,8 @@ export const songService = {
       const songRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, targetId);
       const docSnap = await getDoc(songRef);
       if (docSnap.exists()) {
-        return transformSongDoc(docSnap);
+        const song = transformSongDoc(docSnap);
+        return song && !isTamilSong(song) ? song : null;
       }
 
       // 2. Lookup by raw songId
@@ -299,7 +343,8 @@ export const songService = {
         const rawRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, songId);
         const rawSnap = await getDoc(rawRef);
         if (rawSnap.exists()) {
-          return transformSongDoc(rawSnap);
+          const song = transformSongDoc(rawSnap);
+          return song && !isTamilSong(song) ? song : null;
         }
       }
 
@@ -311,11 +356,14 @@ export const songService = {
       const match = allSongs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
+        const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
         return (
           sIdNFC === targetNFC ||
           sIdNFC === songNFC ||
           sSlugNFC === targetNFC ||
           sSlugNFC === songNFC ||
+          sSlugEnglishNFC === targetNFC ||
+          sSlugEnglishNFC === songNFC ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
