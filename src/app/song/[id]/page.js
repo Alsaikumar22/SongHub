@@ -28,7 +28,6 @@ import YouTubeIcon from "@/components/ui/YouTubeIcon";
 import { extractDominantColor } from "@/utils/extract-color";
 import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
-import Footer from "@/components/layout/Footer";
 import { songService } from "@/services/songService";
 import {
   getShareableSongUrl,
@@ -938,8 +937,6 @@ function SongPageContent({ params }) {
         </div>
       )}
 
-      {/* APP FOOTER */}
-      <Footer />
     </div>
   );
 }

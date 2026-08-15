@@ -1,4 +1,3 @@
-import Footer from "@/components/layout/Footer";
 import ContactLink from "@/components/layout/ContactLink";
 import BackButton from "@/components/layout/BackButton";
 
@@ -107,8 +106,6 @@ export default function PrivacyPage() {
         </section>
       </div>
 
-      {/* APP FOOTER */}
-      <Footer />
     </div>
   );
 }

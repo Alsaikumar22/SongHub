@@ -222,9 +222,7 @@ function AppLayoutInner({
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
-      <div
-        className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0"
-      >
+      <div className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0">
         {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
