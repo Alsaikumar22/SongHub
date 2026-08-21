@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAudio } from "@/context/audio-context";
 import {
   Play,
@@ -140,15 +141,25 @@ export default function HeroCarousel() {
 
       {/* 2. HIGH DEFINITION COVER ARTWORK — contained as a right-side banner within the card */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={`bg-cover-${current.id}`}
-          initial={{ opacity: 0, scale: 1.06 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="absolute inset-0 w-full bg-cover bg-center pointer-events-none"
-          style={current.bgUrl ? { backgroundImage: `url(${current.bgUrl})` } : undefined}
-        />
+        {current.bgUrl && (
+          <motion.div
+            key={`bg-cover-${current.id}`}
+            initial={{ opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+          >
+            <Image
+              src={current.bgUrl}
+              alt={current.title}
+              fill
+              priority
+              className="object-cover object-center"
+              sizes="(max-width: 768px) 100vw, 1200px"
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* 3. GRADIENT OVERLAYS — strong left-side opacity so text stays readable */}

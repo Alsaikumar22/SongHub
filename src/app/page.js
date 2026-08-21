@@ -9,7 +9,7 @@ import EnterAppButton from "@/components/landing/EnterAppButton";
  *   subtitle, tagline and a glassmorphism "Explore Songs" CTA that
  *   opens the application at /home.
  *
- * The landing gate (src/middleware.js) sends every public app URL here with a
+ * The landing gate (src/proxy.js) sends every public app URL here with a
  * `redirect` param (e.g. a shared song link → /?redirect=%2Fsong%2Fxyz), so the
  * CTA opens the visitor's intended destination after they click through.
  *

@@ -100,8 +100,18 @@ export const AudioProvider = ({ children }) => {
   const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
   const [lyricsLanguage, setLyricsLanguage] = useState("telugu");
 
+  const [sections, setSections] = useState({});
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [currentSectionLetter, setCurrentSectionLetter] = useState(null);
+  const [currentIndexInSection, setCurrentIndexInSection] = useState(null);
+  const [isLoadingMoreNext, setIsLoadingMoreNext] = useState(false);
+
   const isLoopingRef = useRef(isLooping);
   const isShuffledRef = useRef(isShuffled);
+  const sectionsRef = useRef(sections);
+  const currentSectionLetterRef = useRef(currentSectionLetter);
+  const currentIndexInSectionRef = useRef(currentIndexInSection);
+  const sectionsLoadingRef = useRef(sectionsLoading);
   const queueRef = useRef(queue);
   const currentSongRef = useRef(currentSong);
   const consecutiveErrorsRef = useRef(0);
@@ -113,6 +123,22 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     isShuffledRef.current = isShuffled;
   }, [isShuffled]);
+
+  useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+
+  useEffect(() => {
+    currentSectionLetterRef.current = currentSectionLetter;
+  }, [currentSectionLetter]);
+
+  useEffect(() => {
+    currentIndexInSectionRef.current = currentIndexInSection;
+  }, [currentIndexInSection]);
+
+  useEffect(() => {
+    sectionsLoadingRef.current = sectionsLoading;
+  }, [sectionsLoading]);
 
   useEffect(() => {
     queueRef.current = queue;
@@ -320,8 +346,10 @@ export const AudioProvider = ({ children }) => {
 
   // Initialize browser-dependent values
   useEffect(() => {
-    // 1. Initialize HTML Audio Element
-    audioRef.current = new Audio();
+    // 1. Initialize HTML Audio Element by ref from DOM or fallback
+    if (!audioRef.current) {
+      audioRef.current = document.getElementById("global-audio-player") || new Audio();
+    }
     audioRef.current.volume = volume;
     audioRef.current.loop = isLoopingRef.current;
 
@@ -374,12 +402,47 @@ export const AudioProvider = ({ children }) => {
       consecutiveErrorsRef.current = 0; // Reset error count on successful load
     };
 
-    const handleEnded = () => {
-      // Handles auto-play next
+    const handleEnded = async () => {
       if (isLoopingRef.current) {
         audio.currentTime = 0;
         audio.play().catch((err) => console.log("Playback error: ", err));
+        return;
+      }
+
+      // Check if we are playing inside an alphabetical letter section
+      const letter = currentSectionLetterRef.current;
+      const index = currentIndexInSectionRef.current;
+
+      if (letter && index !== null) {
+        const section = sectionsRef.current[letter];
+        if (section && section.songs) {
+          const nextIndex = index + 1;
+          
+          if (nextIndex < section.songs.length) {
+            // Next song is already loaded in the section, play it!
+            const nextSong = section.songs[nextIndex];
+            playSong(nextSong, letter, nextIndex, section.songs);
+          } else if (section.hasMore && section.allSongs) {
+            // End of loaded batch but all songs are pre-computed in allSongs
+            const allLetterSongs = section.allSongs;
+            if (nextIndex < allLetterSongs.length) {
+              const updatedSongs = allLetterSongs;
+              setSections((prev) => ({
+                ...prev,
+                [letter]: {
+                  ...prev[letter],
+                  songs: updatedSongs,
+                  hasMore: false,
+                  showAll: true,
+                }
+              }));
+              const nextSong = updatedSongs[nextIndex];
+              playSong(nextSong, letter, nextIndex, updatedSongs);
+            }
+          }
+        }
       } else {
+        // Default queue auto-play next
         handleNextSong();
       }
     };
@@ -773,8 +836,110 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isMiniPlayerActive, currentSong?.id]);
 
-  const playSong = (song, customQueue = null) => {
+  const initializeAlphabeticalSections = useCallback(async (lang = "english") => {
+    // Build alphabetical sections from the already-loaded songs in state
+    const currentSongs = songs;
+    if (currentSongs.length === 0) {
+      console.log("[Sections] songs still empty, skipping init");
+      return;
+    }
+
+    console.log("[Sections] Initializing sections for", lang, "with", currentSongs.length, "songs");
+
+    const ALPHABETS = {
+      english: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+      telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'క', 'ఖ', 'గ', 'ఘ', 'చ', 'జ', 'డ', 'త', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ'],
+      hindi: ['आ', 'इ', 'उ', 'ख', 'च', 'ज', 'झ', 'त', 'द', 'न', 'प', 'य', 'र', 'ल', 'व', 'स'],
+      tamil: ['அ', 'ஆ', 'இ', 'ஈ', 'உ', 'ஊ', 'எ', 'ஏ', 'ஐ', 'ஒ', 'ஓ', 'க', 'ச', 'ஜ', 'ஞ', 'ட', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ற', 'ல', 'வ', 'ஷ', 'ஸ', 'ஹ'],
+    };
+
+    // Language filter
+    const languageMap = {
+      english: ["en", "english"],
+      telugu: ["te", "telugu"],
+      hindi: ["hi", "hindi"],
+      tamil: ["ta", "tamil"],
+    };
+    const allowedLangs = languageMap[lang] || languageMap.english;
+
+    const letters = ALPHABETS[lang] || ALPHABETS.english;
+    // Always rebuild — clear old sections for this language's letters first
+    const newSections = {};
+
+    setSectionsLoading(true);
+    try {
+      const BATCH_SIZE = 20;
+
+      // Group all songs by their first letter
+      const grouped = {};
+      currentSongs.forEach(song => {
+        const songLang = (song.language || "").toLowerCase();
+        if (!allowedLangs.includes(songLang)) return;
+
+        const firstLetter = song.firstLetter || (song.title ? song.title.charAt(0).toUpperCase() : "");
+        if (!grouped[firstLetter]) grouped[firstLetter] = [];
+        grouped[firstLetter].push(song);
+      });
+
+      console.log("[Sections] Grouped letters:", Object.keys(grouped).join(", "));
+
+      // Sort songs within each letter group
+      Object.keys(grouped).forEach(letter => {
+        grouped[letter].sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+      });
+
+      // Build sections for all letters that have songs
+      letters.forEach(letter => {
+        const allLetterSongs = grouped[letter] || [];
+        if (allLetterSongs.length === 0) return;
+
+        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
+        newSections[letter] = {
+          songs: initialSongs,
+          lastDoc: null,
+          hasMore: allLetterSongs.length > BATCH_SIZE,
+          allSongs: allLetterSongs,
+          showAll: false,
+          loading: false,
+        };
+      });
+
+      console.log("[Sections] Built sections for letters:", Object.keys(newSections).join(", "));
+
+      setSections(newSections);
+    } catch (error) {
+      console.error("Failed to initialize alphabetical sections for language:", lang, error);
+    } finally {
+      setSectionsLoading(false);
+    }
+  }, [songs]);
+
+  const showAllSongsForLetter = useCallback(async (letter) => {
+    const section = sectionsRef.current[letter];
+    if (!section || section.showAll || section.loading) return;
+
+    // Use the pre-computed allSongs from initialization
+    const allLetterSongs = section.allSongs || section.songs;
+
+    setSections((prev) => ({
+      ...prev,
+      [letter]: {
+        ...prev[letter],
+        songs: allLetterSongs,
+        hasMore: false,
+        showAll: true,
+        loading: false,
+      },
+    }));
+  }, []);
+
+  const playSong = (song, sectionLetter = null, indexInSection = null, customQueue = null) => {
     if (!song) return;
+
+    setCurrentSectionLetter(sectionLetter);
+    setCurrentIndexInSection(indexInSection);
+    currentSectionLetterRef.current = sectionLetter;
+    currentIndexInSectionRef.current = indexInSection;
 
     if (currentSong && currentSong.id === song.id) {
       if (isPlaying) {
@@ -803,7 +968,7 @@ export const AudioProvider = ({ children }) => {
             checkedCount++;
           }
           if (checkedCount < contextSongs.length) {
-            playSong(contextSongs[nextIndex], contextSongs);
+            playSong(contextSongs[nextIndex], sectionLetter, nextIndex, contextSongs);
             return;
           }
         }
@@ -1020,9 +1185,14 @@ export const AudioProvider = ({ children }) => {
         setIsMiniPlayerActive,
         lyricsLanguage,
         setLyricsLanguage,
+        sections,
+        sectionsLoading,
+        initializeAlphabeticalSections,
+        showAllSongsForLetter,
       }}
     >
       {children}
+      <audio id="global-audio-player" ref={audioRef} preload="none" />
     </AudioContext.Provider>
   );
 };

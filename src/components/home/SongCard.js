@@ -1,9 +1,43 @@
 "use client";
 
 import React from "react";
-import { Play, Pause } from "lucide-react";
-import SongArtwork from "../ui/SongArtwork";
-import ProtectedAction from "@/components/auth/ProtectedAction";
+import Image from "next/image";
+import { Play, Pause, Music } from "lucide-react";
+
+const letterGradients = {
+  A: "from-red-600 to-red-900",
+  B: "from-orange-600 to-orange-900",
+  C: "from-amber-600 to-amber-900",
+  D: "from-yellow-600 to-yellow-900",
+  E: "from-lime-600 to-lime-900",
+  F: "from-green-600 to-green-900",
+  G: "from-emerald-600 to-emerald-900",
+  H: "from-teal-600 to-teal-900",
+  I: "from-cyan-600 to-cyan-900",
+  J: "from-sky-600 to-sky-900",
+  K: "from-blue-600 to-blue-900",
+  L: "from-indigo-600 to-indigo-900",
+  M: "from-violet-600 to-violet-900",
+  N: "from-purple-600 to-purple-900",
+  O: "from-fuchsia-600 to-fuchsia-900",
+  P: "from-pink-600 to-pink-900",
+  Q: "from-rose-600 to-rose-900",
+  R: "from-red-500 to-rose-900",
+  S: "from-orange-500 to-amber-900",
+  T: "from-yellow-500 to-lime-900",
+  U: "from-green-500 to-emerald-900",
+  V: "from-teal-500 to-cyan-900",
+  W: "from-sky-500 to-blue-900",
+  X: "from-indigo-500 to-violet-900",
+  Y: "from-purple-500 to-fuchsia-900",
+  Z: "from-pink-500 to-rose-900",
+};
+
+function getLetterGradient(song) {
+  const title = song.titleEnglish || song.title || song.teluguTitle || "";
+  const firstLetter = title.charAt(0).toUpperCase();
+  return letterGradients[firstLetter] || "from-slate-600 to-slate-900";
+}
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md", language }) {
   const isCurrent = currentSong?.id === song.id;
@@ -21,11 +55,20 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           isSmall ? "mb-2" : "mb-3"
         }`}
       >
-        <SongArtwork
-          song={song}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          iconSize="w-8 h-8"
-        />
+        {song.imageUrl || song.coverUrl ? (
+          <Image
+            src={song.imageUrl || song.coverUrl}
+            alt={song.teluguTitle || song.title}
+            width={300}
+            height={300}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${getLetterGradient(song)} flex items-center justify-center`}>
+            <Music className="w-10 h-10 text-white/25" />
+          </div>
+        )}
 
         {/* Overlay: centered play/pause — always visible on mobile, hover on desktop */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">

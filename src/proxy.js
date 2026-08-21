@@ -24,7 +24,7 @@ const BOT_RE =
 // Session cookie set by the "Explore Songs" button (see EnterAppButton).
 const ENTERED_COOKIE = "yw_entered";
 
-export function middleware(request) {
+export function proxy(request) {
   return NextResponse.next();
   const { pathname } = request.nextUrl;
 

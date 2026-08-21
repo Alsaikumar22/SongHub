@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-// Must match src/middleware.js — this cookie tells the landing gate that the
+// Must match src/proxy.js — this cookie tells the landing gate that the
 // visitor chose to enter the app, letting all subsequent navigation through.
 const ENTERED_COOKIE = "yw_entered";
 

@@ -7,6 +7,8 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
 } from "firebase/firestore";
 import { getEnglishSlug } from "@/utils/songSlug";
 
@@ -248,7 +250,11 @@ export function transformSongDoc(docSnap) {
     teluguTitle: title,
     firstLetter,
     teluguFirstLetter: firstLetter,
-    chords: Array.isArray(data.chords) ? data.chords : [],
+    chords: Array.isArray(data.chords)
+      ? data.chords
+      : typeof data.chords === "string" && data.chords.trim()
+        ? data.chords.split("\n")
+        : [],
     chordCredits: data.chordCredits || "",
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
@@ -454,4 +460,73 @@ export const songService = {
       );
     });
   },
+
+  /**
+   * Fetch the first 20 songs starting with the specified letter from Firestore.
+   */
+  async fetchInitialSongsForLetter(letter) {
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc, hasMore: snapshot.docs.length === 20 };
+    } catch (error) {
+      console.error(`Error fetching initial songs for letter ${letter}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all remaining songs starting with the specified letter from Firestore.
+   */
+  async fetchRemainingSongsForLetter(letter, lastDoc) {
+    if (!lastDoc) return { songs: [], lastDoc: null, hasMore: false };
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        startAfter(lastDoc)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc: newLastDoc, hasMore: false };
+    } catch (error) {
+      console.error(`Error fetching remaining songs for letter ${letter}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch the next batch (limitCount) of songs starting with the specified letter from Firestore.
+   */
+  async fetchNextBatchForLetter(letter, lastDoc, limitCount = 20) {
+    if (!lastDoc) return { songs: [], lastDoc: null, hasMore: false };
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc: newLastDoc, hasMore: snapshot.docs.length === limitCount };
+    } catch (error) {
+      console.error(`Error fetching next batch for letter ${letter}:`, error);
+      throw error;
+    }
+  }
 };

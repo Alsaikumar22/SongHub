@@ -639,6 +639,7 @@ function SongPageContent({ params }) {
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
               songLanguage={(song?.language || "").toLowerCase()}
+              hasChords={Array.isArray(song?.chords) && song.chords.length > 0}
             />
           </div>
         </div>
@@ -865,6 +866,7 @@ function SongPageContent({ params }) {
                 selected={selectedLanguage}
                 onChange={setSelectedLanguage}
                 songLanguage={(song?.language || "").toLowerCase()}
+                hasChords={Array.isArray(song?.chords) && song.chords.length > 0}
               />
 
               {/* Size & Full Screen Controls */}
