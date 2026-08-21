@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import EnterAppButton from "@/components/landing/EnterAppButton";
+import SongsPrefetcher from "@/components/landing/SongsPrefetcher";
 
 /**
  * Landing / Welcome screen — shown at the root URL (youworship.world).
@@ -48,6 +49,7 @@ export default async function LandingPage({ searchParams }) {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#0B0F18] flex flex-col items-center justify-center px-5 sm:px-6 select-none">
+      <SongsPrefetcher />
       {/* Deep navy (#0B0F18) → black gradient, middle toned to blend the logo seamlessly */}
       <div
         aria-hidden

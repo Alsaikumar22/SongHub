@@ -305,12 +305,33 @@ export const AudioProvider = ({ children }) => {
     }
   }, [firestoreData]);
 
-  // Load songs from the API endpoint (server-side rendered to avoid Firestore client issues)
+  // Load songs from the API endpoint.
+  // Priority: 1) prefetched global 2) browser cache 3) fresh fetch
   useEffect(() => {
     let isMounted = true;
     setSongsLoading(true);
 
-    fetch("/api/songs", { cache: "no-store" })
+    // Skip fetch if songs already loaded (SPA re-mount / hot reload)
+    if (songs.length > 0) {
+      setSongsLoading(false);
+      return () => { isMounted = false; };
+    }
+
+    // 1) Check if the landing page prefetched songs (instant!)
+    const prefetched = window.__SONGHUB_PREFETCHED_SONGS;
+    if (Array.isArray(prefetched) && prefetched.length > 0) {
+      const fetchedSongs = prefetched.filter(Boolean).map(normalizeSongForUi);
+      setSongs(fetchedSongs);
+      setQueue(fetchedSongs);
+      setOriginalQueue(fetchedSongs);
+      setSongsLoading(false);
+      console.log(`✓ Loaded ${fetchedSongs.length} songs from prefetch (instant)`);
+      delete window.__SONGHUB_PREFETCHED_SONGS; // free memory
+      return () => { isMounted = false; };
+    }
+
+    // 2) Browser cache or fresh fetch
+    fetch("/api/songs", { cache: "default" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();

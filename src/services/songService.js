@@ -12,6 +12,59 @@ import {
 } from "firebase/firestore";
 import { getEnglishSlug } from "@/utils/songSlug";
 
+// ── Server-side in-memory cache ──────────────────────────────────────
+// Avoids hitting Firestore on every /api/songs request. TTL: 60 seconds.
+const _songsCache = { data: null, ts: 0 };
+const CACHE_TTL_MS = 60_000;
+
+function _getCachedSongs() {
+  if (_songsCache.data && Date.now() - _songsCache.ts < CACHE_TTL_MS) {
+    return _songsCache.data;
+  }
+  return null;
+}
+
+function _setCachedSongs(data) {
+  _songsCache.data = data;
+  _songsCache.ts = Date.now();
+}
+
+/**
+ * Lightweight song summary — strips heavy fields (lyrics, chords)
+ * used only by the listing API so the payload stays small.
+ */
+function toSongSummary(song) {
+  if (!song) return null;
+  return {
+    id: song.id,
+    title: song.title,
+    titleEnglish: song.titleEnglish,
+    slug: song.slug,
+    slugEnglish: song.slugEnglish,
+    artist: song.artist,
+    artistObj: song.artistObj,
+    artistName: song.artistName,
+    artistNameEnglish: song.artistNameEnglish,
+    language: song.language,
+    category: song.category,
+    categoryArr: song.categoryArr,
+    genre: song.genre,
+    duration: song.duration,
+    durationSec: song.durationSec,
+    imageUrl: song.imageUrl,
+    audioUrl: song.audioUrl,
+    videoUrl: song.videoUrl,
+    youtubeUrl: song.youtubeUrl,
+    youtubeId: song.youtubeId,
+    teluguTitle: song.teluguTitle,
+    firstLetter: song.firstLetter,
+    // Has-chords flag so client knows the tab should appear
+    hasChords: Array.isArray(song.chords) && song.chords.length > 0,
+    tags: song.tags,
+    year: song.year,
+  };
+}
+
 /**
  * Parses raw lyrics text into an array of verse lines/paragraphs
  * Splits by double newlines or single newlines if needed
@@ -287,6 +340,13 @@ export const songService = {
    * @returns {Promise<Array>} List of transformed song objects with document IDs
    */
   async getAllSongs() {
+    // Return cached data if still fresh
+    const cached = _getCachedSongs();
+    if (cached) {
+      console.log(`🍟 [songService] Returning ${cached.length} songs from cache.`);
+      return cached;
+    }
+
     try {
       const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
       const snapshot = await getDocs(songsRef);
@@ -307,6 +367,9 @@ export const songService = {
         }),
       );
 
+      // Store in cache for subsequent requests
+      _setCachedSongs(songs);
+
       console.log(
         `🍟 [songService] Loaded ${songs.length} songs from youworship_songs.`,
       );
@@ -318,6 +381,15 @@ export const songService = {
       );
       throw error;
     }
+  },
+
+  /**
+   * Lightweight version of getAllSongs — strips lyrics/chords for fast listing.
+   * Cached alongside getAllSongs for minimal payload.
+   */
+  async getAllSongsSummary() {
+    const allSongs = await this.getAllSongs();
+    return allSongs.map(toSongSummary).filter(Boolean);
   },
 
   /**

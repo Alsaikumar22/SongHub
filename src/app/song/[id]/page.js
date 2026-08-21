@@ -394,8 +394,13 @@ function SongPageContent({ params }) {
         ? currentSong
         : null);
 
+    // Always show the summary immediately for fast rendering
     if (foundSong) {
       queueMicrotask(() => setSong(foundSong));
+    }
+
+    // If found song already has full data (lyrics/chords), skip fetch
+    if (foundSong && (foundSong.lyricsTelugu || foundSong.lyrics || (Array.isArray(foundSong.lyrics) && foundSong.lyrics.length > 0))) {
       return;
     }
 
