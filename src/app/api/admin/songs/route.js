@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getFirebaseAdmin, verifyAdminAuth, COLLECTION_NAME, generateSongId, FieldValue } from "@/lib/admin-firebase";
+import {
+  getFirebaseAdmin,
+  verifyAdminAuth,
+  COLLECTION_NAME,
+  generateSongId,
+  FieldValue,
+} from "@/lib/admin-firebase";
 
 // firebase-admin requires Node.js APIs (crypto, net) and must NOT run on the
 // Edge runtime. Explicitly opt into the Node.js runtime.
@@ -9,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/songs
- * List all songs from the Youworship_songs collection.
+ * List all songs from the youworship_songs collection.
  */
 export async function GET(request) {
   try {
@@ -28,21 +34,25 @@ export async function GET(request) {
     }));
 
     // Sort alphabetically in-memory to avoid needing a composite Firestore index
-    songs.sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+    songs.sort((a, b) =>
+      (a.title || "").localeCompare(b.title || "", undefined, {
+        sensitivity: "base",
+      }),
+    );
 
     return NextResponse.json({ songs });
   } catch (error) {
     console.error("Error listing songs:", error);
     return NextResponse.json(
       { error: error.stack || error.message || "Failed to list songs." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 /**
  * POST /api/admin/songs
- * Create a new song in the Youworship_songs collection.
+ * Create a new song in the youworship_songs collection.
  * Document ID is auto-generated as title-artistName.
  */
 export async function POST(request) {
@@ -55,11 +65,13 @@ export async function POST(request) {
     const body = await request.json();
 
     if (!body.title || !body.title.trim()) {
-      return NextResponse.json({ error: "Song title is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Song title is required." },
+        { status: 400 },
+      );
     }
 
     const db = getFirebaseAdmin();
-
 
     let artistName = "Unknown Artist";
     let artistNameEnglish = "";
@@ -81,14 +93,24 @@ export async function POST(request) {
       inputLyrics = body.lyrics;
     } else if (typeof body.lyrics === "string" && body.lyrics.trim()) {
       inputLyrics = [
-        { language: "te", format: "original", title: "తెలుగు", content: body.lyrics.trim(), isDefault: true }
+        {
+          language: "te",
+          format: "original",
+          title: "తెలుగు",
+          content: body.lyrics.trim(),
+          isDefault: true,
+        },
       ];
-      if (body.englishLyrics && typeof body.englishLyrics === "string" && body.englishLyrics.trim()) {
+      if (
+        body.englishLyrics &&
+        typeof body.englishLyrics === "string" &&
+        body.englishLyrics.trim()
+      ) {
         inputLyrics.push({
           language: "en",
           format: "transliteration",
           title: "Romanized",
-          content: body.englishLyrics.trim()
+          content: body.englishLyrics.trim(),
         });
       }
     }
@@ -99,7 +121,9 @@ export async function POST(request) {
     const existingDoc = await songsRef.doc(customId).get();
     if (existingDoc.exists) {
       const existingData = existingDoc.data() || {};
-      const existingLyrics = Array.isArray(existingData.lyrics) ? existingData.lyrics : [];
+      const existingLyrics = Array.isArray(existingData.lyrics)
+        ? existingData.lyrics
+        : [];
 
       // Merge lyrics arrays by matching language
       const lyricsMap = {};
@@ -117,31 +141,72 @@ export async function POST(request) {
       }
 
       // Merge categories, tags, and media
-      const mergedCategories = Array.from(new Set([
-        ...(Array.isArray(body.category) ? body.category : (body.category ? [body.category] : [])),
-        ...(Array.isArray(existingData.category) ? existingData.category : (existingData.category ? [existingData.category] : []))
-      ]));
+      const mergedCategories = Array.from(
+        new Set([
+          ...(Array.isArray(body.category)
+            ? body.category
+            : body.category
+              ? [body.category]
+              : []),
+          ...(Array.isArray(existingData.category)
+            ? existingData.category
+            : existingData.category
+              ? [existingData.category]
+              : []),
+        ]),
+      );
 
-      const mergedTags = Array.from(new Set([
-        ...(Array.isArray(body.tags) ? body.tags : []),
-        ...(Array.isArray(existingData.tags) ? existingData.tags : [])
-      ]));
+      const mergedTags = Array.from(
+        new Set([
+          ...(Array.isArray(body.tags) ? body.tags : []),
+          ...(Array.isArray(existingData.tags) ? existingData.tags : []),
+        ]),
+      );
 
       const updateData = {
         title: body.title.trim(),
-        titleEnglish: body.titleEnglish ? body.titleEnglish.trim() : (existingData.titleEnglish || ""),
-        artist: { id: artistId, name: artistName, nameEnglish: artistNameEnglish || existingData.artist?.nameEnglish || "" },
+        titleEnglish: body.titleEnglish
+          ? body.titleEnglish.trim()
+          : existingData.titleEnglish || "",
+        artist: {
+          id: artistId,
+          name: artistName,
+          nameEnglish:
+            artistNameEnglish || existingData.artist?.nameEnglish || "",
+        },
         language: body.language || existingData.language || "te",
         category: mergedCategories,
-        album: body.album !== undefined ? body.album : (existingData.album || null),
-        year: typeof body.year === "number" ? body.year : (existingData.year || new Date().getFullYear()),
-        duration: typeof body.duration === "number" ? body.duration : (existingData.duration || null),
+        album:
+          body.album !== undefined ? body.album : existingData.album || null,
+        year:
+          typeof body.year === "number"
+            ? body.year
+            : existingData.year || new Date().getFullYear(),
+        duration:
+          typeof body.duration === "number"
+            ? body.duration
+            : existingData.duration || null,
         tags: mergedTags,
         lyrics: mergedLyrics,
         media: {
-          image: body.media?.image || body.imageUrl || existingData.media?.image || existingData.imageUrl || "",
-          audio: body.media?.audio || body.audioUrl || existingData.media?.audio || existingData.audioUrl || "",
-          video: body.media?.video || body.videoUrl || existingData.media?.video || existingData.videoUrl || "",
+          image:
+            body.media?.image ||
+            body.imageUrl ||
+            existingData.media?.image ||
+            existingData.imageUrl ||
+            "",
+          audio:
+            body.media?.audio ||
+            body.audioUrl ||
+            existingData.media?.audio ||
+            existingData.audioUrl ||
+            "",
+          video:
+            body.media?.video ||
+            body.videoUrl ||
+            existingData.media?.video ||
+            existingData.videoUrl ||
+            "",
         },
         updatedBy: auth.uid,
         updatedAt: FieldValue.serverTimestamp(),
@@ -151,7 +216,7 @@ export async function POST(request) {
 
       return NextResponse.json(
         { success: true, id: customId, message: "Song updated successfully." },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -160,11 +225,20 @@ export async function POST(request) {
       title: body.title.trim(),
       titleEnglish: body.titleEnglish ? body.titleEnglish.trim() : "",
       slug: customId,
-      artist: { id: artistId, name: artistName, nameEnglish: artistNameEnglish },
+      artist: {
+        id: artistId,
+        name: artistName,
+        nameEnglish: artistNameEnglish,
+      },
       language: body.language || "te",
-      category: Array.isArray(body.category) ? body.category : (body.category ? [body.category] : []),
+      category: Array.isArray(body.category)
+        ? body.category
+        : body.category
+          ? [body.category]
+          : [],
       album: body.album || null,
-      year: typeof body.year === "number" ? body.year : new Date().getFullYear(),
+      year:
+        typeof body.year === "number" ? body.year : new Date().getFullYear(),
       duration: typeof body.duration === "number" ? body.duration : null,
       tags: Array.isArray(body.tags) ? body.tags : [],
       lyrics: inputLyrics,
@@ -178,14 +252,13 @@ export async function POST(request) {
 
     return NextResponse.json(
       { success: true, id: customId, message: "Song added successfully." },
-      { status: 201 }
+      { status: 201 },
     );
-
   } catch (error) {
     console.error("Error adding song:", error);
     return NextResponse.json(
       { error: error.message || "Failed to add song." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -204,7 +277,10 @@ export async function PUT(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
-      return NextResponse.json({ error: "Song ID is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Song ID is required." },
+        { status: 400 },
+      );
     }
 
     const body = await request.json();
@@ -221,7 +297,8 @@ export async function PUT(request) {
     const updateData = {};
 
     if (body.title !== undefined) updateData.title = body.title.trim();
-    if (body.titleEnglish !== undefined) updateData.titleEnglish = body.titleEnglish.trim();
+    if (body.titleEnglish !== undefined)
+      updateData.titleEnglish = body.titleEnglish.trim();
 
     // Update artist info
     if (body.artist !== undefined) {
@@ -235,19 +312,26 @@ export async function PUT(request) {
       } else if (typeof body.artist === "string" && body.artist.trim()) {
         artistName = body.artist.trim();
       }
-      updateData.artist = { id: artistId, name: artistName, nameEnglish: artistNameEnglish };
+      updateData.artist = {
+        id: artistId,
+        name: artistName,
+        nameEnglish: artistNameEnglish,
+      };
     }
 
     if (body.language !== undefined) updateData.language = body.language;
     if (body.category !== undefined) {
       updateData.category = Array.isArray(body.category)
         ? body.category
-        : (body.category ? [body.category] : []);
+        : body.category
+          ? [body.category]
+          : [];
     }
     if (body.album !== undefined) updateData.album = body.album;
     if (body.year !== undefined) updateData.year = body.year;
     if (body.duration !== undefined) {
-      updateData.duration = typeof body.duration === "number" ? body.duration : null;
+      updateData.duration =
+        typeof body.duration === "number" ? body.duration : null;
     }
     if (body.tags !== undefined) updateData.tags = body.tags;
     if (body.lyrics !== undefined) {
@@ -256,14 +340,24 @@ export async function PUT(request) {
         finalLyrics = body.lyrics;
       } else if (typeof body.lyrics === "string" && body.lyrics.trim()) {
         finalLyrics = [
-          { language: "te", format: "original", title: "తెలుగు", content: body.lyrics.trim(), isDefault: true }
+          {
+            language: "te",
+            format: "original",
+            title: "తెలుగు",
+            content: body.lyrics.trim(),
+            isDefault: true,
+          },
         ];
-        if (body.englishLyrics && typeof body.englishLyrics === "string" && body.englishLyrics.trim()) {
+        if (
+          body.englishLyrics &&
+          typeof body.englishLyrics === "string" &&
+          body.englishLyrics.trim()
+        ) {
           finalLyrics.push({
             language: "en",
             format: "transliteration",
             title: "Romanized",
-            content: body.englishLyrics.trim()
+            content: body.englishLyrics.trim(),
           });
         }
       }
@@ -273,7 +367,8 @@ export async function PUT(request) {
 
     // Regenerate slug/id if title or artist name changed
     const title = updateData.title ?? existingData.title;
-    const artistName = updateData.artist?.name ?? existingData.artist?.name ?? "Unknown Artist";
+    const artistName =
+      updateData.artist?.name ?? existingData.artist?.name ?? "Unknown Artist";
     const newId = generateSongId(title, artistName);
     updateData.id = newId;
     updateData.slug = newId;
@@ -288,7 +383,7 @@ export async function PUT(request) {
       if (newDoc.exists) {
         return NextResponse.json(
           { error: "A song with this title and artist name already exists." },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -320,7 +415,7 @@ export async function PUT(request) {
         code: error.code || "unknown",
         stack: error.stack,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -339,7 +434,10 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
-      return NextResponse.json({ error: "Song ID is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Song ID is required." },
+        { status: 400 },
+      );
     }
 
     const db = getFirebaseAdmin();
@@ -369,7 +467,7 @@ export async function DELETE(request) {
         code: error.code || "unknown",
         stack: error.stack,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

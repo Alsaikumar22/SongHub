@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { songService } from "../services/songService";
 
 /**
- * Custom React hook for fetching and managing songs from Youworship_songs collection.
+ * Custom React hook for fetching and managing songs from youworship_songs collection.
  * Provides loading states, error handling, refetch capabilities, and filtering helpers.
  *
  * @returns {Object} { songs, loading, error, refetch, search, filterByCategory, filterByLetter }

@@ -156,6 +156,18 @@ function AppLayoutInner({
   const isLanding = pathname === "/";
   const isDiscover = pathname === "/home";
 
+  // Footer links open the Talk to Us drawer / About modal via custom events
+  useEffect(() => {
+    const openTalkToUs = () => setShowTalkToUs(true);
+    const openAbout = () => setShowAboutModal(true);
+    window.addEventListener("youworship:open-talk-to-us", openTalkToUs);
+    window.addEventListener("youworship:open-about", openAbout);
+    return () => {
+      window.removeEventListener("youworship:open-talk-to-us", openTalkToUs);
+      window.removeEventListener("youworship:open-about", openAbout);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Disable the hotkey on the landing page (no player chrome there).
@@ -197,30 +209,10 @@ function AppLayoutInner({
     return <>{children}</>;
   }
 
-  // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
-  if (authLoading) {
-    return (
-      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans items-center justify-center">
-        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
-          {/* Logo */}
-          <Image
-            src="/youworship-logo.png"
-            alt="YouWorship"
-            width={80}
-            height={80}
-            className="w-20 h-20 object-contain"
-            priority
-          />
-          {/* App Name */}
-          <h1 className="text-2xl font-black text-title tracking-tight">
-            YouWorship
-          </h1>
-          {/* Loading Spinner */}
-          <div className="w-6 h-6 border-2 border-[#D4A32A]/30 border-t-[#D4A32A] rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  // ─── AUTH LOADING: no splash screen ──────────────────────────────────────
+  // The app renders immediately while Firebase resolves the auth state in the
+  // background (isAuthenticated flips a moment later). Removing the branded
+  // splash avoids the jarring logo + spinner flash after "Explore Songs".
 
   // ─── AUTH GATE: for non-authenticated users, show content but block interaction ───
   // The home page content is fully visible. An invisible overlay catches all clicks
@@ -230,9 +222,7 @@ function AppLayoutInner({
   return (
     <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
-      <div
-        className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
-      >
+      <div className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0">
         {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}

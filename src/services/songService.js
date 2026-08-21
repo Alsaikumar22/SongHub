@@ -6,8 +6,64 @@ import {
   getDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  limit,
+  startAfter,
 } from "firebase/firestore";
+import { getEnglishSlug } from "@/utils/songSlug";
+
+// ── Server-side in-memory cache ──────────────────────────────────────
+// Avoids hitting Firestore on every /api/songs request. TTL: 60 seconds.
+const _songsCache = { data: null, ts: 0 };
+const CACHE_TTL_MS = 60_000;
+
+function _getCachedSongs() {
+  if (_songsCache.data && Date.now() - _songsCache.ts < CACHE_TTL_MS) {
+    return _songsCache.data;
+  }
+  return null;
+}
+
+function _setCachedSongs(data) {
+  _songsCache.data = data;
+  _songsCache.ts = Date.now();
+}
+
+/**
+ * Lightweight song summary — strips heavy fields (lyrics, chords)
+ * used only by the listing API so the payload stays small.
+ */
+function toSongSummary(song) {
+  if (!song) return null;
+  return {
+    id: song.id,
+    title: song.title,
+    titleEnglish: song.titleEnglish,
+    slug: song.slug,
+    slugEnglish: song.slugEnglish,
+    artist: song.artist,
+    artistObj: song.artistObj,
+    artistName: song.artistName,
+    artistNameEnglish: song.artistNameEnglish,
+    language: song.language,
+    category: song.category,
+    categoryArr: song.categoryArr,
+    genre: song.genre,
+    duration: song.duration,
+    durationSec: song.durationSec,
+    imageUrl: song.imageUrl,
+    audioUrl: song.audioUrl,
+    videoUrl: song.videoUrl,
+    youtubeUrl: song.youtubeUrl,
+    youtubeId: song.youtubeId,
+    teluguTitle: song.teluguTitle,
+    firstLetter: song.firstLetter,
+    // Has-chords flag so client knows the tab should appear
+    hasChords: Array.isArray(song.chords) && song.chords.length > 0,
+    tags: song.tags,
+    year: song.year,
+  };
+}
 
 /**
  * Parses raw lyrics text into an array of verse lines/paragraphs
@@ -81,34 +137,54 @@ export function transformSongDoc(docSnap) {
   }
 
   const cleanArtist = rawArtistName.trim();
-  const invalidArtistValues = ["na", "n/a", "unknown", "none", "null", "undefined", ""];
-  const artistName = (!cleanArtist || invalidArtistValues.includes(cleanArtist.toLowerCase()))
-    ? "Unknown Artist"
-    : cleanArtist;
+  const invalidArtistValues = [
+    "na",
+    "n/a",
+    "unknown",
+    "none",
+    "null",
+    "undefined",
+    "",
+  ];
+  const artistName =
+    !cleanArtist || invalidArtistValues.includes(cleanArtist.toLowerCase())
+      ? "Unknown Artist"
+      : cleanArtist;
 
   const cleanArtistEnglish = rawArtistNameEnglish.trim();
-  const artistNameEnglish = (!cleanArtistEnglish || invalidArtistValues.includes(cleanArtistEnglish.toLowerCase()))
-    ? "Unknown Artist"
-    : cleanArtistEnglish;
+  const artistNameEnglish =
+    !cleanArtistEnglish ||
+    invalidArtistValues.includes(cleanArtistEnglish.toLowerCase())
+      ? "Unknown Artist"
+      : cleanArtistEnglish;
 
-  const artistObj = { id: artistId, name: artistName, nameEnglish: artistNameEnglish };
+  const artistObj = {
+    id: artistId,
+    name: artistName,
+    nameEnglish: artistNameEnglish,
+  };
 
   // 3. Categories & Tags
   const categoryArr = Array.isArray(data.category)
     ? data.category
-    : (data.category ? [data.category] : ["Praise & Worship"]);
+    : data.category
+      ? [data.category]
+      : ["Praise & Worship"];
   const categoryPrimary = categoryArr[0] || "Praise & Worship";
 
   const tagsArr = Array.isArray(data.tags)
     ? data.tags
-    : (typeof data.tags === "string" ? data.tags.split(",").map((t) => t.trim()) : []);
+    : typeof data.tags === "string"
+      ? data.tags.split(",").map((t) => t.trim())
+      : [];
 
   // 4. Duration
-  const durationSec = typeof data.duration === "number"
-    ? data.duration
-    : (typeof data.duration === "string" && data.duration.includes(":")
-        ? data.duration.split(":").reduce((acc, time) => (60 * acc) + +time, 0)
-        : Number(data.duration) || 0);
+  const durationSec =
+    typeof data.duration === "number"
+      ? data.duration
+      : typeof data.duration === "string" && data.duration.includes(":")
+        ? data.duration.split(":").reduce((acc, time) => 60 * acc + +time, 0)
+        : Number(data.duration) || 0;
   const durationDisplay = formatSecondsToDisplay(durationSec);
 
   // 5. Media Object
@@ -121,17 +197,17 @@ export function transformSongDoc(docSnap) {
   let videoUrl = rawVideo;
 
   // If audio field contains a YouTube URL or fake placeholder with YouTube video present, route to video & clear audioUrl
-  if (rawAudio.includes("youtube.com") || rawAudio.includes("youtu.be") || (youtubeId && rawAudio.includes("soundhelix.com"))) {
+  if (
+    rawAudio.includes("youtube.com") ||
+    rawAudio.includes("youtu.be") ||
+    (youtubeId && rawAudio.includes("soundhelix.com"))
+  ) {
     if (!videoUrl) videoUrl = rawAudio;
     audioUrl = "";
   }
 
   const mediaObj = {
-    image:
-      data.media?.image ||
-      data.imageUrl ||
-      data.coverUrl ||
-      "",
+    image: data.media?.image || data.imageUrl || data.coverUrl || "",
     audio: audioUrl ? audioUrl.trim() : "",
     video: videoUrl ? videoUrl.trim() : "",
     youtubeId: youtubeId || null,
@@ -152,18 +228,52 @@ export function transformSongDoc(docSnap) {
     teluguLyricsText = data.lyrics;
     englishLyricsText = data.englishLyrics || "";
     lyricsArray = [
-      { language: "te", format: "original", title: "తెలుగు", content: teluguLyricsText, isDefault: true },
-      { language: "en", format: "transliteration", title: "Romanized", content: englishLyricsText }
+      {
+        language: "te",
+        format: "original",
+        title: "తెలుగు",
+        content: teluguLyricsText,
+        isDefault: true,
+      },
+      {
+        language: "en",
+        format: "transliteration",
+        title: "Romanized",
+        content: englishLyricsText,
+      },
     ];
   }
 
   const firstLetter = title ? title.charAt(0).toUpperCase() : "";
+  let titleEnglish = (data.titleEnglish || "").replace(/-/g, " ");
+
+  // If the language is Tamil and titleEnglish is empty or contains Tamil characters,
+  // extract the English transliteration from the first line of the English lyrics block.
+  const isTamil = (data.language || "").toLowerCase() === "ta" || (data.language || "").toLowerCase() === "tamil" || /[\u0B80-\u0BFF]/.test(title);
+  if (isTamil && (!titleEnglish || /[\u0B80-\u0BFF]/.test(titleEnglish))) {
+    let enContent = "";
+    if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
+      const enBlock = data.lyrics.find((l) => l.language === "en");
+      enContent = enBlock?.content || "";
+    } else if (typeof data.englishLyrics === "string") {
+      enContent = data.englishLyrics;
+    } else if (typeof data.lyrics === "string") {
+      enContent = data.englishLyrics || "";
+    }
+    if (enContent) {
+      const firstLine = enContent.split("\n").map(line => line.trim()).filter(Boolean)[0];
+      if (firstLine && !/[\u0B80-\u0BFF]/.test(firstLine)) {
+        titleEnglish = firstLine;
+      }
+    }
+  }
 
   return {
     id: docId,
     title,
-    titleEnglish: (data.titleEnglish || "").replace(/-/g, " "),
+    titleEnglish,
     slug: slug || docId,
+    slugEnglish: getEnglishSlug(titleEnglish),
     artist: artistName,
     artistObj: artistObj,
     artistName: artistName,
@@ -174,7 +284,8 @@ export function transformSongDoc(docSnap) {
     categoryPrimary: categoryPrimary,
     genre: categoryPrimary,
     album: data.album || null,
-    year: data.year !== undefined && data.year !== null ? Number(data.year) : 2026,
+    year:
+      data.year !== undefined && data.year !== null ? Number(data.year) : 2026,
     releaseYear: data.year || 2026,
     duration: durationDisplay,
     durationSec,
@@ -192,42 +303,93 @@ export function transformSongDoc(docSnap) {
     teluguTitle: title,
     firstLetter,
     teluguFirstLetter: firstLetter,
+    chords: Array.isArray(data.chords)
+      ? data.chords
+      : typeof data.chords === "string" && data.chords.trim()
+        ? data.chords.split("\n")
+        : [],
+    chordCredits: data.chordCredits || "",
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
   };
 }
 
 /**
- * Song Service — Manages Firestore operations for Youworship_songs
+ * True when a song is Tamil. Tamil songs are temporarily excluded from the
+ * app (the owner will re-add Tamil content later); remove this filter once
+ * Tamil songs are ready.
+ */
+function isTamilSong(song) {
+  if (!song) return false;
+  const lang = (song.language || "").toLowerCase();
+  return (
+    lang === "ta" ||
+    lang === "tamil" ||
+    /[\u0B80-\u0BFF]/.test(song.title || "")
+  );
+}
+
+/**
+ * Song Service — Manages Firestore operations for youworship_songs
  */
 export const songService = {
   /**
-   * Fetch all songs from 'Youworship_songs' collection sorted alphabetically by title.
+   * Fetch all songs from 'youworship_songs' collection sorted alphabetically by title.
    * Uses client-side fallback sorting to handle mixed language characters smoothly.
    *
    * @returns {Promise<Array>} List of transformed song objects with document IDs
    */
   async getAllSongs() {
+    // Return cached data if still fresh
+    const cached = _getCachedSongs();
+    if (cached) {
+      console.log(`🍟 [songService] Returning ${cached.length} songs from cache.`);
+      return cached;
+    }
+
     try {
       const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
       const snapshot = await getDocs(songsRef);
 
       if (snapshot.empty) {
-        console.warn("⚠️ No songs found in 'Youworship_songs' collection.");
+        console.warn("⚠️ No songs found in 'youworship_songs' collection.");
         return [];
       }
 
-      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap));
+      const songs = snapshot.docs
+        .map((docSnap) => transformSongDoc(docSnap))
+        .filter((song) => song && !isTamilSong(song)); // exclude Tamil songs for now
 
       // Sort alphabetically by title
-      songs.sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+      songs.sort((a, b) =>
+        (a.title || "").localeCompare(b.title || "", undefined, {
+          sensitivity: "base",
+        }),
+      );
 
-      console.log(`🎵 [songService] Loaded ${songs.length} songs from Youworship_songs.`);
+      // Store in cache for subsequent requests
+      _setCachedSongs(songs);
+
+      console.log(
+        `🍟 [songService] Loaded ${songs.length} songs from youworship_songs.`,
+      );
       return songs;
     } catch (error) {
-      console.error("❌ [songService.getAllSongs] Error fetching songs:", error);
+      console.error(
+        "❌ [songService.getAllSongs] Error fetching songs:",
+        error,
+      );
       throw error;
     }
+  },
+
+  /**
+   * Lightweight version of getAllSongs — strips lyrics/chords for fast listing.
+   * Cached alongside getAllSongs for minimal payload.
+   */
+  async getAllSongsSummary() {
+    const allSongs = await this.getAllSongs();
+    return allSongs.map(toSongSummary).filter(Boolean);
   },
 
   /**
@@ -250,7 +412,8 @@ export const songService = {
       const songRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, targetId);
       const docSnap = await getDoc(songRef);
       if (docSnap.exists()) {
-        return transformSongDoc(docSnap);
+        const song = transformSongDoc(docSnap);
+        return song && !isTamilSong(song) ? song : null;
       }
 
       // 2. Lookup by raw songId
@@ -258,7 +421,8 @@ export const songService = {
         const rawRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, songId);
         const rawSnap = await getDoc(rawRef);
         if (rawSnap.exists()) {
-          return transformSongDoc(rawSnap);
+          const song = transformSongDoc(rawSnap);
+          return song && !isTamilSong(song) ? song : null;
         }
       }
 
@@ -270,11 +434,14 @@ export const songService = {
       const match = allSongs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
+        const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
         return (
           sIdNFC === targetNFC ||
           sIdNFC === songNFC ||
           sSlugNFC === targetNFC ||
           sSlugNFC === songNFC ||
+          sSlugEnglishNFC === targetNFC ||
+          sSlugEnglishNFC === songNFC ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
@@ -285,7 +452,10 @@ export const songService = {
       console.warn(`⚠️ Song document with ID/Slug '${songId}' not found.`);
       return null;
     } catch (error) {
-      console.error(`❌ [songService.getSongById] Error fetching song '${songId}':`, error);
+      console.error(
+        `❌ [songService.getSongById] Error fetching song '${songId}':`,
+        error,
+      );
       throw error;
     }
   },
@@ -331,7 +501,7 @@ export const songService = {
       return allSongs.filter(
         (s) =>
           (s.firstLetter && s.firstLetter.toLowerCase() === targetLetter) ||
-          (s.title && s.title.trim().startsWith(letter))
+          (s.title && s.title.trim().startsWith(letter)),
       );
     } catch (error) {
       console.error(`❌ [songService.getSongsByFirstLetter] Error:`, error);
@@ -350,7 +520,9 @@ export const songService = {
     const q = searchQuery.trim().toLowerCase();
     const allSongs = await this.getAllSongs();
     return allSongs.filter((s) => {
-      const lyricsStr = Array.isArray(s.lyrics) ? s.lyrics.join(" ") : (s.lyrics || "");
+      const lyricsStr = Array.isArray(s.lyrics)
+        ? s.lyrics.join(" ")
+        : s.lyrics || "";
       return (
         s.title.toLowerCase().includes(q) ||
         s.titleEnglish.toLowerCase().includes(q) ||
@@ -359,5 +531,74 @@ export const songService = {
         lyricsStr.toLowerCase().includes(q)
       );
     });
+  },
+
+  /**
+   * Fetch the first 20 songs starting with the specified letter from Firestore.
+   */
+  async fetchInitialSongsForLetter(letter) {
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc, hasMore: snapshot.docs.length === 20 };
+    } catch (error) {
+      console.error(`Error fetching initial songs for letter ${letter}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all remaining songs starting with the specified letter from Firestore.
+   */
+  async fetchRemainingSongsForLetter(letter, lastDoc) {
+    if (!lastDoc) return { songs: [], lastDoc: null, hasMore: false };
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        startAfter(lastDoc)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc: newLastDoc, hasMore: false };
+    } catch (error) {
+      console.error(`Error fetching remaining songs for letter ${letter}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch the next batch (limitCount) of songs starting with the specified letter from Firestore.
+   */
+  async fetchNextBatchForLetter(letter, lastDoc, limitCount = 20) {
+    if (!lastDoc) return { songs: [], lastDoc: null, hasMore: false };
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+      const snapshot = await getDocs(q);
+      const songs = snapshot.docs.map((docSnap) => transformSongDoc(docSnap)).filter(Boolean);
+      const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      return { songs, lastDoc: newLastDoc, hasMore: snapshot.docs.length === limitCount };
+    } catch (error) {
+      console.error(`Error fetching next batch for letter ${letter}:`, error);
+      throw error;
+    }
   }
 };

@@ -7,7 +7,7 @@
  * with realistic favorites, playlists, and recently played data.
  *
  * Prerequisites:
- *   1. Update SongHub/.env.local with real Firebase credentials
+ *   1. Update SongHub/.env.local or SongHub/.env with real Firebase credentials
  *   2. Enable Email/Password auth in Firebase Console (optional, for login)
  */
 
@@ -15,9 +15,13 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path from "path";
 
-// Load .env.local
+// Load .env and .env.local
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const { initializeApp } = await import("firebase/app");
 const { getFirestore, doc, setDoc } = await import("firebase/firestore");
@@ -41,8 +45,8 @@ if (missing.length > 0) {
   console.error(
     "❌ Firebase credentials not configured or still using dummy values.\n" +
       `  Missing/Invalid: ${missing.join(", ")}\n\n` +
-      "👉 Update SongHub/.env.local with your real Firebase project credentials first.\n" +
-      "   Get them from: https://console.firebase.google.com → Project Settings → Web App"
+      "👉 Update SongHub/.env.local or SongHub/.env with your real Firebase project credentials first.\n" +
+      "   Get them from: https://console.firebase.google.com → Project Settings → Web App",
   );
   process.exit(1);
 }
@@ -67,7 +71,16 @@ const testUsers = [
     displayName: "Praveen Kumar",
     photoURL: "https://api.dicebear.com/7.x/avataaars/svg?seed=praveen",
     data: {
-      favorites: ["9", "10", "60", "108", "162", "200", "208", "adavi-chetla-naduma"],
+      favorites: [
+        "9",
+        "10",
+        "60",
+        "108",
+        "162",
+        "200",
+        "208",
+        "adavi-chetla-naduma",
+      ],
       playlists: [
         {
           id: "pl-morning",
@@ -192,7 +205,7 @@ async function seed() {
         `  ✅ ${user.displayName.padEnd(16)} (${user.email}) — ` +
           `${user.data.favorites.length} favorites, ` +
           `${user.data.playlists.length} playlists, ` +
-          `${user.data.recentlyPlayed.length} recently played`
+          `${user.data.recentlyPlayed.length} recently played`,
       );
       successCount++;
     } catch (error) {
@@ -203,9 +216,13 @@ async function seed() {
 
   console.log("\n" + "─".repeat(50));
   if (errorCount === 0) {
-    console.log(`\n🎉 Success! ${successCount} user(s) seeded into Youworship_users.\n`);
+    console.log(
+      `\n🎉 Success! ${successCount} user(s) seeded into Youworship_users.\n`,
+    );
   } else {
-    console.log(`\n⚠️  ${successCount} user(s) seeded, ${errorCount} error(s).\n`);
+    console.log(
+      `\n⚠️  ${successCount} user(s) seeded, ${errorCount} error(s).\n`,
+    );
   }
 
   console.log("📋 To create Firebase Auth users for testing, use:");
@@ -214,7 +231,9 @@ async function seed() {
   testUsers.forEach((u) => {
     console.log(`      - ${u.email} (password: Test123!)`);
   });
-  console.log("   3. Or enable Email/Password sign-in and use the Sign Up flow instead.\n");
+  console.log(
+    "   3. Or enable Email/Password sign-in and use the Sign Up flow instead.\n",
+  );
 
   process.exit(0);
 }

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Music,
-  Video,
   FileText,
   Plus,
   Share2,
@@ -161,6 +160,22 @@ function SongPageContent({ params }) {
   const [song, setSong] = useState(null);
   const selectedLanguage = lyricsLanguage;
   const setSelectedLanguage = setLyricsLanguage;
+
+  useEffect(() => {
+    if (song) {
+      const songLanguage = (song.language || "").toLowerCase();
+      const isHi = songLanguage === "hi" || songLanguage === "hindi";
+      const isTa = songLanguage === "ta" || songLanguage === "tamil";
+      
+      if (isHi && lyricsLanguage !== "hindi" && lyricsLanguage !== "english") {
+        setLyricsLanguage("hindi");
+      } else if (isTa && lyricsLanguage !== "tamil" && lyricsLanguage !== "english") {
+        setLyricsLanguage("tamil");
+      } else if (!isHi && !isTa && lyricsLanguage !== "telugu" && lyricsLanguage !== "english" && lyricsLanguage !== "chords") {
+        setLyricsLanguage("telugu");
+      }
+    }
+  }, [song, lyricsLanguage, setLyricsLanguage]);
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const fetchingRef = useRef(false);
   const prevIdRef = useRef(id);
@@ -357,11 +372,14 @@ function SongPageContent({ params }) {
       songs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
+        const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
         return (
           sIdNFC === targetNFC ||
           sIdNFC === rawNFC ||
           sSlugNFC === targetNFC ||
           sSlugNFC === rawNFC ||
+          sSlugEnglishNFC === targetNFC ||
+          sSlugEnglishNFC === rawNFC ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
@@ -370,12 +388,19 @@ function SongPageContent({ params }) {
       ((currentSong.id || "").normalize("NFC") === targetNFC ||
         (currentSong.id || "").normalize("NFC") === rawNFC ||
         (currentSong.slug || "").normalize("NFC") === targetNFC ||
-        (currentSong.slug || "").normalize("NFC") === rawNFC)
+        (currentSong.slug || "").normalize("NFC") === rawNFC ||
+        (currentSong.slugEnglish || "").normalize("NFC") === targetNFC ||
+        (currentSong.slugEnglish || "").normalize("NFC") === rawNFC)
         ? currentSong
         : null);
 
+    // Always show the summary immediately for fast rendering
     if (foundSong) {
       queueMicrotask(() => setSong(foundSong));
+    }
+
+    // If found song already has full data (lyrics/chords), skip fetch
+    if (foundSong && (foundSong.lyricsTelugu || foundSong.lyrics || (Array.isArray(foundSong.lyrics) && foundSong.lyrics.length > 0))) {
       return;
     }
 
@@ -528,6 +553,13 @@ function SongPageContent({ params }) {
                 >
                   {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
                 </h2>
+                {((selectedLanguage === "english"
+                  ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)
+                  : (song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? song.titleEnglish : null))) && (
+                  <p className="text-xs text-muted/80 italic mt-0.5">
+                    {selectedLanguage === "english" ? song.teluguTitle : song.titleEnglish}
+                  </p>
+                )}
                 <p className="text-xs text-muted mt-1">
                   {selectedLanguage === "english"
                     ? (song.artistNameEnglish || song.artist)
@@ -611,6 +643,8 @@ function SongPageContent({ params }) {
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
+              songLanguage={(song?.language || "").toLowerCase()}
+              hasChords={Array.isArray(song?.chords) && song.chords.length > 0}
             />
           </div>
         </div>
@@ -666,8 +700,8 @@ function SongPageContent({ params }) {
             {song.artist && (
               <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
                 {selectedLanguage === "english"
-                  ? (song.artistNameEnglish || song.artist)
-                  : (song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist))}
+                  ? `${song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? `${song.teluguTitle} • ` : ""}${song.artistNameEnglish || song.artist}`
+                  : `${song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}${song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist)}`}
               </p>
             )}
           </div>
@@ -768,7 +802,7 @@ function SongPageContent({ params }) {
               className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
               title="Watch Video"
             >
-              <Video className="w-4 h-4 text-red-400" />
+              <YouTubeIcon className="w-4 h-4 text-red-400" />
             </Link>
           )}
 
@@ -836,6 +870,8 @@ function SongPageContent({ params }) {
               <LanguageSegmented
                 selected={selectedLanguage}
                 onChange={setSelectedLanguage}
+                songLanguage={(song?.language || "").toLowerCase()}
+                hasChords={Array.isArray(song?.chords) && song.chords.length > 0}
               />
 
               {/* Size & Full Screen Controls */}
@@ -907,6 +943,7 @@ function SongPageContent({ params }) {
           <span>{toastMessage}</span>
         </div>
       )}
+
     </div>
   );
 }

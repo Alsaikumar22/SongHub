@@ -8,10 +8,15 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const { initializeApp } = await import("firebase/app");
-const { getFirestore, collection, getDocs, query, limit } = await import("firebase/firestore");
+const { getFirestore, collection, getDocs, query, limit } =
+  await import("firebase/firestore");
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -35,7 +40,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function main() {
-  console.log("🔍 Fetching up to 3 songs from Firebase 'songs' collection...\n");
+  console.log(
+    "🔍 Fetching up to 3 songs from Firebase 'songs' collection...\n",
+  );
 
   const q = query(collection(db, "songs"), limit(3));
   const snap = await getDocs(q);
@@ -59,9 +66,18 @@ async function main() {
 
     // Print the full structure with types
     for (const [key, value] of Object.entries(data)) {
-      const type = Array.isArray(value) ? `Array(${value.length})` : typeof value;
+      const type = Array.isArray(value)
+        ? `Array(${value.length})`
+        : typeof value;
       const preview = Array.isArray(value)
-        ? `[${value.slice(0, 2).map(v => typeof v === 'string' ? `"${v.substring(0, 30)}..."` : JSON.stringify(v)).join(", ")}${value.length > 2 ? "..." : ""}]`
+        ? `[${value
+            .slice(0, 2)
+            .map((v) =>
+              typeof v === "string"
+                ? `"${v.substring(0, 30)}..."`
+                : JSON.stringify(v),
+            )
+            .join(", ")}${value.length > 2 ? "..." : ""}]`
         : typeof value === "string"
           ? `"${value.substring(0, 60)}${value.length > 60 ? "..." : ""}"`
           : JSON.stringify(value);
@@ -74,7 +90,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error("❌ Error:", err.message);
   process.exit(1);
 });

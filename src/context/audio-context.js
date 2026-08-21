@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { useAuth } from "./auth-context";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/config";
@@ -25,7 +32,11 @@ function getDisplayArtist(song) {
     return song.artistObj.name.trim();
   }
 
-  if (typeof song?.artist === "object" && typeof song.artist?.name === "string" && song.artist.name.trim()) {
+  if (
+    typeof song?.artist === "object" &&
+    typeof song.artist?.name === "string" &&
+    song.artist.name.trim()
+  ) {
     return song.artist.name.trim();
   }
 
@@ -57,6 +68,13 @@ function normalizeSongForUi(song) {
   };
 }
 
+function isSongPlayable(song) {
+  if (!song) return false;
+  const audioUrl = song.audioUrl || song.media?.audio;
+  const youtubeId = song.youtubeId;
+  return !!(audioUrl || youtubeId);
+}
+
 export const AudioProvider = ({ children }) => {
   const { user, firestoreData, setFirestoreData } = useAuth();
   const userRef = useRef(user);
@@ -82,10 +100,21 @@ export const AudioProvider = ({ children }) => {
   const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
   const [lyricsLanguage, setLyricsLanguage] = useState("telugu");
 
+  const [sections, setSections] = useState({});
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [currentSectionLetter, setCurrentSectionLetter] = useState(null);
+  const [currentIndexInSection, setCurrentIndexInSection] = useState(null);
+  const [isLoadingMoreNext, setIsLoadingMoreNext] = useState(false);
+
   const isLoopingRef = useRef(isLooping);
   const isShuffledRef = useRef(isShuffled);
+  const sectionsRef = useRef(sections);
+  const currentSectionLetterRef = useRef(currentSectionLetter);
+  const currentIndexInSectionRef = useRef(currentIndexInSection);
+  const sectionsLoadingRef = useRef(sectionsLoading);
   const queueRef = useRef(queue);
   const currentSongRef = useRef(currentSong);
+  const consecutiveErrorsRef = useRef(0);
 
   useEffect(() => {
     isLoopingRef.current = isLooping;
@@ -94,6 +123,22 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     isShuffledRef.current = isShuffled;
   }, [isShuffled]);
+
+  useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+
+  useEffect(() => {
+    currentSectionLetterRef.current = currentSectionLetter;
+  }, [currentSectionLetter]);
+
+  useEffect(() => {
+    currentIndexInSectionRef.current = currentIndexInSection;
+  }, [currentIndexInSection]);
+
+  useEffect(() => {
+    sectionsLoadingRef.current = sectionsLoading;
+  }, [sectionsLoading]);
 
   useEffect(() => {
     queueRef.current = queue;
@@ -106,20 +151,25 @@ export const AudioProvider = ({ children }) => {
   const getCurrentContextSongs = (currentPlayingSong) => {
     let contextSongs = songs;
     if (activeTab === "favorites") {
-      contextSongs = songs.filter(s => favorites.includes(s.id));
+      contextSongs = songs.filter((s) => favorites.includes(s.id));
     } else if (activeTab === "playlist" && activePlaylistId) {
-      const pl = playlists.find(p => p.id === activePlaylistId);
+      const pl = playlists.find((p) => p.id === activePlaylistId);
       if (pl) {
-        contextSongs = songs.filter(s => pl.songIds.includes(s.id));
+        contextSongs = songs.filter((s) => pl.songIds.includes(s.id));
       } else {
         contextSongs = [];
       }
     } else if (activeTab === "recently-played") {
-      contextSongs = recentlyPlayed.map(id => songs.find(s => s.id === id)).filter(Boolean);
+      contextSongs = recentlyPlayed
+        .map((id) => songs.find((s) => s.id === id))
+        .filter(Boolean);
     }
 
     // Ensure the playing song is part of the queue
-    if (currentPlayingSong && !contextSongs.some(s => s.id === currentPlayingSong.id)) {
+    if (
+      currentPlayingSong &&
+      !contextSongs.some((s) => s.id === currentPlayingSong.id)
+    ) {
       return songs;
     }
     return contextSongs;
@@ -128,9 +178,9 @@ export const AudioProvider = ({ children }) => {
   const handleSetIsShuffled = (shuffledVal) => {
     setIsShuffled(shuffledVal);
     if (shuffledVal) {
-      const remaining = originalQueue.filter(s => s.id !== currentSong?.id);
-      const shuffled = currentSong 
-        ? [currentSong, ...shuffleArray(remaining)] 
+      const remaining = originalQueue.filter((s) => s.id !== currentSong?.id);
+      const shuffled = currentSong
+        ? [currentSong, ...shuffleArray(remaining)]
         : shuffleArray(originalQueue);
       setQueue(shuffled);
     } else {
@@ -142,38 +192,66 @@ export const AudioProvider = ({ children }) => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) return;
 
-    let nextIndex = 0;
+    let currentIndex = -1;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
-      if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
-        nextIndex = currentIndex + 1;
-      }
+      currentIndex = currentQueue.findIndex(
+        (s) => s.id === currentSongRef.current.id,
+      );
     }
 
-    setCurrentSong(currentQueue[nextIndex]);
-    setIsPlaying(true);
-    setProgress(0);
+    let nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % currentQueue.length;
+    let checkedCount = 0;
+
+    // Skip songs that do not have audio
+    while (
+      checkedCount < currentQueue.length &&
+      !isSongPlayable(currentQueue[nextIndex])
+    ) {
+      nextIndex = (nextIndex + 1) % currentQueue.length;
+      checkedCount++;
+    }
+
+    if (checkedCount < currentQueue.length) {
+      setCurrentSong(currentQueue[nextIndex]);
+      setIsPlaying(true);
+      setProgress(0);
+    } else {
+      setIsPlaying(false);
+    }
   }, []);
 
   const handlePrevSong = useCallback(() => {
     const currentQueue = queueRef.current;
     if (currentQueue.length === 0) return;
 
-    let prevIndex = 0;
+    let currentIndex = -1;
     if (currentSongRef.current) {
-      const currentIndex = currentQueue.findIndex(s => s.id === currentSongRef.current.id);
-      if (currentIndex !== -1) {
-        if (currentIndex > 0) {
-          prevIndex = currentIndex - 1;
-        } else {
-          prevIndex = currentQueue.length - 1; // loop back to end
-        }
-      }
+      currentIndex = currentQueue.findIndex(
+        (s) => s.id === currentSongRef.current.id,
+      );
     }
 
-    setCurrentSong(currentQueue[prevIndex]);
-    setIsPlaying(true);
-    setProgress(0);
+    let prevIndex = currentIndex === -1
+      ? currentQueue.length - 1
+      : (currentIndex - 1 + currentQueue.length) % currentQueue.length;
+    let checkedCount = 0;
+
+    // Skip songs that do not have audio
+    while (
+      checkedCount < currentQueue.length &&
+      !isSongPlayable(currentQueue[prevIndex])
+    ) {
+      prevIndex = (prevIndex - 1 + currentQueue.length) % currentQueue.length;
+      checkedCount++;
+    }
+
+    if (checkedCount < currentQueue.length) {
+      setCurrentSong(currentQueue[prevIndex]);
+      setIsPlaying(true);
+      setProgress(0);
+    } else {
+      setIsPlaying(false);
+    }
   }, []);
 
   const audioRef = useRef(null);
@@ -192,7 +270,10 @@ export const AudioProvider = ({ children }) => {
         audioRef.current.pause();
         audioRef.current.removeAttribute("src");
       }
-      if (youtubePlayerRef.current && typeof youtubePlayerRef.current.pauseVideo === "function") {
+      if (
+        youtubePlayerRef.current &&
+        typeof youtubePlayerRef.current.pauseVideo === "function"
+      ) {
         try {
           youtubePlayerRef.current.pauseVideo();
         } catch (e) {}
@@ -207,7 +288,11 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     if (!firestoreData) return;
 
-    const { favorites: favs, playlists: pls, recentlyPlayed: recent } = firestoreData;
+    const {
+      favorites: favs,
+      playlists: pls,
+      recentlyPlayed: recent,
+    } = firestoreData;
 
     if (Array.isArray(favs) && favs.length > 0) {
       setFavorites(favs);
@@ -220,12 +305,33 @@ export const AudioProvider = ({ children }) => {
     }
   }, [firestoreData]);
 
-  // Load songs from the API endpoint (server-side rendered to avoid Firestore client issues)
+  // Load songs from the API endpoint.
+  // Priority: 1) prefetched global 2) browser cache 3) fresh fetch
   useEffect(() => {
     let isMounted = true;
     setSongsLoading(true);
-    
-    fetch("/api/songs", { cache: "no-store" })
+
+    // Skip fetch if songs already loaded (SPA re-mount / hot reload)
+    if (songs.length > 0) {
+      setSongsLoading(false);
+      return () => { isMounted = false; };
+    }
+
+    // 1) Check if the landing page prefetched songs (instant!)
+    const prefetched = window.__SONGHUB_PREFETCHED_SONGS;
+    if (Array.isArray(prefetched) && prefetched.length > 0) {
+      const fetchedSongs = prefetched.filter(Boolean).map(normalizeSongForUi);
+      setSongs(fetchedSongs);
+      setQueue(fetchedSongs);
+      setOriginalQueue(fetchedSongs);
+      setSongsLoading(false);
+      console.log(`✓ Loaded ${fetchedSongs.length} songs from prefetch (instant)`);
+      delete window.__SONGHUB_PREFETCHED_SONGS; // free memory
+      return () => { isMounted = false; };
+    }
+
+    // 2) Browser cache or fresh fetch
+    fetch("/api/songs", { cache: "default" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
@@ -246,8 +352,10 @@ export const AudioProvider = ({ children }) => {
         console.error("❌ Failed to fetch songs from API:", err);
         setSongsLoading(false);
       });
-    
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync native looping property of the HTML5 Audio element
@@ -259,8 +367,10 @@ export const AudioProvider = ({ children }) => {
 
   // Initialize browser-dependent values
   useEffect(() => {
-    // 1. Initialize HTML Audio Element
-    audioRef.current = new Audio();
+    // 1. Initialize HTML Audio Element by ref from DOM or fallback
+    if (!audioRef.current) {
+      audioRef.current = document.getElementById("global-audio-player") || new Audio();
+    }
     audioRef.current.volume = volume;
     audioRef.current.loop = isLoopingRef.current;
 
@@ -310,13 +420,62 @@ export const AudioProvider = ({ children }) => {
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration || 0);
+      consecutiveErrorsRef.current = 0; // Reset error count on successful load
     };
 
-    const handleEnded = () => {
-      // Handles auto-play next
+    const handleEnded = async () => {
       if (isLoopingRef.current) {
         audio.currentTime = 0;
-        audio.play().catch(err => console.log("Playback error: ", err));
+        audio.play().catch((err) => console.log("Playback error: ", err));
+        return;
+      }
+
+      // Check if we are playing inside an alphabetical letter section
+      const letter = currentSectionLetterRef.current;
+      const index = currentIndexInSectionRef.current;
+
+      if (letter && index !== null) {
+        const section = sectionsRef.current[letter];
+        if (section && section.songs) {
+          const nextIndex = index + 1;
+          
+          if (nextIndex < section.songs.length) {
+            // Next song is already loaded in the section, play it!
+            const nextSong = section.songs[nextIndex];
+            playSong(nextSong, letter, nextIndex, section.songs);
+          } else if (section.hasMore && section.allSongs) {
+            // End of loaded batch but all songs are pre-computed in allSongs
+            const allLetterSongs = section.allSongs;
+            if (nextIndex < allLetterSongs.length) {
+              const updatedSongs = allLetterSongs;
+              setSections((prev) => ({
+                ...prev,
+                [letter]: {
+                  ...prev[letter],
+                  songs: updatedSongs,
+                  hasMore: false,
+                  showAll: true,
+                }
+              }));
+              const nextSong = updatedSongs[nextIndex];
+              playSong(nextSong, letter, nextIndex, updatedSongs);
+            }
+          }
+        }
+      } else {
+        // Default queue auto-play next
+        handleNextSong();
+      }
+    };
+
+    const handleError = (e) => {
+      console.warn("Audio element error, skipping to next song:", e);
+      consecutiveErrorsRef.current += 1;
+      const currentQueue = queueRef.current;
+      if (consecutiveErrorsRef.current >= Math.max(5, currentQueue.length)) {
+        console.error("Too many consecutive audio playback errors. Stopping.");
+        setIsPlaying(false);
+        consecutiveErrorsRef.current = 0;
       } else {
         handleNextSong();
       }
@@ -325,11 +484,13 @@ export const AudioProvider = ({ children }) => {
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
       audio.pause();
     };
   }, []);
@@ -340,7 +501,7 @@ export const AudioProvider = ({ children }) => {
 
     if (currentSong) {
       const srcToPlay = currentSong.audioUrl || currentSong.media?.audio || "";
-      
+
       if (srcToPlay) {
         const isSameSrc = audioRef.current.src === srcToPlay;
         if (!isSameSrc) {
@@ -351,10 +512,14 @@ export const AudioProvider = ({ children }) => {
         if (isPlaying) {
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
-            playPromise.catch(err => {
+            playPromise.catch((err) => {
               console.warn("Audio playback attempted for src:", srcToPlay, err);
               // If play() was interrupted by load() or buffering, auto-play once audio is ready
-              if (err.name === "AbortError" || err.name === "NotAllowedError" || err.name === "NotSupportedError") {
+              if (
+                err.name === "AbortError" ||
+                err.name === "NotAllowedError" ||
+                err.name === "NotSupportedError"
+              ) {
                 const onCanPlay = () => {
                   audioRef.current?.play().catch(() => setIsPlaying(false));
                   audioRef.current?.removeEventListener("canplay", onCanPlay);
@@ -375,8 +540,8 @@ export const AudioProvider = ({ children }) => {
 
       // Add to recently played + sync to Firestore if logged in
       setTimeout(() => {
-        setRecentlyPlayed(prev => {
-          const filtered = prev.filter(id => id !== currentSong.id);
+        setRecentlyPlayed((prev) => {
+          const filtered = prev.filter((id) => id !== currentSong.id);
           const updated = [currentSong.id, ...filtered].slice(0, 10);
           localStorage.setItem("songhub_recently", JSON.stringify(updated));
           // Sync to Firestore if authenticated
@@ -402,7 +567,7 @@ export const AudioProvider = ({ children }) => {
     if (isPlaying) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(err => {
+        playPromise.catch((err) => {
           console.log("Play failed: ", err);
           if (err.name === "AbortError") {
             const onCanPlay = () => {
@@ -421,7 +586,9 @@ export const AudioProvider = ({ children }) => {
   }, [isPlaying]);
 
   // Keep refs in sync
-  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Handle volume and mute
   useEffect(() => {
@@ -440,14 +607,19 @@ export const AudioProvider = ({ children }) => {
   useEffect(() => {
     const hasYoutube = currentSong?.youtubeId;
     const hasAudio = currentSong?.audioUrl || currentSong?.media?.audio;
-    if (!hasYoutube || hasAudio) return;
+    if (!hasYoutube || hasAudio) {
+      setIsMiniPlayerActive(false);
+      return;
+    }
 
     let isMounted = true;
     let pollTimer = null;
     const youtubeId = currentSong.youtubeId;
 
     if (youtubePlayerRef.current) {
-      try { youtubePlayerRef.current.destroy(); } catch (e) {}
+      try {
+        youtubePlayerRef.current.destroy();
+      } catch (e) {}
       youtubePlayerRef.current = null;
     }
     if (youtubeProgressRef.current) {
@@ -474,11 +646,17 @@ export const AudioProvider = ({ children }) => {
           height: "200",
           width: "200",
           videoId: youtubeId,
-          playerVars: { autoplay: 0, controls: 0, modestbranding: 1, enablejsapi: 1 },
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+          },
           events: {
             onReady: () => {
               if (!isMounted) return;
               youtubePlayerRef.current = player;
+              consecutiveErrorsRef.current = 0; // Reset error count on successful YouTube ready
 
               if (typeof player.setVolume === "function") {
                 player.setVolume(isMuted ? 0 : volume * 100);
@@ -490,25 +668,41 @@ export const AudioProvider = ({ children }) => {
                 const mins = Math.floor(detectedSec / 60);
                 const secs = Math.floor(detectedSec % 60);
                 const formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
-                setCurrentSong(prev => prev ? { ...prev, duration: formatted, durationSec: detectedSec } : prev);
-                setSongs(prev => prev.map(s =>
-                  s.id === currentSong?.id ? { ...s, duration: formatted, durationSec: detectedSec } : s
-                ));
-                const songRef = doc(db, "Youworship_songs", currentSong.id);
+                setCurrentSong((prev) =>
+                  prev
+                    ? { ...prev, duration: formatted, durationSec: detectedSec }
+                    : prev,
+                );
+                setSongs((prev) =>
+                  prev.map((s) =>
+                    s.id === currentSong?.id
+                      ? { ...s, duration: formatted, durationSec: detectedSec }
+                      : s,
+                  ),
+                );
+                const songRef = doc(db, "youworship_songs", currentSong.id);
                 updateDoc(songRef, {
                   duration: detectedSec,
                   updatedAt: new Date().toISOString(),
                 }).catch(() => {});
               }
 
-              if (isPlayingRef.current && typeof player?.playVideo === "function") {
-                try { player.playVideo(); } catch (e) {}
+              if (
+                isPlayingRef.current &&
+                typeof player?.playVideo === "function"
+              ) {
+                try {
+                  player.playVideo();
+                } catch (e) {}
               }
 
               youtubeProgressRef.current = setInterval(() => {
                 if (!youtubePlayerRef.current || !isMounted) return;
                 try {
-                  if (typeof youtubePlayerRef.current.getCurrentTime === "function") {
+                  if (
+                    typeof youtubePlayerRef.current.getCurrentTime ===
+                    "function"
+                  ) {
                     const time = youtubePlayerRef.current.getCurrentTime();
                     if (time !== undefined) setProgress(time);
                   }
@@ -519,11 +713,29 @@ export const AudioProvider = ({ children }) => {
               if (!isMounted) return;
               if (event.data === 0) {
                 if (isLoopingRef.current) {
-                  if (typeof player?.seekTo === "function") try { player.seekTo(0); } catch (e) {}
-                  if (typeof player?.playVideo === "function") try { player.playVideo(); } catch (e) {}
+                  if (typeof player?.seekTo === "function")
+                    try {
+                      player.seekTo(0);
+                    } catch (e) {}
+                  if (typeof player?.playVideo === "function")
+                    try {
+                      player.playVideo();
+                    } catch (e) {}
                 } else {
                   handleNextSong();
                 }
+              }
+            },
+            onError: (event) => {
+              console.warn("YouTube player error:", event.data);
+              consecutiveErrorsRef.current += 1;
+              const currentQueue = queueRef.current;
+              if (consecutiveErrorsRef.current >= Math.max(5, currentQueue.length)) {
+                console.error("Too many consecutive YouTube playback errors. Stopping.");
+                setIsPlaying(false);
+                consecutiveErrorsRef.current = 0;
+              } else {
+                handleNextSong();
               }
             },
           },
@@ -556,7 +768,10 @@ export const AudioProvider = ({ children }) => {
 
     return () => {
       isMounted = false;
-      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
       if (youtubeProgressRef.current) {
         clearInterval(youtubeProgressRef.current);
         youtubeProgressRef.current = null;
@@ -606,21 +821,35 @@ export const AudioProvider = ({ children }) => {
         iframe.style.position = "fixed";
         iframe.style.bottom = "100px";
         iframe.style.right = "24px";
+        iframe.style.left = "auto";
+        iframe.style.top = "auto";
+        iframe.style.opacity = "1";
+        iframe.style.pointerEvents = "auto";
         iframe.style.width = "320px";
         iframe.style.height = "180px";
         iframe.style.zIndex = "9999";
         iframe.style.borderRadius = "12px";
         iframe.style.border = "2px solid rgba(255, 255, 255, 0.15)";
-        iframe.style.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
+        iframe.style.boxShadow =
+          "0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)";
         if (typeof player.setSize === "function") {
           player.setSize(320, 180);
         }
       } else {
-        iframe.style.display = "none";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
+        iframe.style.display = "block";
+        iframe.style.position = "absolute";
+        iframe.style.left = "-9999px";
+        iframe.style.top = "-9999px";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.style.width = "200px";
+        iframe.style.height = "200px";
+        iframe.style.zIndex = "-1";
+        iframe.style.borderRadius = "0px";
+        iframe.style.border = "none";
+        iframe.style.boxShadow = "none";
         if (typeof player.setSize === "function") {
-          player.setSize(1, 1);
+          player.setSize(200, 200);
         }
       }
     } catch (e) {
@@ -628,10 +857,110 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isMiniPlayerActive, currentSong?.id]);
 
+  const initializeAlphabeticalSections = useCallback(async (lang = "english") => {
+    // Build alphabetical sections from the already-loaded songs in state
+    const currentSongs = songs;
+    if (currentSongs.length === 0) {
+      console.log("[Sections] songs still empty, skipping init");
+      return;
+    }
 
+    console.log("[Sections] Initializing sections for", lang, "with", currentSongs.length, "songs");
 
-  const playSong = (song) => {
+    const ALPHABETS = {
+      english: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+      telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'క', 'ఖ', 'గ', 'ఘ', 'చ', 'జ', 'డ', 'త', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ'],
+      hindi: ['आ', 'इ', 'उ', 'ख', 'च', 'ज', 'झ', 'त', 'द', 'न', 'प', 'य', 'र', 'ल', 'व', 'स'],
+      tamil: ['அ', 'ஆ', 'இ', 'ஈ', 'உ', 'ஊ', 'எ', 'ஏ', 'ஐ', 'ஒ', 'ஓ', 'க', 'ச', 'ஜ', 'ஞ', 'ட', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ற', 'ல', 'வ', 'ஷ', 'ஸ', 'ஹ'],
+    };
+
+    // Language filter
+    const languageMap = {
+      english: ["en", "english"],
+      telugu: ["te", "telugu"],
+      hindi: ["hi", "hindi"],
+      tamil: ["ta", "tamil"],
+    };
+    const allowedLangs = languageMap[lang] || languageMap.english;
+
+    const letters = ALPHABETS[lang] || ALPHABETS.english;
+    // Always rebuild — clear old sections for this language's letters first
+    const newSections = {};
+
+    setSectionsLoading(true);
+    try {
+      const BATCH_SIZE = 20;
+
+      // Group all songs by their first letter
+      const grouped = {};
+      currentSongs.forEach(song => {
+        const songLang = (song.language || "").toLowerCase();
+        if (!allowedLangs.includes(songLang)) return;
+
+        const firstLetter = song.firstLetter || (song.title ? song.title.charAt(0).toUpperCase() : "");
+        if (!grouped[firstLetter]) grouped[firstLetter] = [];
+        grouped[firstLetter].push(song);
+      });
+
+      console.log("[Sections] Grouped letters:", Object.keys(grouped).join(", "));
+
+      // Sort songs within each letter group
+      Object.keys(grouped).forEach(letter => {
+        grouped[letter].sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+      });
+
+      // Build sections for all letters that have songs
+      letters.forEach(letter => {
+        const allLetterSongs = grouped[letter] || [];
+        if (allLetterSongs.length === 0) return;
+
+        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
+        newSections[letter] = {
+          songs: initialSongs,
+          lastDoc: null,
+          hasMore: allLetterSongs.length > BATCH_SIZE,
+          allSongs: allLetterSongs,
+          showAll: false,
+          loading: false,
+        };
+      });
+
+      console.log("[Sections] Built sections for letters:", Object.keys(newSections).join(", "));
+
+      setSections(newSections);
+    } catch (error) {
+      console.error("Failed to initialize alphabetical sections for language:", lang, error);
+    } finally {
+      setSectionsLoading(false);
+    }
+  }, [songs]);
+
+  const showAllSongsForLetter = useCallback(async (letter) => {
+    const section = sectionsRef.current[letter];
+    if (!section || section.showAll || section.loading) return;
+
+    // Use the pre-computed allSongs from initialization
+    const allLetterSongs = section.allSongs || section.songs;
+
+    setSections((prev) => ({
+      ...prev,
+      [letter]: {
+        ...prev[letter],
+        songs: allLetterSongs,
+        hasMore: false,
+        showAll: true,
+        loading: false,
+      },
+    }));
+  }, []);
+
+  const playSong = (song, sectionLetter = null, indexInSection = null, customQueue = null) => {
     if (!song) return;
+
+    setCurrentSectionLetter(sectionLetter);
+    setCurrentIndexInSection(indexInSection);
+    currentSectionLetterRef.current = sectionLetter;
+    currentIndexInSectionRef.current = indexInSection;
 
     if (currentSong && currentSong.id === song.id) {
       if (isPlaying) {
@@ -640,21 +969,42 @@ export const AudioProvider = ({ children }) => {
       } else {
         setIsPlaying(true);
         if (audioRef.current && audioRef.current.src) {
-          audioRef.current.play().catch(e => console.warn("Play error:", e));
+          audioRef.current.play().catch((e) => console.warn("Play error:", e));
         }
       }
     } else {
+      const contextSongs = customQueue || getCurrentContextSongs(song);
+
+      if (!isSongPlayable(song)) {
+        // If the song is statically unplayable, search for the next playable one
+        const currentIndex = contextSongs.findIndex((s) => s.id === song.id);
+        if (currentIndex !== -1) {
+          let nextIndex = (currentIndex + 1) % contextSongs.length;
+          let checkedCount = 0;
+          while (
+            checkedCount < contextSongs.length &&
+            !isSongPlayable(contextSongs[nextIndex])
+          ) {
+            nextIndex = (nextIndex + 1) % contextSongs.length;
+            checkedCount++;
+          }
+          if (checkedCount < contextSongs.length) {
+            playSong(contextSongs[nextIndex], sectionLetter, nextIndex, contextSongs);
+            return;
+          }
+        }
+      }
+
       const srcToPlay = song.audioUrl || song.media?.audio || "";
       setCurrentSong(song);
       setIsPlaying(true);
       setProgress(0);
 
       // Set queue and originalQueue for this context
-      const contextSongs = getCurrentContextSongs(song);
       setOriginalQueue(contextSongs);
 
       if (isShuffled) {
-        const remaining = contextSongs.filter(s => s.id !== song.id);
+        const remaining = contextSongs.filter((s) => s.id !== song.id);
         const shuffled = [song, ...shuffleArray(remaining)];
         setQueue(shuffled);
       } else {
@@ -666,7 +1016,7 @@ export const AudioProvider = ({ children }) => {
         if (srcToPlay) {
           audioRef.current.src = srcToPlay;
           audioRef.current.load();
-          audioRef.current.play().catch(err => {
+          audioRef.current.play().catch((err) => {
             console.warn("Direct click play error:", err);
           });
         } else {
@@ -687,7 +1037,9 @@ export const AudioProvider = ({ children }) => {
       } else {
         setIsPlaying(true);
         if (audioRef.current && audioRef.current.src) {
-          audioRef.current.play().catch(e => console.warn("Toggle play error:", e));
+          audioRef.current
+            .play()
+            .catch((e) => console.warn("Toggle play error:", e));
         }
       }
     }
@@ -697,7 +1049,10 @@ export const AudioProvider = ({ children }) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
-    if (youtubePlayerRef.current && typeof youtubePlayerRef.current.seekTo === "function") {
+    if (
+      youtubePlayerRef.current &&
+      typeof youtubePlayerRef.current.seekTo === "function"
+    ) {
       try {
         youtubePlayerRef.current.seekTo(time, true);
       } catch (e) {}
@@ -714,13 +1069,13 @@ export const AudioProvider = ({ children }) => {
   };
 
   const toggleMute = () => {
-    setIsMuted(prev => !prev);
+    setIsMuted((prev) => !prev);
   };
 
   const toggleFavorite = (songId) => {
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const updated = prev.includes(songId)
-        ? prev.filter(id => id !== songId)
+        ? prev.filter((id) => id !== songId)
         : [...prev, songId];
       localStorage.setItem("songhub_favorites", JSON.stringify(updated));
 
@@ -739,9 +1094,9 @@ export const AudioProvider = ({ children }) => {
     const newPlaylist = {
       id: Date.now().toString(),
       name: name.trim(),
-      songIds: []
+      songIds: [],
     };
-    setPlaylists(prev => {
+    setPlaylists((prev) => {
       const updated = [...prev, newPlaylist];
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
       // Sync to Firestore if authenticated
@@ -754,8 +1109,8 @@ export const AudioProvider = ({ children }) => {
   };
 
   const deletePlaylist = (playlistId) => {
-    setPlaylists(prev => {
-      const updated = prev.filter(list => list.id !== playlistId);
+    setPlaylists((prev) => {
+      const updated = prev.filter((list) => list.id !== playlistId);
       localStorage.setItem("songhub_playlists", JSON.stringify(updated));
       // Sync to Firestore if authenticated
       const uid = userRef.current?.uid;
@@ -767,8 +1122,8 @@ export const AudioProvider = ({ children }) => {
   };
 
   const addSongToPlaylist = (playlistId, songId) => {
-    setPlaylists(prev => {
-      const updated = prev.map(list => {
+    setPlaylists((prev) => {
+      const updated = prev.map((list) => {
         if (list.id === playlistId && !list.songIds.includes(songId)) {
           return { ...list, songIds: [...list.songIds, songId] };
         }
@@ -785,10 +1140,13 @@ export const AudioProvider = ({ children }) => {
   };
 
   const removeSongFromPlaylist = (playlistId, songId) => {
-    setPlaylists(prev => {
-      const updated = prev.map(list => {
+    setPlaylists((prev) => {
+      const updated = prev.map((list) => {
         if (list.id === playlistId) {
-          return { ...list, songIds: list.songIds.filter(id => id !== songId) };
+          return {
+            ...list,
+            songIds: list.songIds.filter((id) => id !== songId),
+          };
         }
         return list;
       });
@@ -848,9 +1206,14 @@ export const AudioProvider = ({ children }) => {
         setIsMiniPlayerActive,
         lyricsLanguage,
         setLyricsLanguage,
+        sections,
+        sectionsLoading,
+        initializeAlphabeticalSections,
+        showAllSongsForLetter,
       }}
     >
       {children}
+      <audio id="global-audio-player" ref={audioRef} preload="none" />
     </AudioContext.Provider>
   );
 };

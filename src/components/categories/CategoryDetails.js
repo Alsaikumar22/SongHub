@@ -20,9 +20,16 @@ export default function CategoryDetails({ category, language, onBack }) {
   const categorySongs = (songs || []).filter((song) => {
     // Verify language matches the selected tab language strictly
     const songLanguage = (song.language || "").toLowerCase();
-    const matchesLanguage = language === "telugu"
-      ? (songLanguage === "te" || songLanguage === "telugu")
-      : (songLanguage === "en" || songLanguage === "english");
+    let matchesLanguage = false;
+    if (language === "telugu") {
+      matchesLanguage = songLanguage === "te" || songLanguage === "telugu";
+    } else if (language === "english") {
+      matchesLanguage = songLanguage === "en" || songLanguage === "english";
+    } else if (language === "hindi") {
+      matchesLanguage = songLanguage === "hi" || songLanguage === "hindi";
+    } else if (language === "tamil") {
+      matchesLanguage = songLanguage === "ta" || songLanguage === "tamil";
+    }
 
     if (!matchesLanguage) return false;
 
@@ -34,13 +41,29 @@ export default function CategoryDetails({ category, language, onBack }) {
 
     // 1. Match by database category array or string
     const matchByCategoryField = Array.isArray(song.categoryArr)
-      ? song.categoryArr.some(cat => cat.toLowerCase() === category.nameEn.toLowerCase() || cat.toLowerCase() === category.nameTe.toLowerCase())
-      : (typeof song.category === "string" && (song.category.toLowerCase() === category.nameEn.toLowerCase() || song.category.toLowerCase() === category.nameTe.toLowerCase()));
+      ? song.categoryArr.some(cat => 
+          cat.toLowerCase() === category.nameEn.toLowerCase() || 
+          cat.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === cat.toLowerCase()))
+        )
+      : (typeof song.category === "string" && (
+          song.category.toLowerCase() === category.nameEn.toLowerCase() || 
+          song.category.toLowerCase() === category.nameTe.toLowerCase() ||
+          (Array.isArray(category.legacyNames) && category.legacyNames.some(ln => ln.toLowerCase() === song.category.toLowerCase()))
+        ));
 
     // 2. Fallback: match by the hardcoded list in categoryData.js
     const matchByHardcodedList = songIds.includes(song.id);
 
     return matchByCategoryField || matchByHardcodedList;
+  });
+
+  // Sort categorySongs alphabetically based on display title for the selected language
+  categorySongs.sort((a, b) => {
+    const showNative = language !== "english";
+    const titleA = showNative && a.teluguTitle ? a.teluguTitle : (a.titleEnglish || a.title || "");
+    const titleB = showNative && b.teluguTitle ? b.teluguTitle : (b.titleEnglish || b.title || "");
+    return titleA.localeCompare(titleB, undefined, { sensitivity: "base" });
   });
 
   // Reset viewMode when category changes and scroll to top
@@ -203,6 +226,7 @@ export default function CategoryDetails({ category, language, onBack }) {
                   currentSong={currentSong}
                   isPlaying={isPlaying}
                   playSong={playSong}
+                  language={language}
                 />
               ))}
             </motion.div>

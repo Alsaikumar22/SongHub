@@ -6,7 +6,7 @@ rules_version = '2';
 // Deploy with:  firebase deploy --only firestore:rules
 //
 // Collections in use:
-//   Youworship_songs            — song catalog (served via public API)
+//   youworship_songs            — song catalog (served via public API)
 //   bible_chapters              — daily Bible verses (public)
 //   Youworship_users/{uid}      — favorites / playlists / recently played
 //   Youworship_users/{uid}/devices/{deviceId}  — YouWorship Connect registry
@@ -37,7 +37,7 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────
     // Public content — browsable without an account.
     // ─────────────────────────────────────────────────────────────
-    match /Youworship_songs/{songId} {
+    match /youworship_songs/{songId} {
       // Songs are public; the API also serves them.
       allow read: if true;
 

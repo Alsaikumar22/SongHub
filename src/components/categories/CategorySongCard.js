@@ -31,14 +31,15 @@ export default function CategorySongCard({ song, language, onClick }) {
   const isSongPlaying = isCurrent && isPlaying;
   const isFav = favorites.includes(song.id);
 
+  const isNative = language === "telugu" || language === "tamil" || language === "hindi";
   const displayTitle =
-    language === "telugu" && song.teluguTitle
+    isNative && song.teluguTitle
       ? song.teluguTitle
       : song.titleEnglish || song.title;
   const subtitle =
-    language === "telugu"
-      ? song.titleEnglish || null
-      : song.teluguTitle || null;
+    isNative
+      ? (song.titleEnglish && song.titleEnglish !== song.teluguTitle ? song.titleEnglish : null)
+      : (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null);
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();

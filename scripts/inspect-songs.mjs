@@ -2,10 +2,20 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path from "path";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, limit, query } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  limit,
+  query,
+} from "firebase/firestore";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,12 +31,14 @@ const db = getFirestore(app);
 
 async function main() {
   console.log("🔍 Scanning all songs for Supabase image URL issues...");
-  const snap = await getDocs(collection(db, "Youworship_songs"));
+  const snap = await getDocs(collection(db, "youworship_songs"));
   console.log(`Loaded ${snap.docs.length} documents.`);
 
   for (const doc of snap.docs) {
     const data = doc.data();
-    const urls = [data.imageUrl, data.coverUrl, data.media?.image].filter(Boolean);
+    const urls = [data.imageUrl, data.coverUrl, data.media?.image].filter(
+      Boolean,
+    );
 
     for (const url of urls) {
       if (url.includes("unsplash.com")) {
@@ -43,5 +55,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
-

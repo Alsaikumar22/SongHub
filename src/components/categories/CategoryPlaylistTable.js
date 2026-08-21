@@ -14,7 +14,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   const [sharedSongId, setSharedSongId] = useState(null);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
 
-  const categoryName = language === "telugu" ? category.nameTe : category.nameEn;
+  const categoryName = category.nameEn;
 
   // Auto-close options dropdown on outside clicks
   useEffect(() => {
@@ -110,8 +110,11 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const isFav = favorites.includes(song.id);
           const isHovered = hoveredRowId === song.id;
 
-          const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
-          const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
+          const displayTitle = language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
+          const subtitle =
+            language !== "english"
+              ? (song.titleEnglish && song.titleEnglish !== song.teluguTitle ? song.titleEnglish : null)
+              : (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null);
 
           // Mock date added based on releaseYear or ID
           const year = song.releaseYear || 2024;
@@ -124,7 +127,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 if (isCurrent) {
                   togglePlay();
                 } else {
-                  playSong(song);
+                  playSong(song, songs);
                 }
               }}
               variants={itemVariants}
@@ -171,11 +174,19 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                   sizes="40px"
                 />
                 <div className="min-w-0 flex-1">
-                  <span className={`font-bold text-sm block truncate transition-colors ${
-                    isCurrent ? "text-title font-extrabold" : "text-title"
-                  }`}>
-                    {displayTitle}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`font-bold text-sm truncate transition-colors ${
+                      isCurrent ? "text-title font-extrabold" : "text-title"
+                    }`}>
+                      {displayTitle}
+                    </span>
+                    {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                      <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+                    )}
+                    {!(song.youtubeId || song.media?.video) && (
+                      <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs text-muted truncate">
                       {song.artist}

@@ -265,7 +265,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                         {song.teluguTitle || song.title}
                       </span>
                       <span className="text-[10px] text-muted block truncate mt-0.5">
-                        {song.artist}
+                        {song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}{song.artist}
                       </span>
                     </div>
                     <div className="w-7 h-7 rounded-full bg-card-hover group-hover:bg-white flex items-center justify-center text-title group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">

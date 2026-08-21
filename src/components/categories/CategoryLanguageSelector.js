@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 export default function CategoryLanguageSelector({ selectedLanguage, onChange }) {
   const options = [
     { id: "telugu", label: "తెలుగు" },
-    { id: "english", label: "English" }
+    { id: "english", label: "English" },
+    { id: "hindi", label: "हिन्दी" }
   ];
 
   return (
@@ -17,19 +18,16 @@ export default function CategoryLanguageSelector({ selectedLanguage, onChange })
           return (
             <button
               key={opt.id}
-              onClick={() => onChange(opt.id)}
-              className={`relative h-full px-6 text-xs font-bold rounded-full transition-colors duration-300 cursor-pointer flex items-center justify-center z-10 select-none outline-none ${
-                isSelected ? "text-black" : "text-muted hover:text-title"
+              onClick={() => {
+                onChange(opt.id);
+              }}
+              className={`relative h-full px-6 text-xs font-extrabold rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center z-10 select-none outline-none ${
+                isSelected
+                  ? "bg-white text-black shadow-sm"
+                  : "bg-transparent text-muted hover:text-title"
               }`}
             >
-              <span className="relative z-10" style={{ color: isSelected ? '#000' : undefined }}>{opt.label}</span>
-              {isSelected && (
-                <motion.div
-                  layoutId="activeLangIndicator"
-                  className="absolute inset-0 rounded-full bg-white shadow-[0_2px_10px_rgba(255,255,255,0.15)]"
-                  transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                />
-              )}
+              <span className="relative z-10">{opt.label}</span>
             </button>
           );
         })}
