@@ -35,6 +35,12 @@ import {
   getShareableSongTitle,
 } from "@/utils/share";
 
+const TELUGU_ALPHABET_ORDER = [
+  "అ", "ఆ", "ఇ", "ఈ", "ఉ", "ఊ", "ఋ", "ౠ", "ఎ", "ఏ", "ఐ", "ఒ", "ఓ", "ఔ", "అం", "అః",
+  "క", "ఖ", "గ", "ఘ", "ఙ", "చ", "ఛ", "జ", "ఝ", "ఞ", "ట", "ఠ", "డ", "ఢ", "ణ",
+  "త", "థ", "ద", "ధ", "న", "ప", "ఫ", "బ", "భ", "మ", "య", "ర", "ల", "వ", "శ", "ష", "స", "హ", "ళ", "క్ష", "ఱ"
+];
+
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
@@ -141,6 +147,7 @@ function SongPageContent({ params }) {
   const isLight = theme === "light";
   const {
     songs,
+    setSongs,
     songsLoading,
     currentSong,
     isPlaying,
@@ -161,27 +168,58 @@ function SongPageContent({ params }) {
   const selectedLanguage = lyricsLanguage;
   const setSelectedLanguage = setLyricsLanguage;
 
+  const prevSongIdRef = useRef(null);
+
   useEffect(() => {
-    if (song) {
+    if (song && prevSongIdRef.current !== song.id) {
+      prevSongIdRef.current = song.id;
       const songLanguage = (song.language || "").toLowerCase();
       const isHi = songLanguage === "hi" || songLanguage === "hindi";
       const isTa = songLanguage === "ta" || songLanguage === "tamil";
       
-      if (isHi && lyricsLanguage !== "hindi" && lyricsLanguage !== "english") {
+      if (isHi) {
         setLyricsLanguage("hindi");
-      } else if (isTa && lyricsLanguage !== "tamil" && lyricsLanguage !== "english") {
+      } else if (isTa) {
         setLyricsLanguage("tamil");
-      } else if (!isHi && !isTa && lyricsLanguage !== "telugu" && lyricsLanguage !== "english" && lyricsLanguage !== "chords") {
+      } else {
         setLyricsLanguage("telugu");
       }
     }
-  }, [song, lyricsLanguage, setLyricsLanguage]);
+  }, [song, setLyricsLanguage]);
   const [gradientColor, setGradientColor] = useState({ r: 18, g: 18, b: 18 });
   const fetchingRef = useRef(false);
   const prevIdRef = useRef(id);
 
   const isCurrentSong = currentSong?.id === song?.id;
   const isThisPlaying = isCurrentSong && isPlaying;
+
+  const isTeluguSong = song && (
+    (song.language || "").toLowerCase() === "te" ||
+    (song.language || "").toLowerCase() === "telugu" ||
+    (!["hi", "hindi", "ta", "tamil", "en", "english"].includes((song.language || "").toLowerCase()))
+  );
+
+  const teluguLetters = React.useMemo(() => {
+    const safeSongs = Array.isArray(songs) ? songs : [];
+    const lettersSet = new Set();
+    const teluguLangs = ["te", "telugu"];
+    
+    safeSongs.forEach((s) => {
+      const songLang = (s.language || "").toLowerCase();
+      if (teluguLangs.includes(songLang) || (!songLang && s.teluguTitle)) {
+        const letter = s.firstLetter || (s.teluguTitle ? s.teluguTitle.charAt(0) : "");
+        if (letter && TELUGU_ALPHABET_ORDER.includes(letter)) {
+          lettersSet.add(letter);
+        }
+      }
+    });
+    
+    return Array.from(lettersSet).sort((a, b) => {
+      const idxA = TELUGU_ALPHABET_ORDER.indexOf(a);
+      const idxB = TELUGU_ALPHABET_ORDER.indexOf(b);
+      return idxA - idxB;
+    });
+  }, [songs]);
 
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [showShareDropdown, setShowShareDropdown] = useState(false);
@@ -412,6 +450,11 @@ function SongPageContent({ params }) {
       .then((fetchedSong) => {
         if (fetchedSong) {
           setSong(fetchedSong);
+          if (typeof setSongs === "function") {
+            setSongs((prevSongs) =>
+              prevSongs.map((s) => (s.id === fetchedSong.id ? { ...s, ...fetchedSong } : s))
+            );
+          }
           fetchingRef.current = false;
         } else {
           // Fallback to Next.js API route if not found directly
@@ -420,7 +463,14 @@ function SongPageContent({ params }) {
           })
             .then((res) => res.json())
             .then((data) => {
-              if (data.song) setSong(data.song);
+              if (data.song) {
+                setSong(data.song);
+                if (typeof setSongs === "function") {
+                  setSongs((prevSongs) =>
+                    prevSongs.map((s) => (s.id === data.song.id ? { ...s, ...data.song } : s))
+                  );
+                }
+              }
               fetchingRef.current = false;
             })
             .catch((err) => {
@@ -681,182 +731,207 @@ function SongPageContent({ params }) {
       }}
     >
       {/* Sticky Action Header Bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between px-6 md:px-8 py-3 bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm">
-        {/* Left Side: Back button + Titles */}
-        <div className="flex items-center gap-3.5 min-w-0">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
-            title="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex flex-col leading-tight min-w-0">
-            <h1
-              className="text-title text-base md:text-lg font-bold truncate font-song-title"
-            >
-              {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
-            </h1>
-            {song.artist && (
-              <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
-                {selectedLanguage === "english"
-                  ? `${song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? `${song.teluguTitle} • ` : ""}${song.artistNameEnglish || song.artist}`
-                  : `${song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}${song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist)}`}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Action Icons Group */}
-        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
-          <button
-            onClick={handlePlayClick}
-            className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
-            title={isThisPlaying ? "Pause" : "Play"}
-          >
-            {isThisPlaying ? (
-              <Pause className="w-4 h-4 fill-current" />
-            ) : (
-              <Play className="w-4 h-4 fill-current ml-0.5" />
-            )}
-          </button>
-
-          {/* 2. Favorite Button */}
-          <ProtectedAction action={() => toggleFavorite(song.id)}>
+      <div className="sticky top-0 z-30 flex flex-col bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm">
+        {/* Main Header Row */}
+        <div className="flex items-center justify-between px-6 md:px-8 py-3">
+          {/* Left Side: Back button + Titles */}
+          <div className="flex items-center gap-3.5 min-w-0">
             <button
-              onClick={() => toggleFavorite(song.id)}
-              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
-                isFavorited
-                  ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                  : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
-              }`}
-              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              onClick={() => router.back()}
+              className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+              title="Go back"
             >
-              <Heart
-                className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`}
-              />
+              <ArrowLeft className="w-5 h-5" />
             </button>
-          </ProtectedAction>
-
-          {/* 3. Add to Playlist Icon with Dropdown */}
-          <div className="relative" ref={playlistDropdownRef}>
-            <ProtectedAction
-              action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-            >
-              <button
-                onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-                title="Add to playlist"
+            <div className="flex flex-col leading-tight min-w-0">
+              <h1
+                className="text-title text-base md:text-lg font-bold truncate font-song-title"
               >
-                <Plus className="w-4 h-4" />
+                {selectedLanguage === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
+              </h1>
+              {song.artist && (
+                <p className="text-[11px] text-muted truncate mt-0.5 font-semibold tracking-wide">
+                  {selectedLanguage === "english"
+                    ? `${song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? `${song.teluguTitle} • ` : ""}${song.artistNameEnglish || song.artist}`
+                    : `${song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}${song.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (song.artistName || song.artist)}`}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right Side: Action Icons Group */}
+          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0 select-none">
+            <button
+              onClick={handlePlayClick}
+              className="w-9 h-9 rounded-full bg-title text-card flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex-shrink-0"
+              title={isThisPlaying ? "Pause" : "Play"}
+            >
+              {isThisPlaying ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* 2. Favorite Button */}
+            <ProtectedAction action={() => toggleFavorite(song.id)}>
+              <button
+                onClick={() => toggleFavorite(song.id)}
+                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0 ${
+                  isFavorited
+                    ? "border-red-500/40 text-red-500 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                    : "border-line bg-card text-muted hover:text-title hover:bg-card-hover"
+                }`}
+                title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart
+                  className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`}
+                />
               </button>
             </ProtectedAction>
-            {showPlaylistDropdown && (
-              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                  Select Playlist
-                </div>
-                {playlists.length > 0 ? (
-                  playlists.map((list) => {
-                    const isInPlaylist = list.songIds.includes(song.id);
-                    return (
-                      <button
-                        key={list.id}
-                        onClick={() => {
-                          if (isInPlaylist) {
-                            removeSongFromPlaylist(list.id, song.id);
-                          } else {
-                            addSongToPlaylist(list.id, song.id);
-                          }
-                          setShowPlaylistDropdown(false);
-                        }}
-                        className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
-                      >
-                        <span className="truncate">{list.name}</span>
-                        {isInPlaylist ? (
-                          <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
-                            Added
-                          </span>
-                        ) : (
-                          <Plus className="w-3.5 h-3.5 text-muted" />
-                        )}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-3 py-2 text-xs text-muted italic text-center">
-                    No custom playlists
+
+            {/* 3. Add to Playlist Icon with Dropdown */}
+            <div className="relative" ref={playlistDropdownRef}>
+              <ProtectedAction
+                action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+              >
+                <button
+                  onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+                  className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                  title="Add to playlist"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </ProtectedAction>
+              {showPlaylistDropdown && (
+                <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
+                    Select Playlist
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* 4. Watch Video Button */}
-          {rawVideoUrl && embedUrl && (
-            <Link
-              href={`/song/${encodeURIComponent(song.slug || song.id)}?view=video`}
-              onClick={() => {
-                if (currentSong?.id !== song.id) playSong(song);
-              }}
-              className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
-              title="Watch Video"
-            >
-              <YouTubeIcon className="w-4 h-4 text-red-400" />
-            </Link>
-          )}
-
-          {/* 5. Share Button — uses native share sheet or copies link */}
-          <div className="relative" ref={shareDropdownRef}>
-            <button
-              onClick={() => {
-                // On mobile, try native share directly without showing dropdown
-                if (typeof navigator !== "undefined" && navigator.share) {
-                  handleShare();
-                } else {
-                  setShowShareDropdown(!showShareDropdown);
-                }
-              }}
-              className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-              title="Share song"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-
-            {showShareDropdown && (
-              <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 font-sans animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                  Share
+                  {playlists.length > 0 ? (
+                    playlists.map((list) => {
+                      const isInPlaylist = list.songIds.includes(song.id);
+                      return (
+                        <button
+                          key={list.id}
+                          onClick={() => {
+                            if (isInPlaylist) {
+                              removeSongFromPlaylist(list.id, song.id);
+                            } else {
+                              addSongToPlaylist(list.id, song.id);
+                            }
+                            setShowPlaylistDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
+                        >
+                          <span className="truncate">{list.name}</span>
+                          {isInPlaylist ? (
+                            <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
+                              Added
+                            </span>
+                          ) : (
+                            <Plus className="w-3.5 h-3.5 text-muted" />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3 py-2 text-xs text-muted italic text-center">
+                      No custom playlists
+                    </div>
+                  )}
                 </div>
-                {/* Share via native sheet */}
-                <button
-                  onClick={handleShare}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
-                >
-                  <Share2 className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">Share</span>
-                </button>
-                {/* Copy Link */}
-                <button
-                  onClick={() => handleCopyLink()}
-                  className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
-                >
-                  <LinkIcon className="w-4 h-4 text-muted shrink-0" />
-                  <span className="font-semibold text-title">Copy Link</span>
-                </button>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* 6. Copy Icon (Copies full lyrics text) */}
-          <button
-            onClick={handleCopyLyrics}
-            className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-            title="Copy lyrics to clipboard"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
+            {/* 4. Watch Video Button */}
+            {rawVideoUrl && embedUrl && (
+              <Link
+                href={`/song/${encodeURIComponent(song.slug || song.id)}?view=video`}
+                onClick={() => {
+                  if (currentSong?.id !== song.id) playSong(song);
+                }}
+                className="w-9 h-9 rounded-full border border-line bg-card text-muted hover:text-title hover:bg-card-hover flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm flex-shrink-0"
+                title="Watch Video"
+              >
+                <YouTubeIcon className="w-4 h-4 text-red-400" />
+              </Link>
+            )}
+
+            {/* 5. Share Button — uses native share sheet or copies link */}
+            <div className="relative" ref={shareDropdownRef}>
+              <button
+                onClick={() => {
+                  // On mobile, try native share directly without showing dropdown
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    handleShare();
+                  } else {
+                    setShowShareDropdown(!showShareDropdown);
+                  }
+                }}
+                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                title="Share song"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+
+              {showShareDropdown && (
+                <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 font-sans animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
+                    Share
+                  </div>
+                  {/* Share via native sheet */}
+                  <button
+                    onClick={handleShare}
+                    className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 cursor-pointer"
+                  >
+                    <Share2 className="w-4 h-4 text-muted shrink-0" />
+                    <span className="font-semibold text-title">Share</span>
+                  </button>
+                  {/* Copy Link */}
+                  <button
+                    onClick={() => handleCopyLink()}
+                    className="w-full px-3 py-2.5 text-xs text-copy hover:bg-card-hover text-left flex items-center gap-2.5 border-t border-line/35 cursor-pointer"
+                  >
+                    <LinkIcon className="w-4 h-4 text-muted shrink-0" />
+                    <span className="font-semibold text-title">Copy Link</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 6. Copy Icon (Copies full lyrics text) */}
+            <button
+              onClick={handleCopyLyrics}
+              className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+              title="Copy lyrics to clipboard"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Telugu Alphabetical Row */}
+        {isTeluguSong && teluguLetters.length > 0 && (
+          <div className="px-6 md:px-8 pb-3 pt-1 flex items-center gap-3 overflow-x-auto no-scrollbar select-none border-t border-line/20 animate-in fade-in duration-200">
+            <span className="text-[10px] font-black text-muted uppercase tracking-wider shrink-0 mr-1">
+              Browse Telugu (తెలుగు):
+            </span>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              {teluguLetters.map((letter) => (
+                <button
+                  key={letter}
+                  onClick={() => {
+                    router.push(`/home?tab=discover&letter=${encodeURIComponent(letter)}`);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-black bg-card hover:bg-card-hover text-title/95 border border-line/50 hover:border-line hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer font-telugu shadow-sm"
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">

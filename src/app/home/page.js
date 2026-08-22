@@ -11,6 +11,8 @@ import HeroCarousel from "@/components/home/HeroCarousel";
 import VerseOfTheWeek from "@/components/home/VerseOfTheWeek";
 import RecentlyPlayed from "@/components/home/RecentlyPlayed";
 import SearchResults from "@/components/layout/SearchResults";
+import LyricsSearchResults from "@/components/search/LyricsSearchResults";
+import { useLyricsSearch } from "@/hooks/useLyricsSearch";
 import SongArtwork from "@/components/ui/SongArtwork";
 import CategoryExplorer from "@/components/categories/CategoryExplorer";
 import { FullAppSkeleton } from "@/components/ui/SongSkeleton";
@@ -29,7 +31,8 @@ import {
   TrendingUp,
   Library,
   X,
-  Music
+  Music,
+  Mic
 } from "lucide-react";
 
 const searchableText = (value) => {
@@ -66,12 +69,39 @@ function HomeContent() {
     showFullHome,
   } = useAudio();
 
-  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults } = useSearch();
+  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults, searchMode, setSearchMode, triggerVoiceSearch } = useSearch();
+
+  // Lyrics search (used when searchMode === "lyrics")
+  const {
+    query: lyricsQuery,
+    setQuery: setLyricsQuery,
+    results: lyricsResults,
+    total: lyricsTotal,
+    loading: lyricsLoading,
+    error: lyricsError,
+    hasMore: lyricsHasMore,
+    loadMore: lyricsLoadMore,
+    clear: clearLyricsSearch,
+  } = useLyricsSearch({ debounceMs: 350 });
+
+  // Sync searchQuery -> lyricsQuery when in lyrics mode
+  useEffect(() => {
+    if (searchMode === "lyrics" && searchQuery) {
+      setLyricsQuery(searchQuery);
+      setShowFullResults(true);
+    }
+  }, [searchMode]);
 
   const commitMobileSearch = useCallback((value) => {
     setSearchQuery(value);
-    if (value) setShowFullResults(true);
-  }, [setSearchQuery, setShowFullResults]);
+    if (value) {
+      setShowFullResults(true);
+    }
+    // Always update lyrics query when in lyrics mode
+    if (searchMode === "lyrics") {
+      setLyricsQuery(value || "");
+    }
+  }, [setSearchQuery, setShowFullResults, searchMode, setLyricsQuery]);
 
   const {
     inputValue: mobileInputValue,
@@ -83,6 +113,11 @@ function HomeContent() {
     onCommit: commitMobileSearch,
     debounceMs: 250,
   });
+
+  const onMobileSearchChange = useCallback((e) => {
+    handleMobileSearchChange(e);
+    setLyricsQuery(e.target.value || "");
+  }, [handleMobileSearchChange, setLyricsQuery]);
 
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
@@ -143,6 +178,12 @@ function HomeContent() {
       if (selectedLetter) {
         setSelectedLetter(null);
       }
+    }
+
+    // Sync searchMode param
+    const smParam = searchParams.get("searchMode");
+    if (smParam === "lyrics" && searchMode !== "lyrics") {
+      setSearchMode("lyrics");
     }
   }, [searchParams]);
 
@@ -341,14 +382,38 @@ function HomeContent() {
         {/* Songs Section or Search Results */}
         {activeTab !== "categories" && (
           searchQuery && showFullResults ? (
-            <div className="flex-1 flex flex-col min-h-0">
-              <SearchResults
-                results={filteredSongs}
-                query={searchQuery}
-                currentSong={currentSong}
-                isPlaying={isPlaying}
-                playSong={playSong}
-              />
+            <div className="flex-1 flex flex-col min-h-0 space-y-8">
+              {filteredSongs.length > 0 && (
+                <SearchResults
+                  results={filteredSongs}
+                  query={searchQuery}
+                  currentSong={currentSong}
+                  isPlaying={isPlaying}
+                  playSong={playSong}
+                />
+              )}
+              {lyricsResults.length > 0 && (
+                <div className={`${filteredSongs.length > 0 ? "border-t border-line/30 pt-6" : ""}`}>
+                  <LyricsSearchResults
+                    results={lyricsResults}
+                    total={lyricsTotal}
+                    query={searchQuery}
+                    loading={lyricsLoading}
+                    error={lyricsError}
+                    hasMore={lyricsHasMore}
+                    onLoadMore={lyricsLoadMore}
+                  />
+                </div>
+              )}
+              {filteredSongs.length === 0 && lyricsResults.length === 0 && !lyricsLoading && (
+                <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+                  <Search className="w-8 h-8 text-dim mb-4" />
+                  <h2 className="text-lg font-semibold text-title">No matches found</h2>
+                  <p className="text-sm text-muted mt-1.5 max-w-xs">
+                    We couldn&apos;t find any songs or lyrics matching &ldquo;{searchQuery}&rdquo;.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <SongsSection
@@ -407,23 +472,34 @@ function HomeContent() {
                     <div className="flex flex-col">
                       <h1 className="text-3xl font-black text-title tracking-tight">Search</h1>
                     </div>
-                    <div className="relative flex items-center w-full">
-                      <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="What do you want to listen to?"
-                        value={mobileInputValue}
-                        onFocus={() => setIsSearchFocused(true)}
-                        onChange={(e) => {
-                          handleMobileSearchChange(e);
-                        }}
-                        className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
-                      />
+                    <div className="relative flex items-center w-full gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="What do you want to listen to?"
+                          value={mobileInputValue}
+                          onFocus={() => setIsSearchFocused(true)}
+                          onChange={(e) => {
+                            onMobileSearchChange(e);
+                          }}
+                          className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
+                        />
+                      </div>
+                      
+                      {/* Mobile Mic Button */}
+                      <button
+                        onClick={triggerVoiceSearch}
+                        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                        title="Voice Search"
+                      >
+                        <Mic className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 ) : (
                   /* Focused / active search sticky layout */
-                  <div className="sticky top-0 bg-card py-2 z-30 flex items-center gap-3 w-full animate-in slide-in-from-top-1.5 duration-200">
+                  <div className="sticky top-0 bg-card py-2 z-30 flex items-center gap-2.5 w-full animate-in slide-in-from-top-1.5 duration-200">
                     <div className="relative flex-1">
                       <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                       <input
@@ -432,7 +508,7 @@ function HomeContent() {
                         placeholder="Search songs, artists, genres..."
                         value={mobileInputValue}
                         onChange={(e) => {
-                          handleMobileSearchChange(e);
+                          onMobileSearchChange(e);
                         }}
                         className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
                       />
@@ -447,12 +523,22 @@ function HomeContent() {
                         </button>
                       )}
                     </div>
+
+                    {/* Mobile Mic Button */}
+                    <button
+                      onClick={triggerVoiceSearch}
+                      className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                      title="Voice Search"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+
                     <button
                       onClick={() => {
                         setIsSearchFocused(false);
                         clearMobileSearch();
                       }}
-                      className="text-xs font-bold text-title hover:text-dim active:scale-95 transition-all duration-150 pr-1"
+                      className="text-xs font-bold text-title hover:text-dim active:scale-95 transition-all duration-150 pr-1 shrink-0"
                     >
                       Cancel
                     </button>
@@ -518,58 +604,86 @@ function HomeContent() {
               <CategoryExplorer />
             ) : (
               /* Inline Search Results */
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-line pb-2">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Results</span>
-                  <span className="text-xs text-dim">{mobileSearchResults.length} found</span>
-                </div>
-                {mobileSearchResults.length === 0 ? (
+              <div className="space-y-6">
+                {/* 1. Songs metadata matches */}
+                {mobileSearchResults.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Songs</span>
+                      <span className="text-xs text-dim">{mobileSearchResults.length} found</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {mobileSearchResults.map((song) => {
+                        const isCurrent = currentSong?.id === song.id;
+                        return (
+                          <div
+                            key={song.id}
+                            onClick={() => {
+                              playSong(song);
+                              router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                            }}
+                            className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
+                              isCurrent ? "bg-card-hover border border-line" : ""
+                            }`}
+                          >
+                            <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
+                              <SongArtwork song={song} className="w-full h-full object-cover" iconSize="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-sm font-semibold block truncate ${
+                                isCurrent ? "text-title" : "text-title"
+                              } ${song.teluguTitle ? "font-telugu" : ""}`}>
+                                {song.teluguTitle || song.title}
+                              </span>
+                              <span className="text-xs text-muted block truncate mt-0.5">
+                                {song.titleEnglish}
+                              </span>
+                            </div>
+                            <div className="shrink-0 text-xs text-dim pr-1">
+                              {isCurrent && isPlaying ? (
+                                <div className="flex items-end gap-[2px] h-3">
+                                  <span className="w-[2px] bg-white rounded-full h-3 animate-music-bar-1" />
+                                  <span className="w-[2px] bg-white rounded-full h-2 animate-music-bar-2" />
+                                  <span className="w-[2px] bg-white rounded-full h-2.5 animate-music-bar-3" />
+                                </div>
+                              ) : (
+                                song.duration
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Lyrics matches */}
+                {lyricsResults.length > 0 && (
+                  <div className="space-y-4">
+                    <LyricsSearchResults
+                      results={lyricsResults}
+                      total={lyricsTotal}
+                      query={searchQuery}
+                      loading={lyricsLoading}
+                      error={lyricsError}
+                      hasMore={lyricsHasMore}
+                      onLoadMore={lyricsLoadMore}
+                    />
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {lyricsLoading && mobileSearchResults.length === 0 && lyricsResults.length === 0 && (
+                  <div className="text-center py-12 text-muted">
+                    <p className="text-sm">Searching...</p>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {mobileSearchResults.length === 0 && lyricsResults.length === 0 && !lyricsLoading && (
                   <div className="text-center py-12 text-muted">
                     <p className="font-semibold text-sm">No matches found</p>
-                    <p className="text-xs mt-1 text-dim">Try another spelling or word</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {mobileSearchResults.map((song) => {
-                      const isCurrent = currentSong?.id === song.id;
-                      return (
-                        <div
-                          key={song.id}
-                          onClick={() => {
-                            playSong(song);
-                            router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
-                          }}
-                          className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                            isCurrent ? "bg-card-hover border border-line" : ""
-                          }`}
-                        >
-                          <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
-                            <SongArtwork song={song} className="w-full h-full object-cover" iconSize="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm font-semibold block truncate ${
-                              isCurrent ? "text-title" : "text-title"
-                            } ${song.teluguTitle ? "font-telugu" : ""}`}>
-                              {song.teluguTitle || song.title}
-                            </span>
-                            <span className="text-xs text-muted block truncate mt-0.5">
-                              {song.titleEnglish}
-                            </span>
-                          </div>
-                          <div className="shrink-0 text-xs text-dim pr-1">
-                            {isCurrent && isPlaying ? (
-                              <div className="flex items-end gap-[2px] h-3">
-                                <span className="w-[2px] bg-white rounded-full h-3 animate-music-bar-1" />
-                                <span className="w-[2px] bg-white rounded-full h-2 animate-music-bar-2" />
-                                <span className="w-[2px] bg-white rounded-full h-2.5 animate-music-bar-3" />
-                              </div>
-                            ) : (
-                              song.duration
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <p className="text-xs mt-1 text-dim">Try another spelling or phrase</p>
                   </div>
                 )}
               </div>

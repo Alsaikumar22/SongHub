@@ -5,9 +5,9 @@ import { collection, doc } from "firebase/firestore";
  * Collection Name Constants
  */
 export const COLLECTIONS = {
-  YOUWORSHIP_SONGS: "youworship_songs",
-  YOUWORSHIP_USERS: "Youworship_users",
-  BIBLE_CHAPTERS: "bible_chapters",
+  YOUWORSHIP_SONGS: process.env.NEXT_PUBLIC_COLLECTION_SONGS || "youworship_songs",
+  YOUWORSHIP_USERS: process.env.NEXT_PUBLIC_COLLECTION_USERS || "Youworship_users",
+  BIBLE_CHAPTERS: process.env.NEXT_PUBLIC_COLLECTION_BIBLE || "bible_chapters",
 };
 
 /**

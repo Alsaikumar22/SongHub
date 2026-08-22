@@ -6,6 +6,7 @@ import {
   generateSongId,
   FieldValue,
 } from "@/lib/admin-firebase";
+import { songService } from "@/services/songService";
 
 // firebase-admin requires Node.js APIs (crypto, net) and must NOT run on the
 // Edge runtime. Explicitly opt into the Node.js runtime.
@@ -250,6 +251,8 @@ export async function POST(request) {
 
     await songsRef.doc(customId).set(songData);
 
+    songService.invalidateCache();
+
     return NextResponse.json(
       { success: true, id: customId, message: "Song added successfully." },
       { status: 201 },
@@ -398,6 +401,8 @@ export async function PUT(request) {
       await songRef.update(updateData);
     }
 
+    songService.invalidateCache();
+
     return NextResponse.json({
       success: true,
       id: newId,
@@ -449,6 +454,8 @@ export async function DELETE(request) {
     }
 
     await songRef.delete();
+
+    songService.invalidateCache();
 
     return NextResponse.json({
       success: true,

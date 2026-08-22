@@ -102,6 +102,50 @@ export const AudioProvider = ({ children }) => {
 
   const [sections, setSections] = useState({});
   const [sectionsLoading, setSectionsLoading] = useState(false);
+
+  // ─── Pre-build alphabetical sections synchronously ─────────────
+  // Called immediately when songs load so SongsSection never shows a spinner.
+  const _prebuildSections = useCallback((songList, lang = 'telugu') => {
+    const ALPHABETS = {
+      english: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+      telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఋ', 'ౠ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'ఔ', 'అం', 'అః', 'క', 'ఖ', 'గ', 'ఘ', 'ఙ', 'చ', 'ఛ', 'జ', 'ఝ', 'ఞ', 'ట', 'ఠ', 'డ', 'ఢ', 'ణ', 'త', 'థ', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ', 'ళ', 'క్ష', 'ఱ'],
+      hindi: ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ए', 'ऐ', 'ओ', 'औ', 'अं', 'अः', 'क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ल', 'व', 'श', 'ष', 'स', 'ह', 'क्ष', 'त्र', 'ज्ञ'],
+    };
+    const languageMap = {
+      english: ['en', 'english'],
+      telugu: ['te', 'telugu'],
+      hindi: ['hi', 'hindi'],
+    };
+    const allowedLangs = languageMap[lang] || languageMap.english;
+    const letters = ALPHABETS[lang] || ALPHABETS.english;
+    const BATCH_SIZE = 20;
+    const grouped = {};
+    songList.forEach(song => {
+      const songLang = (song.language || '').toLowerCase();
+      if (!allowedLangs.includes(songLang)) return;
+      const firstLetter = song.firstLetter || (song.title ? song.title.charAt(0).toUpperCase() : '');
+      if (!grouped[firstLetter]) grouped[firstLetter] = [];
+      grouped[firstLetter].push(song);
+    });
+    Object.keys(grouped).forEach(letter => {
+      grouped[letter].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+    });
+    const newSections = {};
+    letters.forEach(letter => {
+      const allLetterSongs = grouped[letter] || [];
+      if (allLetterSongs.length === 0) return;
+      newSections[letter] = {
+        songs: allLetterSongs.slice(0, BATCH_SIZE),
+        lastDoc: null,
+        hasMore: allLetterSongs.length > BATCH_SIZE,
+        allSongs: allLetterSongs,
+        showAll: false,
+        loading: false,
+      };
+    });
+    setSections(newSections);
+    console.log('[Sections] Pre-built sections for', lang, ':', Object.keys(newSections).join(', '));
+  }, []);
   const [currentSectionLetter, setCurrentSectionLetter] = useState(null);
   const [currentIndexInSection, setCurrentIndexInSection] = useState(null);
   const [isLoadingMoreNext, setIsLoadingMoreNext] = useState(false);
@@ -212,6 +256,10 @@ export const AudioProvider = ({ children }) => {
     }
 
     if (checkedCount < currentQueue.length) {
+      if (currentSectionLetterRef.current) {
+        setCurrentIndexInSection(nextIndex);
+        currentIndexInSectionRef.current = nextIndex;
+      }
       setCurrentSong(currentQueue[nextIndex]);
       setIsPlaying(true);
       setProgress(0);
@@ -246,6 +294,10 @@ export const AudioProvider = ({ children }) => {
     }
 
     if (checkedCount < currentQueue.length) {
+      if (currentSectionLetterRef.current) {
+        setCurrentIndexInSection(prevIndex);
+        currentIndexInSectionRef.current = prevIndex;
+      }
       setCurrentSong(currentQueue[prevIndex]);
       setIsPlaying(true);
       setProgress(0);
@@ -306,10 +358,9 @@ export const AudioProvider = ({ children }) => {
   }, [firestoreData]);
 
   // Load songs from the API endpoint.
-  // Priority: 1) prefetched global 2) browser cache 3) fresh fetch
+  // Priority: 1) prefetched global 2) in-progress prefetch promise 3) browser cache / fresh fetch
   useEffect(() => {
     let isMounted = true;
-    setSongsLoading(true);
 
     // Skip fetch if songs already loaded (SPA re-mount / hot reload)
     if (songs.length > 0) {
@@ -327,10 +378,41 @@ export const AudioProvider = ({ children }) => {
       setSongsLoading(false);
       console.log(`✓ Loaded ${fetchedSongs.length} songs from prefetch (instant)`);
       delete window.__SONGHUB_PREFETCHED_SONGS; // free memory
+      // Pre-build English sections immediately so SongsSection skips loading spinner
+      _prebuildSections(fetchedSongs, 'telugu');
       return () => { isMounted = false; };
     }
 
-    // 2) Browser cache or fresh fetch
+    // 1.5) Check if the landing page prefetch is currently IN PROGRESS
+    const prefetchPromise = window.__SONGHUB_PREFETCHED_PROMISE;
+    if (prefetchPromise && typeof prefetchPromise.then === "function") {
+      setSongsLoading(true);
+      prefetchPromise
+        .then((songsData) => {
+          if (!isMounted) return;
+          const fetchedSongs = Array.isArray(songsData)
+            ? songsData.filter(Boolean).map(normalizeSongForUi)
+            : [];
+          setSongs(fetchedSongs);
+          setQueue(fetchedSongs);
+          setOriginalQueue(fetchedSongs);
+          setSongsLoading(false);
+          console.log(`✓ Loaded ${fetchedSongs.length} songs from in-progress prefetch promise`);
+          _prebuildSections(fetchedSongs, 'telugu');
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          console.error("❌ Failed to resolve prefetch promise:", err);
+          setSongsLoading(false);
+        })
+        .finally(() => {
+          delete window.__SONGHUB_PREFETCHED_PROMISE; // free memory
+        });
+      return () => { isMounted = false; };
+    }
+
+    // 2) Browser cache or fresh fetch — only now set loading
+    setSongsLoading(true);
     fetch("/api/songs", { cache: "default" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -346,6 +428,8 @@ export const AudioProvider = ({ children }) => {
         setOriginalQueue(fetchedSongs);
         setSongsLoading(false);
         console.log(`✓ Loaded ${fetchedSongs.length} songs from API`);
+        // Pre-build English sections immediately so SongsSection skips loading spinner
+        _prebuildSections(fetchedSongs, 'telugu');
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -857,7 +941,7 @@ export const AudioProvider = ({ children }) => {
     }
   }, [isMiniPlayerActive, currentSong?.id]);
 
-  const initializeAlphabeticalSections = useCallback(async (lang = "english") => {
+  const initializeAlphabeticalSections = useCallback(async (lang = "telugu") => {
     // Build alphabetical sections from the already-loaded songs in state
     const currentSongs = songs;
     if (currentSongs.length === 0) {
@@ -869,8 +953,8 @@ export const AudioProvider = ({ children }) => {
 
     const ALPHABETS = {
       english: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
-      telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'క', 'ఖ', 'గ', 'ఘ', 'చ', 'జ', 'డ', 'త', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ'],
-      hindi: ['आ', 'इ', 'उ', 'ख', 'च', 'ज', 'झ', 'त', 'द', 'न', 'प', 'य', 'र', 'ल', 'व', 'स'],
+      telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఋ', 'ౠ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'ఔ', 'అం', 'అః', 'క', 'ఖ', 'గ', 'ఘ', 'ఙ', 'చ', 'ఛ', 'జ', 'ఝ', 'ఞ', 'ట', 'ఠ', 'డ', 'ఢ', 'ణ', 'త', 'థ', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ', 'ళ', 'క్ష', 'ఱ'],
+      hindi: ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ए', 'ऐ', 'ओ', 'औ', 'अं', 'अः', 'क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ल', 'व', 'श', 'ष', 'स', 'ह', 'क्ष', 'त्र', 'ज्ञ'],
       tamil: ['அ', 'ஆ', 'இ', 'ஈ', 'உ', 'ஊ', 'எ', 'ஏ', 'ஐ', 'ஒ', 'ஓ', 'க', 'ச', 'ஜ', 'ஞ', 'ட', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ற', 'ல', 'வ', 'ஷ', 'ஸ', 'ஹ'],
     };
 
@@ -887,7 +971,6 @@ export const AudioProvider = ({ children }) => {
     // Always rebuild — clear old sections for this language's letters first
     const newSections = {};
 
-    setSectionsLoading(true);
     try {
       const BATCH_SIZE = 20;
 
@@ -909,17 +992,36 @@ export const AudioProvider = ({ children }) => {
         grouped[letter].sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
       });
 
-      // Build sections for all letters that have songs
+      // Build sections: predefined letters first (in order), then any extra grouped letters
+      const processedLetters = new Set();
       letters.forEach(letter => {
         const allLetterSongs = grouped[letter] || [];
         if (allLetterSongs.length === 0) return;
+        processedLetters.add(letter);
 
-        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
+        const sorted = allLetterSongs.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+        const initialSongs = sorted.slice(0, BATCH_SIZE);
         newSections[letter] = {
           songs: initialSongs,
           lastDoc: null,
-          hasMore: allLetterSongs.length > BATCH_SIZE,
-          allSongs: allLetterSongs,
+          hasMore: sorted.length > BATCH_SIZE,
+          allSongs: sorted,
+          showAll: false,
+          loading: false,
+        };
+      });
+
+      // Also include any songs grouped under letters not in the predefined list
+      Object.keys(grouped).forEach(letter => {
+        if (processedLetters.has(letter)) return;
+        if (grouped[letter].length === 0) return;
+        const sorted = grouped[letter].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+        const initialSongs = sorted.slice(0, BATCH_SIZE);
+        newSections[letter] = {
+          songs: initialSongs,
+          lastDoc: null,
+          hasMore: sorted.length > BATCH_SIZE,
+          allSongs: sorted,
           showAll: false,
           loading: false,
         };
@@ -930,8 +1032,6 @@ export const AudioProvider = ({ children }) => {
       setSections(newSections);
     } catch (error) {
       console.error("Failed to initialize alphabetical sections for language:", lang, error);
-    } finally {
-      setSectionsLoading(false);
     }
   }, [songs]);
 
@@ -1164,6 +1264,7 @@ export const AudioProvider = ({ children }) => {
     <AudioContext.Provider
       value={{
         songs: songs,
+        setSongs,
         songsLoading,
         currentSong,
         isPlaying,

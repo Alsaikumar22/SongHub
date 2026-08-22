@@ -12,10 +12,33 @@ import {
 } from "firebase/firestore";
 import { getEnglishSlug } from "@/utils/songSlug";
 
+function removeWatermark(text) {
+  if (typeof text !== "string") return text;
+  return text
+    .replace(/^(?:lyrics\s*[:-]\s*)?www\.desiworship\.com\s*$/gim, "")
+    .replace(/^(?:lyrics\s*[:-]\s*)?desiworship\.com\s*$/gim, "")
+    .replace(/^(?:lyrics\s*[:-]\s*)?desiworship\s*$/gim, "")
+    .replace(/desiworship\.com/gi, "")
+    .replace(/www\.desiworship\.com/gi, "")
+    .replace(/desiworship/gi, "")
+    .split("\n")
+    .map(line => line.trim())
+    .map(line => {
+      const trimmed = line.trim();
+      if (trimmed === "-" || trimmed === ":" || trimmed === "- :" || trimmed === ": -") {
+        return "";
+      }
+      return line;
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // ── Server-side in-memory cache ──────────────────────────────────────
-// Avoids hitting Firestore on every /api/songs request. TTL: 60 seconds.
+// Avoids hitting Firestore on every /api/songs request. TTL: 24 hours.
 const _songsCache = { data: null, ts: 0 };
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 86_400_000; // 24 hours in milliseconds
 
 function _getCachedSongs() {
   if (_songsCache.data && Date.now() - _songsCache.ts < CACHE_TTL_MS) {
@@ -115,7 +138,7 @@ export function transformSongDoc(docSnap) {
   const docId = docSnap.id;
 
   // 1. Core Fields
-  const title = (data.title || "").replace(/-/g, " ");
+  const title = removeWatermark((data.title || "").replace(/-/g, " "));
   const slug = data.slug || docId;
 
   // 2. Artist Object
@@ -219,14 +242,17 @@ export function transformSongDoc(docSnap) {
   let englishLyricsText = "";
 
   if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
-    lyricsArray = data.lyrics;
+    lyricsArray = data.lyrics.map(block => ({
+      ...block,
+      content: removeWatermark(block.content || "")
+    }));
     const teBlock = lyricsArray.find((l) => l.language === "te" || l.isDefault);
     const enBlock = lyricsArray.find((l) => l.language === "en");
     teluguLyricsText = teBlock?.content || lyricsArray[0]?.content || "";
     englishLyricsText = enBlock?.content || "";
   } else if (typeof data.lyrics === "string") {
-    teluguLyricsText = data.lyrics;
-    englishLyricsText = data.englishLyrics || "";
+    teluguLyricsText = removeWatermark(data.lyrics);
+    englishLyricsText = removeWatermark(data.englishLyrics || "");
     lyricsArray = [
       {
         language: "te",
@@ -245,7 +271,7 @@ export function transformSongDoc(docSnap) {
   }
 
   const firstLetter = title ? title.charAt(0).toUpperCase() : "";
-  let titleEnglish = (data.titleEnglish || "").replace(/-/g, " ");
+  let titleEnglish = removeWatermark((data.titleEnglish || "").replace(/-/g, " "));
 
   // If the language is Tamil and titleEnglish is empty or contains Tamil characters,
   // extract the English transliteration from the first line of the English lyrics block.
@@ -304,9 +330,9 @@ export function transformSongDoc(docSnap) {
     firstLetter,
     teluguFirstLetter: firstLetter,
     chords: Array.isArray(data.chords)
-      ? data.chords
+      ? data.chords.map(removeWatermark)
       : typeof data.chords === "string" && data.chords.trim()
-        ? data.chords.split("\n")
+        ? data.chords.split("\n").map(removeWatermark)
         : [],
     chordCredits: data.chordCredits || "",
     createdAt: data.createdAt || null,
@@ -333,6 +359,15 @@ function isTamilSong(song) {
  * Song Service — Manages Firestore operations for youworship_songs
  */
 export const songService = {
+  /**
+   * Clear the server-side in-memory cache.
+   */
+  invalidateCache() {
+    _songsCache.data = null;
+    _songsCache.ts = 0;
+    console.log("🍟 [songService] In-memory cache invalidated.");
+  },
+
   /**
    * Fetch all songs from 'youworship_songs' collection sorted alphabetically by title.
    * Uses client-side fallback sorting to handle mixed language characters smoothly.
@@ -408,25 +443,7 @@ export const songService = {
     }
 
     try {
-      // 1. Direct lookup by decoded targetId
-      const songRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, targetId);
-      const docSnap = await getDoc(songRef);
-      if (docSnap.exists()) {
-        const song = transformSongDoc(docSnap);
-        return song && !isTamilSong(song) ? song : null;
-      }
-
-      // 2. Lookup by raw songId
-      if (targetId !== songId) {
-        const rawRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, songId);
-        const rawSnap = await getDoc(rawRef);
-        if (rawSnap.exists()) {
-          const song = transformSongDoc(rawSnap);
-          return song && !isTamilSong(song) ? song : null;
-        }
-      }
-
-      // 3. Fallback: Search all songs list for matching ID or Slug (with NFC normalization)
+      // 1. Check in-memory cached 'allSongs' list first for instant lookup
       const allSongs = await this.getAllSongs();
       const targetNFC = (targetId || "").normalize("NFC");
       const songNFC = (songId || "").normalize("NFC");
@@ -448,6 +465,24 @@ export const songService = {
       });
 
       if (match) return match;
+
+      // 2. Direct lookup by decoded targetId
+      const songRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, targetId);
+      const docSnap = await getDoc(songRef);
+      if (docSnap.exists()) {
+        const song = transformSongDoc(docSnap);
+        return song && !isTamilSong(song) ? song : null;
+      }
+
+      // 3. Lookup by raw songId
+      if (targetId !== songId) {
+        const rawRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, songId);
+        const rawSnap = await getDoc(rawRef);
+        if (rawSnap.exists()) {
+          const song = transformSongDoc(rawSnap);
+          return song && !isTamilSong(song) ? song : null;
+        }
+      }
 
       console.warn(`⚠️ Song document with ID/Slug '${songId}' not found.`);
       return null;

@@ -49,6 +49,30 @@ export default async function LandingPage({ searchParams }) {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#0B0F18] flex flex-col items-center justify-center px-5 sm:px-6 select-none">
+      {/* Inline script: starts fetching songs BEFORE React hydrates.
+          By the time the user clicks "Explore Songs" the data is ready. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              if (window.__SONGHUB_SONGS_PREFETCHED) return;
+              window.__SONGHUB_SONGS_PREFETCHED = true;
+              fetch('/api/songs', { cache: 'default' })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(d) {
+                  if (d && d.songs) {
+                    window.__SONGHUB_PREFETCHED_SONGS = d.songs;
+                    console.log('✓ Prefetched ' + d.songs.length + ' songs (inline)');
+                  }
+                })
+                .catch(function() {});
+            })();
+          `,
+        }}
+      />
+      {/* Also prefetch the /home page JS bundle and API */}
+      <link rel="prefetch" href="/home" />
+      <link rel="prefetch" href="/api/songs" />
       <SongsPrefetcher />
       {/* Deep navy (#0B0F18) → black gradient, middle toned to blend the logo seamlessly */}
       <div

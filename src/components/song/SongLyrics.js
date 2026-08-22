@@ -18,11 +18,11 @@ export function LanguageSegmented({ selected, onChange, songLanguage, hasChords 
     if (hasChords) langs.push({ id: "chords", label: "Chords" });
   } else if (isEn) {
     langs.push({ id: "english", label: "English" });
-    langs.push({ id: "chords", label: "Chords" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
   } else {
     langs.push({ id: "telugu", label: "తెలుగు" });
     langs.push({ id: "english", label: "English" });
-    langs.push({ id: "chords", label: "Chords" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
   }
 
   return (

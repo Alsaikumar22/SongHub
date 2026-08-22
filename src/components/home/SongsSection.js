@@ -221,7 +221,15 @@ export default function SongsSection({
   const sectionRefs = useRef({});
   const scrollRefs = useRef({});
   const [activeLetter, setActiveLetter] = useState(selectedLetter || null);
-  const [scriptLang, setScriptLang] = useState("english");
+  const [scriptLang, setScriptLang] = useState(() => {
+    // Auto-detect script from initial selectedLetter
+    if (selectedLetter) {
+      if (/[\u0C00-\u0C7F]/.test(selectedLetter)) return "telugu";
+      if (/[\u0900-\u097F]/.test(selectedLetter)) return "hindi";
+    }
+    // Default to Telugu so Telugu songs show first
+    return "telugu";
+  });
  
   // State hooks for Spotify-style letter detail views
   const {
@@ -247,6 +255,20 @@ export default function SongsSection({
     }
   }, [initializeAlphabeticalSections, scriptLang, songsLoading]);
  
+  // Auto-switch scriptLang when a letter is clicked
+  useEffect(() => {
+    if (selectedLetter) {
+      // Detect if the selected letter is Telugu, Hindi, or English
+      if (/[\u0C00-\u0C7F]/.test(selectedLetter)) {
+        setScriptLang("telugu");
+      } else if (/[\u0900-\u097F]/.test(selectedLetter)) {
+        setScriptLang("hindi");
+      } else if (/[A-Z]/i.test(selectedLetter)) {
+        setScriptLang("english");
+      }
+    }
+  }, [selectedLetter]);
+
   useEffect(() => {
     if (selectedLetter && sections[selectedLetter] && !sections[selectedLetter].showAll && !sections[selectedLetter].loading) {
       showAllSongsForLetter(selectedLetter);
@@ -745,7 +767,10 @@ export default function SongsSection({
                                 ? "border-[#D4A32A]/40 bg-[#D4A32A]/5"
                                 : "border-line/40 bg-card-hover/20 hover:bg-card-hover/40 hover:border-line-muted"
                             }`}
-                            onClick={() => router.push(`/song/${encodeURIComponent(song.slug || song.id)}`)}
+                            onClick={() => {
+                              playSong(song, letter, index, letterSongs);
+                              router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                            }}
                           >
                             {/* Left: Toggle Favorite */}
                             <button
