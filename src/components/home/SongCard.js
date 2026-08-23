@@ -51,7 +51,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
       className={`relative flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
     >
       <div
-        className={`relative aspect-square w-full rounded-xl overflow-hidden border border-line/50 shadow-md bg-card ${
+        className={`relative aspect-square w-full rounded-md overflow-hidden border border-line/50 shadow-md bg-card ${
           isSmall ? "mb-2" : "mb-3"
         }`}
       >

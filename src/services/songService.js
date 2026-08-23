@@ -569,6 +569,174 @@ export const songService = {
   },
 
   /**
+   * Resolve a cursor ID into a Firestore DocumentSnapshot.
+   * Returns null if the document doesn't exist.
+   */
+  async _resolveCursor(cursorId) {
+    if (!cursorId) return null;
+    const cursorRef = doc(db, COLLECTIONS.YOUWORSHIP_SONGS, cursorId);
+    const cursorSnap = await getDoc(cursorRef);
+    return cursorSnap.exists() ? cursorSnap : null;
+  },
+
+  /**
+   * Transform + filter a Firestore snapshot into a page result.
+   */
+  _buildPage(snapshot, pageSize) {
+    const songs = snapshot.docs
+      .map((docSnap) => transformSongDoc(docSnap))
+      .filter((song) => song && !isTamilSong(song))
+      .slice(0, pageSize);
+
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+    const cursor = lastDoc ? lastDoc.id : null;
+    const hasMore = snapshot.docs.length === pageSize;
+
+    return { songs, cursor, hasMore };
+  },
+
+  /**
+   * Keyset pagination: first page of songs.
+   * Over-fetches to compensate for Tamil song filtering.
+   */
+  async getSongsPage(pageSize = 20) {
+    const overFetch = Math.ceil(pageSize * 1.5);
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(songsRef, orderBy("title"), limit(overFetch));
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getSongsPage] Error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Keyset pagination: next page after a cursor.
+   */
+  async getSongsPageAfter(cursorId, pageSize = 20) {
+    if (!cursorId) return this.getSongsPage(pageSize);
+    try {
+      const cursorSnap = await this._resolveCursor(cursorId);
+      if (!cursorSnap) return this.getSongsPage(pageSize);
+
+      const overFetch = Math.ceil(pageSize * 1.5);
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(songsRef, orderBy("title"), startAfter(cursorSnap), limit(overFetch));
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getSongsPageAfter] Error:", error);
+      throw error;
+    }
+  },
+
+  // ── Category pagination ───────────────────────────────────────────
+
+  /**
+   * Keyset pagination: first page of songs filtered by category.
+   * Uses Firestore array-contains query on the category field.
+   */
+  async getCategorySongsPage(category, pageSize = 20) {
+    if (!category) return this.getSongsPage(pageSize);
+    const overFetch = Math.ceil(pageSize * 1.5);
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("category", "array-contains", category),
+        orderBy("title"),
+        limit(overFetch),
+      );
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getCategorySongsPage] Error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Keyset pagination: next page of category-filtered songs after a cursor.
+   */
+  async getCategorySongsPageAfter(category, cursorId, pageSize = 20) {
+    if (!category) return this.getSongsPageAfter(cursorId, pageSize);
+    if (!cursorId) return this.getCategorySongsPage(category, pageSize);
+    try {
+      const cursorSnap = await this._resolveCursor(cursorId);
+      if (!cursorSnap) return this.getCategorySongsPage(category, pageSize);
+
+      const overFetch = Math.ceil(pageSize * 1.5);
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("category", "array-contains", category),
+        orderBy("title"),
+        startAfter(cursorSnap),
+        limit(overFetch),
+      );
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getCategorySongsPageAfter] Error:", error);
+      throw error;
+    }
+  },
+
+  // ── Letter pagination ─────────────────────────────────────────────
+
+  /**
+   * Keyset pagination: first page of songs filtered by first letter.
+   * Uses Firestore where + orderBy with composite index.
+   */
+  async getLetterSongsPage(letter, pageSize = 20) {
+    if (!letter) return this.getSongsPage(pageSize);
+    const overFetch = Math.ceil(pageSize * 1.5);
+    try {
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        limit(overFetch),
+      );
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getLetterSongsPage] Error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Keyset pagination: next page of letter-filtered songs after a cursor.
+   */
+  async getLetterSongsPageAfter(letter, cursorId, pageSize = 20) {
+    if (!letter) return this.getSongsPageAfter(cursorId, pageSize);
+    if (!cursorId) return this.getLetterSongsPage(letter, pageSize);
+    try {
+      const cursorSnap = await this._resolveCursor(cursorId);
+      if (!cursorSnap) return this.getLetterSongsPage(letter, pageSize);
+
+      const overFetch = Math.ceil(pageSize * 1.5);
+      const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
+      const q = query(
+        songsRef,
+        where("firstLetter", "==", letter.toUpperCase()),
+        orderBy("title"),
+        startAfter(cursorSnap),
+        limit(overFetch),
+      );
+      const snapshot = await getDocs(q);
+      return this._buildPage(snapshot, pageSize);
+    } catch (error) {
+      console.error("❌ [songService.getLetterSongsPageAfter] Error:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Fetch the first 20 songs starting with the specified letter from Firestore.
    */
   async fetchInitialSongsForLetter(letter) {

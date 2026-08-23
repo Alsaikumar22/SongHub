@@ -35,12 +35,6 @@ import {
   getShareableSongTitle,
 } from "@/utils/share";
 
-const TELUGU_ALPHABET_ORDER = [
-  "అ", "ఆ", "ఇ", "ఈ", "ఉ", "ఊ", "ఋ", "ౠ", "ఎ", "ఏ", "ఐ", "ఒ", "ఓ", "ఔ", "అం", "అః",
-  "క", "ఖ", "గ", "ఘ", "ఙ", "చ", "ఛ", "జ", "ఝ", "ఞ", "ట", "ఠ", "డ", "ఢ", "ణ",
-  "త", "థ", "ద", "ధ", "న", "ప", "ఫ", "బ", "భ", "మ", "య", "ర", "ల", "వ", "శ", "ష", "స", "హ", "ళ", "క్ష", "ఱ"
-];
-
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
@@ -165,6 +159,7 @@ function SongPageContent({ params }) {
   const { setSearchQuery, setShowFullResults } = useSearch();
 
   const [song, setSong] = useState(null);
+  const [lyricsLoading, setLyricsLoading] = useState(true);
   const selectedLanguage = lyricsLanguage;
   const setSelectedLanguage = setLyricsLanguage;
 
@@ -192,34 +187,6 @@ function SongPageContent({ params }) {
 
   const isCurrentSong = currentSong?.id === song?.id;
   const isThisPlaying = isCurrentSong && isPlaying;
-
-  const isTeluguSong = song && (
-    (song.language || "").toLowerCase() === "te" ||
-    (song.language || "").toLowerCase() === "telugu" ||
-    (!["hi", "hindi", "ta", "tamil", "en", "english"].includes((song.language || "").toLowerCase()))
-  );
-
-  const teluguLetters = React.useMemo(() => {
-    const safeSongs = Array.isArray(songs) ? songs : [];
-    const lettersSet = new Set();
-    const teluguLangs = ["te", "telugu"];
-    
-    safeSongs.forEach((s) => {
-      const songLang = (s.language || "").toLowerCase();
-      if (teluguLangs.includes(songLang) || (!songLang && s.teluguTitle)) {
-        const letter = s.firstLetter || (s.teluguTitle ? s.teluguTitle.charAt(0) : "");
-        if (letter && TELUGU_ALPHABET_ORDER.includes(letter)) {
-          lettersSet.add(letter);
-        }
-      }
-    });
-    
-    return Array.from(lettersSet).sort((a, b) => {
-      const idxA = TELUGU_ALPHABET_ORDER.indexOf(a);
-      const idxB = TELUGU_ALPHABET_ORDER.indexOf(b);
-      return idxA - idxB;
-    });
-  }, [songs]);
 
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [showShareDropdown, setShowShareDropdown] = useState(false);
@@ -392,6 +359,7 @@ function SongPageContent({ params }) {
   useEffect(() => {
     if (prevIdRef.current !== id) {
       setSong(null);
+      setLyricsLoading(true);
       fetchingRef.current = false;
       prevIdRef.current = id;
     }
@@ -439,17 +407,20 @@ function SongPageContent({ params }) {
 
     // If found song already has full data (lyrics/chords), skip fetch
     if (foundSong && (foundSong.lyricsTelugu || foundSong.lyrics || (Array.isArray(foundSong.lyrics) && foundSong.lyrics.length > 0))) {
+      setLyricsLoading(false);
       return;
     }
 
     if (fetchingRef.current) return;
     fetchingRef.current = true;
+    setLyricsLoading(true);
 
     songService
       .getSongById(decodedId)
       .then((fetchedSong) => {
         if (fetchedSong) {
           setSong(fetchedSong);
+          setLyricsLoading(false);
           if (typeof setSongs === "function") {
             setSongs((prevSongs) =>
               prevSongs.map((s) => (s.id === fetchedSong.id ? { ...s, ...fetchedSong } : s))
@@ -471,10 +442,12 @@ function SongPageContent({ params }) {
                   );
                 }
               }
+              setLyricsLoading(false);
               fetchingRef.current = false;
             })
             .catch((err) => {
               console.error("API fallback fetch failed:", err);
+              setLyricsLoading(false);
               fetchingRef.current = false;
             });
         }
@@ -488,6 +461,7 @@ function SongPageContent({ params }) {
           .then((res) => res.json())
           .then((data) => {
             if (data.song) setSong(data.song);
+            setLyricsLoading(false);
             fetchingRef.current = false;
           })
           .catch((fetchErr) => {
@@ -495,6 +469,7 @@ function SongPageContent({ params }) {
               "API fallback fetch failed on direct error:",
               fetchErr,
             );
+            setLyricsLoading(false);
             fetchingRef.current = false;
           });
       });
@@ -911,27 +886,7 @@ function SongPageContent({ params }) {
           </div>
         </div>
 
-        {/* Telugu Alphabetical Row */}
-        {isTeluguSong && teluguLetters.length > 0 && (
-          <div className="px-6 md:px-8 pb-3 pt-1 flex items-center gap-3 overflow-x-auto no-scrollbar select-none border-t border-line/20 animate-in fade-in duration-200">
-            <span className="text-[10px] font-black text-muted uppercase tracking-wider shrink-0 mr-1">
-              Browse Telugu (తెలుగు):
-            </span>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {teluguLetters.map((letter) => (
-                <button
-                  key={letter}
-                  onClick={() => {
-                    router.push(`/home?tab=discover&letter=${encodeURIComponent(letter)}`);
-                  }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-black bg-card hover:bg-card-hover text-title/95 border border-line/50 hover:border-line hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer font-telugu shadow-sm"
-                >
-                  {letter}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
 
       <div className="w-full px-6 md:px-8 pb-16 pt-2 space-y-8 flex-1 flex flex-col">
@@ -1000,13 +955,34 @@ function SongPageContent({ params }) {
                 <span className="hidden sm:inline">Exit Fullscreen</span>
               </button>
             )}
-            <SongLyrics
-              song={song}
-              isImmersive={true}
-              selectedLanguage={selectedLanguage}
-              setSelectedLanguage={setSelectedLanguage}
-              fontSizeMultiplier={fontSizeMultiplier}
-            />
+            {lyricsLoading ? (
+              /* Lyrics loading skeleton */
+              <div className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 select-none bg-card">
+                <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center space-y-6 animate-pulse">
+                  <div className="max-w-2xl mx-auto text-center space-y-8 w-full">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="space-y-3">
+                        <div className="h-6 md:h-8 bg-card-hover rounded-lg mx-auto" style={{ width: `${50 + (i % 4) * 12}%` }} />
+                        {i % 3 === 0 && (
+                          <div className="h-5 md:h-7 bg-card-hover rounded-lg mx-auto" style={{ width: `${40 + (i % 3) * 15}%` }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center pt-4">
+                    <span className="text-xs text-muted font-medium">Loading lyrics...</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <SongLyrics
+                song={song}
+                isImmersive={true}
+                selectedLanguage={selectedLanguage}
+                setSelectedLanguage={setSelectedLanguage}
+                fontSizeMultiplier={fontSizeMultiplier}
+              />
+            )}
           </div>
         </div>
       </div>

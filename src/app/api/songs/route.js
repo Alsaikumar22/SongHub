@@ -4,17 +4,54 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/songs
- * Returns a lightweight summary of all songs (lyrics/chords stripped).
- * Server-side in-memory cache (60 s) + HTTP cache headers for fast loads.
+ *
+ * Supports cursor-based (keyset) pagination with optional filters:
+ *   GET /api/songs                              → first page (20 songs)
+ *   GET /api/songs?limit=30                     → first page with custom size
+ *   GET /api/songs?cursor=<id>                  → next page after cursor
+ *   GET /api/songs?category=Praise & Worship    → category-filtered first page
+ *   GET /api/songs?letter=A                     → letter-filtered first page
+ *
+ * Response shape:
+ *   { songs, count, cursor, hasMore, filter: { category?, letter? } }
  */
-export async function GET() {
+export async function GET(request) {
   try {
-    const songs = await songService.getAllSongsSummary();
+    const { searchParams } = new URL(request.url);
+    const limitParam = Math.min(Math.max(parseInt(searchParams.get("limit")) || 20, 1), 100);
+    const cursor = searchParams.get("cursor");
+    const category = searchParams.get("category");
+    const letter = searchParams.get("letter");
+
+    let result;
+
+    if (category) {
+      // Category-filtered pagination
+      result = cursor
+        ? await songService.getCategorySongsPageAfter(category, cursor, limitParam)
+        : await songService.getCategorySongsPage(category, limitParam);
+    } else if (letter) {
+      // Letter-filtered pagination
+      result = cursor
+        ? await songService.getLetterSongsPageAfter(letter, cursor, limitParam)
+        : await songService.getLetterSongsPage(letter, limitParam);
+    } else {
+      // All songs pagination
+      result = cursor
+        ? await songService.getSongsPageAfter(cursor, limitParam)
+        : await songService.getSongsPage(limitParam);
+    }
+
     return Response.json(
-      { songs, count: songs.length },
+      {
+        songs: result.songs,
+        count: result.songs.length,
+        cursor: result.cursor,
+        hasMore: result.hasMore,
+        filter: { category: category || null, letter: letter || null },
+      },
       {
         headers: {
-          // Browser can serve from cache for 30 s, revalidate in background
           "Cache-Control": "public, s-maxage=60, max-age=30, stale-while-revalidate=60",
         },
       },

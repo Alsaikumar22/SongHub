@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { SongRowSkeleton } from "../ui/SongSkeleton";
 import {
   Play,
   Pause,
@@ -375,9 +376,35 @@ export default function SongsSection({
     }
   };
  
-  if (sectionsLoading && Object.keys(sections).length === 0) {
+  // Show skeleton while songs are loading OR while sections haven't been built yet
+  const isLoading = songsLoading || (Object.keys(sections).length === 0 && !selectedLetter);
+  if (isLoading) {
     return <SongsSectionSkeleton />;
   }
+
+  // ── Progressive infinite scroll ──────────────────────────────────
+  const INITIAL_VISIBLE = 5;
+  const BATCH_SIZE = 4;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const sentinelRef = useRef(null);
+
+  // IntersectionObserver for progressive section loading
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || selectedLetter) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + BATCH_SIZE);
+        }
+      },
+      { rootMargin: "400px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [selectedLetter, availableLetters.length]);
 
   return (
     <div className="space-y-4">
@@ -642,7 +669,7 @@ export default function SongsSection({
         </div>
       ) : (
         <div className={showFullHome ? "space-y-6" : "space-y-8"}>
-          {availableLetters.map((letter) => {
+          {availableLetters.slice(0, visibleCount).map((letter) => {
             const letterSec = sections[letter];
             if (!letterSec) return null;
             const letterSongs = getFilteredSongsForLetter(letter);
@@ -725,15 +752,7 @@ export default function SongsSection({
                         <ChevronRight className="w-5 h-5" />
                       </button>
 
-                      {/* Show All Inline button under the row */}
-                      {!letterSec.showAll && letterSec.hasMore && (
-                        <button
-                          onClick={() => showAllSongsForLetter(letter)}
-                          className="self-start mt-2 px-4 py-1.5 bg-card hover:bg-card-hover border border-line/60 rounded-full text-xs font-bold text-title transition-all active:scale-95 cursor-pointer shadow-sm"
-                        >
-                          {letterSec.loading ? "Loading..." : "Show All"}
-                        </button>
-                      )}
+
                     </div>
                   </>
                 ) : (
@@ -872,20 +891,22 @@ export default function SongsSection({
                       })}
                     </div>
 
-                    {/* Show All Inline button under the grid */}
-                    {!letterSec.showAll && letterSec.hasMore && (
-                      <button
-                        onClick={() => showAllSongsForLetter(letter)}
-                        className="mt-4 px-4 py-2 bg-card hover:bg-card-hover border border-line/60 rounded-full text-xs font-bold text-title transition-all active:scale-95 cursor-pointer shadow-sm w-full md:w-auto"
-                      >
-                        {letterSec.loading ? "Loading..." : "Show All Songs"}
-                      </button>
-                    )}
+
                   </>
                 )}
               </div>
             );
           })}
+
+          {/* Progressive loading: show skeleton placeholders for upcoming sections */}
+          {visibleCount < availableLetters.length && (
+            <>
+              {Array.from({ length: Math.min(BATCH_SIZE, availableLetters.length - visibleCount) }).map((_, i) => (
+                <SongRowSkeleton key={`skeleton-${i}`} />
+              ))}
+              <div ref={sentinelRef} className="h-4" />
+            </>
+          )}
         </div>
       )}
     </div>

@@ -20,10 +20,10 @@ export default function SongCard({ song, onPlay }) {
           onPlay(song);
         }
       }}
-      className="group relative bg-card border border-line/40 hover:border-line rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+      className="group relative bg-card border border-line/40 hover:border-line rounded-md p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
     >
       {/* Cover Artwork Container */}
-      <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-card-hover mb-3 border border-line/30">
+      <div className="relative aspect-square w-full rounded-sm overflow-hidden bg-card-hover mb-3 border border-line/30">
         <SongArtwork
           song={song}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

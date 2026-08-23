@@ -1,7 +1,7 @@
 export function SongCardSkeleton() {
   return (
     <div className="group relative w-48 shrink-0 animate-pulse" role="status" aria-label="Loading song">
-      <div className="relative aspect-square w-full rounded-xl bg-card-hover overflow-hidden">
+      <div className="relative aspect-square w-full rounded-md bg-card-hover overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/[0.02]" />
       </div>
       <div className="mt-2.5 space-y-1.5 px-0.5">
