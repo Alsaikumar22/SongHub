@@ -68,6 +68,35 @@ function normalizeSongForUi(song) {
   };
 }
 
+function getAlphabeticalKey(song, language) {
+  if (language === "english") {
+    const engTitle = song?.titleEnglish || song?.title || "";
+    const first = engTitle.trim().charAt(0).toUpperCase();
+    if (/[A-Z]/.test(first)) return first;
+    return "#";
+  }
+
+  const title = song?.title || song?.teluguTitle || "";
+  const storedLetter = song?.firstLetter || "";
+  const nativePattern =
+    language === "telugu"
+      ? /[\u0C00-\u0C7F]/
+      : language === "hindi"
+        ? /[\u0900-\u097F]/
+        : language === "tamil"
+          ? /[\u0B80-\u0BFF]/
+          : null;
+
+  if (nativePattern) {
+    if (nativePattern.test(storedLetter)) return storedLetter;
+    const firstChar = title.trim().charAt(0);
+    if (nativePattern.test(firstChar)) return firstChar;
+  }
+
+  const fallbackChar = storedLetter || title.trim().charAt(0).toUpperCase();
+  return fallbackChar || "#";
+}
+
 function isSongPlayable(song) {
   if (!song) return false;
   const audioUrl = song.audioUrl || song.media?.audio;
@@ -110,11 +139,13 @@ export const AudioProvider = ({ children }) => {
       english: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
       telugu: ['అ', 'ఆ', 'ఇ', 'ఈ', 'ఉ', 'ఊ', 'ఋ', 'ౠ', 'ఎ', 'ఏ', 'ఐ', 'ఒ', 'ఓ', 'ఔ', 'అం', 'అః', 'క', 'ఖ', 'గ', 'ఘ', 'ఙ', 'చ', 'ఛ', 'జ', 'ఝ', 'ఞ', 'ట', 'ఠ', 'డ', 'ఢ', 'ణ', 'త', 'థ', 'ద', 'ధ', 'న', 'ప', 'ఫ', 'బ', 'భ', 'మ', 'య', 'ర', 'ల', 'వ', 'శ', 'ష', 'స', 'హ', 'ళ', 'క్ష', 'ఱ'],
       hindi: ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ए', 'ऐ', 'ओ', 'औ', 'अं', 'अः', 'क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ल', 'व', 'श', 'ष', 'स', 'ह', 'क्ष', 'त्र', 'ज्ञ'],
+      tamil: ['அ', 'ஆ', 'இ', 'ஈ', 'உ', 'ஊ', 'எ', 'ஏ', 'ஐ', 'ஒ', 'ஓ', 'க', 'ச', 'ஜ', 'ஞ', 'ட', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ற', 'ல', 'வ', 'ஷ', 'ஸ', 'ஹ'],
     };
     const languageMap = {
       english: ['en', 'english'],
       telugu: ['te', 'telugu'],
       hindi: ['hi', 'hindi'],
+      tamil: ['ta', 'tamil'],
     };
     const allowedLangs = languageMap[lang] || languageMap.english;
     const letters = ALPHABETS[lang] || ALPHABETS.english;
@@ -122,13 +153,11 @@ export const AudioProvider = ({ children }) => {
     const grouped = {};
     songList.forEach(song => {
       const songLang = (song.language || '').toLowerCase();
-      if (!allowedLangs.includes(songLang)) return;
-      const firstLetter = song.firstLetter || (song.title ? song.title.charAt(0).toUpperCase() : '');
+      // Include songs with no language field (treat untagged as matching the selected language)
+      if (songLang && !allowedLangs.includes(songLang)) return;
+      const firstLetter = getAlphabeticalKey(song, lang);
       if (!grouped[firstLetter]) grouped[firstLetter] = [];
       grouped[firstLetter].push(song);
-    });
-    Object.keys(grouped).forEach(letter => {
-      grouped[letter].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
     });
     const newSections = {};
     letters.forEach(letter => {
@@ -413,7 +442,7 @@ export const AudioProvider = ({ children }) => {
 
     // 2) Browser cache or fresh fetch — only now set loading
     setSongsLoading(true);
-    fetch("/api/songs", { cache: "default" })
+    fetch("/api/songs?all=true", { cache: "default" })
       .then((res) => {
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         return res.json();
@@ -978,19 +1007,15 @@ export const AudioProvider = ({ children }) => {
       const grouped = {};
       currentSongs.forEach(song => {
         const songLang = (song.language || "").toLowerCase();
-        if (!allowedLangs.includes(songLang)) return;
+        // Include songs with no language field (treat untagged as matching the selected language)
+        if (songLang && !allowedLangs.includes(songLang)) return;
 
-        const firstLetter = song.firstLetter || (song.title ? song.title.charAt(0).toUpperCase() : "");
+        const firstLetter = getAlphabeticalKey(song, lang);
         if (!grouped[firstLetter]) grouped[firstLetter] = [];
         grouped[firstLetter].push(song);
       });
 
       console.log("[Sections] Grouped letters:", Object.keys(grouped).join(", "));
-
-      // Sort songs within each letter group
-      Object.keys(grouped).forEach(letter => {
-        grouped[letter].sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
-      });
 
       // Build sections: predefined letters first (in order), then any extra grouped letters
       const processedLetters = new Set();
@@ -999,13 +1024,12 @@ export const AudioProvider = ({ children }) => {
         if (allLetterSongs.length === 0) return;
         processedLetters.add(letter);
 
-        const sorted = allLetterSongs.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
-        const initialSongs = sorted.slice(0, BATCH_SIZE);
+        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
         newSections[letter] = {
           songs: initialSongs,
           lastDoc: null,
-          hasMore: sorted.length > BATCH_SIZE,
-          allSongs: sorted,
+          hasMore: allLetterSongs.length > BATCH_SIZE,
+          allSongs: allLetterSongs,
           showAll: false,
           loading: false,
         };
@@ -1014,14 +1038,14 @@ export const AudioProvider = ({ children }) => {
       // Also include any songs grouped under letters not in the predefined list
       Object.keys(grouped).forEach(letter => {
         if (processedLetters.has(letter)) return;
-        if (grouped[letter].length === 0) return;
-        const sorted = grouped[letter].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
-        const initialSongs = sorted.slice(0, BATCH_SIZE);
+        const allLetterSongs = grouped[letter] || [];
+        if (allLetterSongs.length === 0) return;
+        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
         newSections[letter] = {
           songs: initialSongs,
           lastDoc: null,
-          hasMore: sorted.length > BATCH_SIZE,
-          allSongs: sorted,
+          hasMore: allLetterSongs.length > BATCH_SIZE,
+          allSongs: allLetterSongs,
           showAll: false,
           loading: false,
         };

@@ -57,7 +57,7 @@ export default async function LandingPage({ searchParams }) {
             (function() {
               if (window.__SONGHUB_SONGS_PREFETCHED) return;
               window.__SONGHUB_SONGS_PREFETCHED = true;
-              fetch('/api/songs', { cache: 'default' })
+              fetch('/api/songs?all=true', { cache: 'default' })
                 .then(function(r) { return r.ok ? r.json() : null; })
                 .then(function(d) {
                   if (d && d.songs) {
@@ -72,7 +72,7 @@ export default async function LandingPage({ searchParams }) {
       />
       {/* Also prefetch the /home page JS bundle and API */}
       <link rel="prefetch" href="/home" />
-      <link rel="prefetch" href="/api/songs" />
+      <link rel="prefetch" href="/api/songs?all=true" />
       <SongsPrefetcher />
       {/* Deep navy (#0B0F18) → black gradient, middle toned to blend the logo seamlessly */}
       <div

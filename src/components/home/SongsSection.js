@@ -249,6 +249,7 @@ export default function SongsSection({
   const [isShared, setIsShared] = useState(false);
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [scrollStates, setScrollStates] = useState({});
+  const [pendingScrollToLetter, setPendingScrollToLetter] = useState(null);
  
   useEffect(() => {
     if (!songsLoading) {
@@ -352,13 +353,19 @@ export default function SongsSection({
       setSelectedLetter(letter);
     } else {
       setActiveLetter(letter);
-      const el = sectionRefs.current[letter];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const targetIndex = availableLetters.indexOf(letter);
+      if (targetIndex !== -1 && targetIndex >= visibleCount) {
+        setVisibleCount(targetIndex + 1);
+        setPendingScrollToLetter(letter);
+      } else {
+        const el = sectionRefs.current[letter];
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     }
   };
- 
+
   const handleShare = () => {
     setIsShared(true);
     if (typeof window !== "undefined") {
@@ -376,12 +383,6 @@ export default function SongsSection({
     }
   };
  
-  // Show skeleton while songs are loading OR while sections haven't been built yet
-  const isLoading = songsLoading || (Object.keys(sections).length === 0 && !selectedLetter);
-  if (isLoading) {
-    return <SongsSectionSkeleton />;
-  }
-
   // ── Progressive infinite scroll ──────────────────────────────────
   const INITIAL_VISIBLE = 5;
   const BATCH_SIZE = 4;
@@ -404,7 +405,25 @@ export default function SongsSection({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [selectedLetter, availableLetters.length]);
+  }, [selectedLetter, availableLetters.length, visibleCount]);
+
+  // Scroll to pending letter once rendered
+  useEffect(() => {
+    if (pendingScrollToLetter) {
+      const el = sectionRefs.current[pendingScrollToLetter];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        setPendingScrollToLetter(null);
+      }
+    }
+  }, [pendingScrollToLetter, visibleCount]);
+
+  // Show skeleton only while songs are loading.
+  // Don't block on empty sections — they may be empty when no songs
+  // match the selected language filter (see initializeAlphabeticalSections).
+  if (songsLoading) {
+    return <SongsSectionSkeleton />;
+  }
 
   return (
     <div className="space-y-4">

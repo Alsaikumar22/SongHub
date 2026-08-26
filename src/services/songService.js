@@ -12,6 +12,17 @@ import {
 } from "firebase/firestore";
 import { getEnglishSlug } from "@/utils/songSlug";
 
+const TAMIL_CHAR_REGEXP = /[\u0B80-\u0BFF]/;
+
+function removeWatermarkFromTitle(text) {
+  if (typeof text !== "string") return text;
+  return text
+    .replace(/desiworship\.com/gi, "")
+    .replace(/www\.desiworship\.com/gi, "")
+    .replace(/desiworship/gi, "")
+    .trim();
+}
+
 function removeWatermark(text) {
   if (typeof text !== "string") return text;
   return text
@@ -38,6 +49,7 @@ function removeWatermark(text) {
 // ── Server-side in-memory cache ──────────────────────────────────────
 // Avoids hitting Firestore on every /api/songs request. TTL: 24 hours.
 const _songsCache = { data: null, ts: 0 };
+const _songsSummaryCache = { data: null, ts: 0 };
 const CACHE_TTL_MS = 86_400_000; // 24 hours in milliseconds
 
 function _getCachedSongs() {
@@ -50,6 +62,18 @@ function _getCachedSongs() {
 function _setCachedSongs(data) {
   _songsCache.data = data;
   _songsCache.ts = Date.now();
+}
+
+function _getCachedSongSummaries() {
+  if (_songsSummaryCache.data && Date.now() - _songsSummaryCache.ts < CACHE_TTL_MS) {
+    return _songsSummaryCache.data;
+  }
+  return null;
+}
+
+function _setCachedSongSummaries(data) {
+  _songsSummaryCache.data = data;
+  _songsSummaryCache.ts = Date.now();
 }
 
 /**
@@ -138,7 +162,7 @@ export function transformSongDoc(docSnap) {
   const docId = docSnap.id;
 
   // 1. Core Fields
-  const title = removeWatermark((data.title || "").replace(/-/g, " "));
+  const title = removeWatermarkFromTitle((data.title || "").replace(/-/g, " "));
   const slug = data.slug || docId;
 
   // 2. Artist Object
@@ -271,12 +295,12 @@ export function transformSongDoc(docSnap) {
   }
 
   const firstLetter = title ? title.charAt(0).toUpperCase() : "";
-  let titleEnglish = removeWatermark((data.titleEnglish || "").replace(/-/g, " "));
+  let titleEnglish = removeWatermarkFromTitle((data.titleEnglish || "").replace(/-/g, " "));
 
   // If the language is Tamil and titleEnglish is empty or contains Tamil characters,
   // extract the English transliteration from the first line of the English lyrics block.
-  const isTamil = (data.language || "").toLowerCase() === "ta" || (data.language || "").toLowerCase() === "tamil" || /[\u0B80-\u0BFF]/.test(title);
-  if (isTamil && (!titleEnglish || /[\u0B80-\u0BFF]/.test(titleEnglish))) {
+  const isTamil = (data.language || "").toLowerCase() === "ta" || (data.language || "").toLowerCase() === "tamil" || TAMIL_CHAR_REGEXP.test(title);
+  if (isTamil && (!titleEnglish || TAMIL_CHAR_REGEXP.test(titleEnglish))) {
     let enContent = "";
     if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
       const enBlock = data.lyrics.find((l) => l.language === "en");
@@ -288,7 +312,7 @@ export function transformSongDoc(docSnap) {
     }
     if (enContent) {
       const firstLine = enContent.split("\n").map(line => line.trim()).filter(Boolean)[0];
-      if (firstLine && !/[\u0B80-\u0BFF]/.test(firstLine)) {
+      if (firstLine && !TAMIL_CHAR_REGEXP.test(firstLine)) {
         titleEnglish = firstLine;
       }
     }
@@ -351,7 +375,7 @@ function isTamilSong(song) {
   return (
     lang === "ta" ||
     lang === "tamil" ||
-    /[\u0B80-\u0BFF]/.test(song.title || "")
+    TAMIL_CHAR_REGEXP.test(song.title || "")
   );
 }
 
@@ -382,6 +406,26 @@ export const songService = {
       return cached;
     }
 
+    // Server-side filesystem cache fallback
+    if (typeof window === "undefined") {
+      try {
+        const fs = eval('require("fs")');
+        const path = eval('require("path")');
+        const filePath = path.join(process.cwd(), "src", "data", "songs-full.json");
+        if (fs.existsSync(filePath)) {
+          const fileData = fs.readFileSync(filePath, "utf8");
+          const songs = JSON.parse(fileData);
+          if (Array.isArray(songs) && songs.length > 0) {
+            console.log(`🍟 [songService] Loaded ${songs.length} songs from filesystem cache (instant).`);
+            _setCachedSongs(songs);
+            return songs;
+          }
+        }
+      } catch (err) {
+        console.warn("⚠️ Failed to read full songs from filesystem:", err);
+      }
+    }
+
     try {
       const songsRef = collection(db, COLLECTIONS.YOUWORSHIP_SONGS);
       const snapshot = await getDocs(songsRef);
@@ -408,6 +452,24 @@ export const songService = {
       console.log(
         `🍟 [songService] Loaded ${songs.length} songs from youworship_songs.`,
       );
+
+      // Save to filesystem in dev / server-side environment for future fast loads
+      if (typeof window === "undefined") {
+        try {
+          const fs = eval('require("fs")');
+          const path = eval('require("path")');
+          const dirPath = path.join(process.cwd(), "src", "data");
+          if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+          }
+          const filePath = path.join(dirPath, "songs-full.json");
+          fs.writeFileSync(filePath, JSON.stringify(songs), "utf8");
+          console.log(`🍟 [songService] Saved ${songs.length} songs to filesystem cache.`);
+        } catch (err) {
+          console.warn("⚠️ Failed to write full songs to filesystem:", err);
+        }
+      }
+
       return songs;
     } catch (error) {
       console.error(
@@ -423,8 +485,106 @@ export const songService = {
    * Cached alongside getAllSongs for minimal payload.
    */
   async getAllSongsSummary() {
-    const allSongs = await this.getAllSongs();
-    return allSongs.map(toSongSummary).filter(Boolean);
+    const cached = _getCachedSongSummaries();
+    if (cached) return cached;
+
+    // Server-side filesystem cache fallback
+    if (typeof window === "undefined") {
+      try {
+        const fs = eval('require("fs")');
+        const path = eval('require("path")');
+        const filePath = path.join(process.cwd(), "src", "data", "songs-summary.json");
+        if (fs.existsSync(filePath)) {
+          const fileData = fs.readFileSync(filePath, "utf8");
+          const summaries = JSON.parse(fileData);
+          if (Array.isArray(summaries) && summaries.length > 0) {
+            console.log(`🍟 [songService] Loaded ${summaries.length} songs from filesystem cache (instant).`);
+            _setCachedSongSummaries(summaries);
+            return summaries;
+          }
+        }
+      } catch (err) {
+        console.warn("⚠️ Failed to read songs summary from filesystem:", err);
+      }
+    }
+
+    const snapshot = await getDocs(collection(db, COLLECTIONS.YOUWORSHIP_SONGS));
+    const summaries = snapshot.docs
+      .map((docSnap) => {
+        const data = docSnap.data() || {};
+        const title = removeWatermarkFromTitle(String(data.title || data.teluguTitle || "").replace(/-/g, " "));
+        const rawArtist = data.artist && typeof data.artist === "object" ? data.artist : {};
+        const artist = typeof data.artist === "string"
+          ? data.artist
+          : data.artistName || rawArtist.name || "Unknown Artist";
+        const artistName = artist.trim() || "Unknown Artist";
+        const categoryArr = Array.isArray(data.category)
+          ? data.category
+          : data.category
+            ? [data.category]
+            : ["Praise & Worship"];
+        const rawAudio = data.media?.audio || data.audioUrl || "";
+        const rawVideo = data.media?.video || data.videoUrl || data.youtubeUrl || "";
+        const youtubeId = extractYouTubeId(rawAudio) || extractYouTubeId(rawVideo);
+        const audioUrl = youtubeId && (rawAudio.includes("youtube.com") || rawAudio.includes("youtu.be")) ? "" : rawAudio;
+        const videoUrl = rawVideo || (youtubeId && !audioUrl ? rawAudio : "");
+        const duration = typeof data.duration === "number"
+          ? data.duration
+          : typeof data.duration === "string" && data.duration.includes(":")
+            ? data.duration.split(":").reduce((total, part) => 60 * total + +part, 0)
+            : Number(data.duration) || 0;
+
+        return {
+          id: docSnap.id,
+          title,
+          titleEnglish: removeWatermarkFromTitle(String(data.titleEnglish || "").replace(/-/g, " ")),
+          slug: data.slug || docSnap.id,
+          slugEnglish: getEnglishSlug(data.titleEnglish || ""),
+          artist: artistName,
+          artistName: artistName,
+          artistNameEnglish: rawArtist.nameEnglish || data.artistNameEnglish || "Unknown Artist",
+          artistObj: { id: rawArtist.id || null, name: artistName },
+          language: data.language || "te",
+          category: categoryArr[0] || "Praise & Worship",
+          categoryArr,
+          genre: categoryArr[0] || "Praise & Worship",
+          duration: formatSecondsToDisplay(duration),
+          durationSec: duration,
+          imageUrl: data.media?.image || data.imageUrl || data.coverUrl || "",
+          audioUrl,
+          videoUrl,
+          youtubeUrl: videoUrl,
+          youtubeId,
+          teluguTitle: title,
+          firstLetter: data.firstLetter || title.charAt(0).toUpperCase(),
+          hasChords: Array.isArray(data.chords) ? data.chords.length > 0 : Boolean(data.chords),
+          tags: Array.isArray(data.tags) ? data.tags : typeof data.tags === "string" ? data.tags.split(",").map((tag) => tag.trim()) : [],
+          year: data.year !== undefined && data.year !== null ? Number(data.year) : 2026,
+        };
+      })
+      .filter((song) => song && !isTamilSong(song));
+
+    summaries.sort((a, b) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" }));
+    _setCachedSongSummaries(summaries);
+
+    // Save to filesystem in dev / server-side environment for future fast loads
+    if (typeof window === "undefined") {
+      try {
+        const fs = eval('require("fs")');
+        const path = eval('require("path")');
+        const dirPath = path.join(process.cwd(), "src", "data");
+        if (!fs.existsSync(dirPath)) {
+          fs.mkdirSync(dirPath, { recursive: true });
+        }
+        const filePath = path.join(dirPath, "songs-summary.json");
+        fs.writeFileSync(filePath, JSON.stringify(summaries), "utf8");
+        console.log(`🍟 [songService] Saved ${summaries.length} songs to filesystem cache.`);
+      } catch (err) {
+        console.warn("⚠️ Failed to write songs summary to filesystem:", err);
+      }
+    }
+
+    return summaries;
   },
 
   /**

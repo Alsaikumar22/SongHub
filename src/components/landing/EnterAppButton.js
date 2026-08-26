@@ -49,7 +49,7 @@ export default function EnterAppButton({ href }) {
       // Ensure we redirect within 1 second even if fetch is slow
       const timer = setTimeout(navigate, 1000);
 
-      const fetchPromise = fetch("/api/songs", { cache: "default" })
+      const fetchPromise = fetch("/api/songs?all=true", { cache: "default" })
         .then((res) => {
           if (!res.ok) throw new Error("Failed to load songs");
           return res.json();

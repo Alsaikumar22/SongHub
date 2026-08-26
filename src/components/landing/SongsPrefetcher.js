@@ -14,7 +14,7 @@ export default function SongsPrefetcher() {
     if (window.__SONGHUB_SONGS_PREFETCHED) return;
     window.__SONGHUB_SONGS_PREFETCHED = true;
 
-    fetch("/api/songs", { cache: "default" })
+    fetch("/api/songs?all=true", { cache: "default" })
       .then((res) => {
         if (!res.ok) return;
         return res.json();

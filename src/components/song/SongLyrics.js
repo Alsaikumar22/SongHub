@@ -138,7 +138,7 @@ export default function SongLyrics({
     if (selectedLanguage === "english") {
       return stanzasEnglish.length > 0 ? stanzasEnglish : stanzasTelugu;
     }
-    return stanzasTelugu;
+    return stanzasTelugu.length > 0 ? stanzasTelugu : stanzasEnglish;
   }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
 
   const dualStanzas = useMemo(() => {

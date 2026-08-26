@@ -171,11 +171,14 @@ function SongPageContent({ params }) {
       const songLanguage = (song.language || "").toLowerCase();
       const isHi = songLanguage === "hi" || songLanguage === "hindi";
       const isTa = songLanguage === "ta" || songLanguage === "tamil";
+      const isEn = songLanguage === "en" || songLanguage === "english";
       
       if (isHi) {
         setLyricsLanguage("hindi");
       } else if (isTa) {
         setLyricsLanguage("tamil");
+      } else if (isEn) {
+        setLyricsLanguage("english");
       } else {
         setLyricsLanguage("telugu");
       }

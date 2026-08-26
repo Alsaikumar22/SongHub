@@ -22,10 +22,14 @@ export async function GET(request) {
     const cursor = searchParams.get("cursor");
     const category = searchParams.get("category");
     const letter = searchParams.get("letter");
+    const loadAll = searchParams.get("all") === "true";
 
     let result;
 
-    if (category) {
+    if (loadAll && !category && !letter) {
+      const songs = await songService.getAllSongsSummary();
+      result = { songs, cursor: null, hasMore: false };
+    } else if (category) {
       // Category-filtered pagination
       result = cursor
         ? await songService.getCategorySongsPageAfter(category, cursor, limitParam)
