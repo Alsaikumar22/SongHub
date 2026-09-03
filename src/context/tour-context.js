@@ -9,12 +9,12 @@ export function TourProvider({ children }) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const hasTriggeredRef = useRef(false);
+  const lastTriggeredUidRef = useRef(null);
 
   /**
    * Onboarding Tour Launch Logic:
-   * 1. Without login: Shows when opening the website.
-   * 2. After login: Shows on first login for each user account.
+   * 1. Without login (Guest): Shows every time the application is opened.
+   * 2. Logged-in user (Gmail account): Shows ONLY ONCE on first login with that account.
    */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -22,34 +22,27 @@ export function TourProvider({ children }) {
 
     try {
       if (!isAuthenticated || !user?.uid) {
-        // Without login: show on first visit / session
-        const guestStorageKey = "youworship_guest_tour_shown";
-        const hasShownGuest = sessionStorage.getItem(guestStorageKey);
-
-        if (!hasShownGuest && !hasTriggeredRef.current) {
-          hasTriggeredRef.current = true;
+        // Without login: show every time the application is opened
+        if (lastTriggeredUidRef.current !== "guest") {
+          lastTriggeredUidRef.current = "guest";
           const timer = setTimeout(() => {
             setCurrentStep(0);
             setIsOpen(true);
-            try {
-              sessionStorage.setItem(guestStorageKey, "true");
-            } catch {
-              // Ignore session storage error
-            }
-          }, 1200);
+          }, 1000);
           return () => clearTimeout(timer);
         }
       } else {
-        // Logged in: show on first login for this user account
-        const userStorageKey = `youworship_onboardingCompleted_${user.uid}`;
+        // Logged in: show ONLY ONCE for this Gmail / user account
+        const accountKey = user.email ? user.email.toLowerCase().trim() : user.uid;
+        const userStorageKey = `youworship_onboardingCompleted_${accountKey}`;
         const isCompleted = localStorage.getItem(userStorageKey);
 
-        if (!isCompleted && !hasTriggeredRef.current) {
-          hasTriggeredRef.current = true;
+        if (!isCompleted && lastTriggeredUidRef.current !== accountKey) {
+          lastTriggeredUidRef.current = accountKey;
           const timer = setTimeout(() => {
             setCurrentStep(0);
             setIsOpen(true);
-          }, 1200);
+          }, 800);
           return () => clearTimeout(timer);
         }
       }
@@ -69,9 +62,10 @@ export function TourProvider({ children }) {
     setIsOpen(false);
     try {
       if (user?.uid) {
+        const accountKey = user.email ? user.email.toLowerCase().trim() : user.uid;
+        localStorage.setItem(`youworship_onboardingCompleted_${accountKey}`, "true");
+        // Also persist by UID for backwards compatibility
         localStorage.setItem(`youworship_onboardingCompleted_${user.uid}`, "true");
-      } else {
-        sessionStorage.setItem("youworship_guest_tour_shown", "true");
       }
     } catch {
       // Handle storage errors safely
