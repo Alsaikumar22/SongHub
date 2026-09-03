@@ -791,81 +791,66 @@ export default function SongsSection({
                     </div>
 
                     {/* 2-Column Song List Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                       {letterSongs.map((song, index) => {
                         const isCurrent = currentSong?.id === song.id;
                         const isThisPlaying = isCurrent && isPlaying;
-                        const isFavorite = favorites.includes(song.id);
 
                         return (
                           <div
                             key={song.id}
-                            className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer select-none ${
+                            className={`group flex items-center justify-between p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer select-none bg-card/85 hover:bg-card-hover ${
                               isCurrent
-                                ? "border-[#D4A32A]/40 bg-[#D4A32A]/5"
-                                : "border-line/40 bg-card-hover/20 hover:bg-card-hover/40 hover:border-line-muted"
+                                ? "border-[#D4A32A]/50 bg-card-hover shadow-[0_0_15px_rgba(212,163,42,0.12)]"
+                                : "border-line/50 hover:border-line"
                             }`}
                             onClick={() => {
                               playSong(song, letter, index, letterSongs);
-                              router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
                             }}
                           >
-                            {/* Left: Toggle Favorite */}
-                            <button
-                              type="button"
+                            {/* Left: Square Artwork/Music icon + Middle: Titles */}
+                            <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleFavorite(song.id);
+                                router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
                               }}
-                              className="p-1.5 text-dim hover:text-red-500 transition-all cursor-pointer mr-2.5 shrink-0"
+                              className="flex items-center gap-3 min-w-0 flex-1 pr-2 cursor-pointer"
+                              title="View song lyrics & details"
                             >
-                              <Heart
-                                className={`w-4.5 h-4.5 transition-all ${
-                                  isFavorite
-                                    ? "text-red-500 fill-red-500 scale-105"
-                                    : "text-muted hover:scale-110"
-                                }`}
-                              />
-                            </button>
-
-                            {/* Song Cover Artwork Image */}
-                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-line shrink-0 mr-3 shadow-sm bg-card-hover select-none">
-                              <SongArtwork
-                                song={song}
-                                className="w-full h-full object-cover"
-                                iconSize="w-4.5 h-4.5"
-                              />
-                            </div>
-
-                            {/* Middle: Titles */}
-                            <div className="flex-1 min-w-0 pr-4">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span
-                                  className={`font-semibold text-sm text-title truncate ${
-                                    scriptLang !== "english" && /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu text-base leading-snug" : ""
-                                  }`}
-                                >
-                                  {scriptLang === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
-                                </span>
-                                {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
-                                  <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
-                                )}
-                                {!(song.youtubeId || song.media?.video) && (
-                                  <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
-                                )}
+                              <div className="w-11 h-11 rounded-xl bg-[#161616] border border-[#282828] overflow-hidden flex items-center justify-center shrink-0 shadow-inner text-muted group-hover:text-title">
+                                <SongArtwork
+                                  song={song}
+                                  className="w-full h-full object-cover"
+                                  iconSize="w-5 h-5"
+                                />
                               </div>
-                              {((scriptLang === "english"
-                                ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)
-                                : (song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? song.titleEnglish : null))) && (
-                                <span className="text-[11px] text-muted block truncate mt-0.5 font-medium">
-                                  {scriptLang === "english" ? song.teluguTitle : song.titleEnglish}
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span
+                                    className={`font-bold text-sm block truncate leading-tight ${
+                                      isCurrent ? "text-[#D4A32A]" : "text-title group-hover:text-[#D4A32A]"
+                                    } ${
+                                      scriptLang !== "english" && /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu leading-snug" : ""
+                                    }`}
+                                  >
+                                    {scriptLang === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
+                                  </span>
+                                  {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                                    <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted block truncate leading-tight mt-0.5">
+                                  {scriptLang === "english"
+                                    ? song.teluguTitle || (typeof song.artist === "object" ? song.artist?.name : song.artist || "Unknown Artist")
+                                    : song.titleEnglish || (typeof song.artist === "object" ? song.artist?.name : song.artist || "Unknown Artist")}
                                 </span>
-                              )}
+                              </div>
                             </div>
 
-                            {/* Right: Controls */}
-                            <div className="flex items-center gap-3 shrink-0 select-none">
-                              {/* Play/Pause Button or Mute Icon */}
+                            {/* Right: Circular Play Button (▷) + Rounded Square Chevron Details Button (>) */}
+                            <div className="flex items-center gap-1.5 shrink-0 select-none">
+                              {/* Circular Play Button */}
                               {song.audioUrl || song.media?.audio || song.youtubeId ? (
                                 <button
                                   type="button"
@@ -873,37 +858,37 @@ export default function SongsSection({
                                     e.stopPropagation();
                                     playSong(song, letter, index, letterSongs);
                                   }}
-                                  className={`p-1.5 rounded-full transition-all hover:bg-card-hover ${
-                                    isCurrent ? "text-[#D4A32A]" : "text-dim hover:text-copy"
+                                  className={`w-8 h-8 rounded-full border border-line/60 hover:border-white hover:bg-white/10 flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                                    isThisPlaying
+                                      ? "bg-[#D4A32A] text-black border-[#D4A32A]"
+                                      : "text-muted hover:text-title"
                                   }`}
+                                  title={isThisPlaying ? "Pause" : "Play"}
                                 >
                                   {isThisPlaying ? (
-                                    <Pause className="w-4 h-4 fill-current" />
+                                    <Pause className="w-3.5 h-3.5 fill-current text-black" />
                                   ) : (
-                                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                                   )}
                                 </button>
                               ) : (
-                                <div className="p-1.5 text-red-500/60 cursor-not-allowed" title="Lyrics only — No audio available">
-                                  <VolumeX className="w-4 h-4" />
+                                <div className="w-8 h-8 rounded-full border border-line/30 flex items-center justify-center text-red-500/60 cursor-not-allowed" title="Lyrics only — No audio available">
+                                  <VolumeX className="w-3.5 h-3.5" />
                                 </div>
                               )}
 
-                              {/* Download link */}
-                              {song.audioUrl && (
-                                <a
-                                  href={song.audioUrl}
-                                  download
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-1.5 text-dim hover:text-copy hover:bg-card-hover rounded-full transition-all"
-                                  title="Download Song"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </a>
-                              )}
-
-                              {/* Chevron Arrow */}
-                              <ChevronRight className="w-4 h-4 text-dim/50" />
+                              {/* Rounded Square Chevron Details Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
+                                }}
+                                className="w-8 h-8 rounded-lg border border-line/60 hover:border-white hover:bg-white/10 text-muted hover:text-title flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                                title="View song lyrics & details"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         );

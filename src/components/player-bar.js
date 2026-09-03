@@ -95,6 +95,9 @@ export default function PlayerBar() {
     isMiniPlayerActive,
     setIsMiniPlayerActive,
     lyricsLanguage,
+    queue,
+    isQueueOpen,
+    setIsQueueOpen,
   } = useAudio();
 
   const pathname = usePathname();
@@ -227,6 +230,7 @@ export default function PlayerBar() {
       {/* ─── MOBILE MINI PLAYER — fixed above MobileNav ─── */}
       {!isExpanded && (
         <div
+          id="tour-player-bar-mobile"
           className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none"
           style={{ bottom: `calc(52px + env(safe-area-inset-bottom, 0px))` }}
         >
@@ -307,20 +311,42 @@ export default function PlayerBar() {
             </div>
 
             {/* Right: Controls */}
-            <div className="flex items-center gap-3.5 shrink-0">
-              {currentSong?.id && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+            <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+              {/* Mobile Play Queue Button */}
+              <button
+                id="tour-mobile-queue-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsQueueOpen(!isQueueOpen);
+                }}
+                className={`p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer relative ${
+                  isQueueOpen ? "text-[#D4A32A]" : "text-muted hover:text-title"
+                }`}
+                aria-label="Play Queue"
+                title="Play Queue"
+              >
+                <ListMusic className="w-4.5 h-4.5" />
+                {queue?.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#D4A32A] text-black text-[7px] font-black flex items-center justify-center pointer-events-none">
+                    {queue.length > 9 ? "9+" : queue.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                id="tour-mobile-lyrics-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentSong?.id) {
                     router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
-                  }}
-                  className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
-                  aria-label="View Lyrics"
-                  title="View Lyrics"
-                >
-                  <MicIcon className="w-4.5 h-4.5" />
-                </button>
-              )}
+                  }
+                }}
+                className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
+                aria-label="View Lyrics"
+                title="View Lyrics"
+              >
+                <MicIcon className="w-4.5 h-4.5" />
+              </button>
               {currentSong && (
                 <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
                   <button
@@ -422,7 +448,7 @@ export default function PlayerBar() {
       )}
 
         {/* ─── DESKTOP PLAYER BAR (lg+) — floating over content ─── */}
-        <div className="hidden lg:flex fixed bottom-0 left-0 right-0 z-40 items-center justify-between w-full h-20 px-8 border-t border-line-muted bg-canvas/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
+        <div id="tour-player-bar" className="hidden lg:flex fixed bottom-0 left-0 right-0 z-40 items-center justify-between w-full h-20 px-8 border-t border-line-muted bg-canvas/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
           {/* Left section: Song Details */}
           <div className="flex items-center gap-3 w-[30%] min-w-0">
             {currentSong ? (
@@ -606,33 +632,39 @@ export default function PlayerBar() {
               </button>
             )}
 
-            {currentSong ? (
-              isLyricsPage ? (
-                <Link
-                  href={`/song/${currentSong.slug || currentSong.id}`}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                    isLyricsPage
-                      ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
-                      : "text-muted hover:text-copy hover:bg-card-hover"
-                  }`}
-                  title="Close Lyrics"
-                >
-                  <MicIcon className="w-4 h-4" />
-                </Link>
+            <div id="tour-lyrics-btn" className="inline-flex">
+              {currentSong ? (
+                isLyricsPage ? (
+                  <Link
+                    href={`/song/${currentSong.slug || currentSong.id}`}
+                    className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                      isLyricsPage
+                        ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
+                        : "text-muted hover:text-copy hover:bg-card-hover"
+                    }`}
+                    title="Close Lyrics"
+                  >
+                    <MicIcon className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}
+                    className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
+                    title="View Lyrics"
+                  >
+                    <MicIcon className="w-4 h-4" />
+                  </button>
+                )
               ) : (
                 <button
-                  onClick={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}
-                  className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
-                  title="View Lyrics"
+                  onClick={() => router.push("/home?tab=discover")}
+                  className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
+                  title="Lyrics"
                 >
                   <MicIcon className="w-4 h-4" />
                 </button>
-              )
-            ) : (
-              <span className="p-1.5 text-muted">
-                <MicIcon className="w-4 h-4" />
-              </span>
-            )}
+              )}
+            </div>
 
             {hasAudio && (
               <button
@@ -691,6 +723,25 @@ export default function PlayerBar() {
               </button>
             )}
 
+            {/* Play Queue Button */}
+            <button
+              id="tour-queue-btn"
+              onClick={() => setIsQueueOpen(!isQueueOpen)}
+              className={`p-1.5 rounded-full transition-all cursor-pointer relative ${
+                isQueueOpen
+                  ? "text-[#D4A32A] bg-card-hover scale-105 shadow-sm"
+                  : "text-muted hover:text-copy hover:bg-card-hover"
+              }`}
+              title="Play Queue"
+            >
+              <ListMusic className="w-4 h-4" />
+              {queue?.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#D4A32A] text-black text-[8px] font-black flex items-center justify-center pointer-events-none">
+                  {queue.length > 9 ? "9+" : queue.length}
+                </span>
+              )}
+            </button>
+
             {/* Full Screen Button */}
             <button
               onClick={toggleFullScreen}
@@ -731,6 +782,23 @@ export default function PlayerBar() {
               </span>
             </div>
             <div className="flex items-center gap-1">
+              {/* Play Queue Button */}
+              <button
+                onClick={() => {
+                  setIsExpanded(false);
+                  setIsQueueOpen(true);
+                }}
+                className="p-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer relative"
+                title="Play Queue"
+              >
+                <ListMusic className="w-5.5 h-5.5" />
+                {queue?.length > 0 && (
+                  <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#D4A32A] text-black text-[8px] font-black flex items-center justify-center pointer-events-none">
+                    {queue.length > 9 ? "9+" : queue.length}
+                  </span>
+                )}
+              </button>
+
               {/* Share Button */}
               <button
                 onClick={() => {

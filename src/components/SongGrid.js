@@ -92,7 +92,7 @@ export default function SongGrid({
       {/* End of list indicator */}
       {!hasMore && songs.length > 0 && (
         <p className="text-center text-xs text-muted py-6">
-          You've reached the end · {songs.length} songs loaded
+          You&apos;ve reached the end · {songs.length} songs loaded
         </p>
       )}
     </div>

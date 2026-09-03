@@ -7,9 +7,10 @@ import { useAudio } from "@/context/audio-context";
 import CategoryHeroBanner from "./CategoryHeroBanner";
 import SongCard from "../home/SongCard";
 import CategoryPlaylistTable from "./CategoryPlaylistTable";
+import { CategoryDetailsSkeleton } from "@/components/ui/SongSkeleton";
 
 export default function CategoryDetails({ category, language, onBack }) {
-  const { songs, playSong, currentSong, isPlaying, playlists, addSongToPlaylist } = useAudio();
+  const { songs, songsLoading, playSong, currentSong, isPlaying, playlists, addSongToPlaylist } = useAudio();
   const [viewMode, setViewMode] = useState("playlist"); // "playlist" | "cards"
   const [isShared, setIsShared] = useState(false);
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
@@ -198,54 +199,58 @@ export default function CategoryDetails({ category, language, onBack }) {
 
       {/* Main Content Area: Song Cards Grid or Playlist Table */}
       <div className="relative min-h-[300px]">
-        <AnimatePresence mode="wait">
-          {categorySongs.length === 0 ? (
-            <motion.div
-              key="empty-state"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="p-12 text-center text-muted border border-line rounded-xl bg-card-hover/20 select-none"
-            >
-              <span className="font-semibold block text-white text-lg">No songs available</span>
-              <span className="text-xs block mt-1">Try another language.</span>
-            </motion.div>
-          ) : viewMode === "cards" ? (
-            <motion.div
-              key="grid-view"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
-            >
-              {categorySongs.map((song) => (
-                <SongCard
-                  key={song.id}
-                  song={song}
-                  currentSong={currentSong}
-                  isPlaying={isPlaying}
-                  playSong={playSong}
+        {songsLoading ? (
+          <CategoryDetailsSkeleton language={language} />
+        ) : (
+          <AnimatePresence>
+            {categorySongs.length === 0 ? (
+              <motion.div
+                key="empty-state"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-12 text-center text-muted border border-line rounded-xl bg-card-hover/20 select-none"
+              >
+                <span className="font-semibold block text-white text-lg">No songs available</span>
+                <span className="text-xs block mt-1">Try another language.</span>
+              </motion.div>
+            ) : viewMode === "cards" ? (
+              <motion.div
+                key="grid-view"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
+              >
+                {categorySongs.map((song) => (
+                  <SongCard
+                    key={song.id}
+                    song={song}
+                    currentSong={currentSong}
+                    isPlaying={isPlaying}
+                    playSong={playSong}
+                    language={language}
+                  />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="playlist-view"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+              >
+                <CategoryPlaylistTable
+                  category={category}
+                  songs={categorySongs}
                   language={language}
                 />
-              ))}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="playlist-view"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <CategoryPlaylistTable
-                category={category}
-                songs={categorySongs}
-                language={language}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

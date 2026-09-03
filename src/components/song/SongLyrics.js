@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { FileText } from "lucide-react";
+import { LyricsSkeleton } from "@/components/ui/SongSkeleton";
 
 export function LanguageSegmented({ selected, onChange, songLanguage, hasChords }) {
   const langs = [];
@@ -65,6 +67,7 @@ export default function SongLyrics({
   selectedLanguage: propLanguage,
   setSelectedLanguage: propSetLanguage,
   fontSizeMultiplier = 1.0,
+  loading = false,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
 
@@ -197,7 +200,9 @@ export default function SongLyrics({
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center">
-          {selectedLanguage === "chords" ? (
+          {loading ? (
+            <LyricsSkeleton language={selectedLanguage} isImmersive={true} />
+          ) : selectedLanguage === "chords" ? (
             <div className="max-w-3xl mx-auto w-full py-4 bg-card-hover/20 rounded-2xl p-6 md:p-10 border border-line/45 shadow-inner">
               {song.chordCredits && (
                 <div className="text-xs uppercase tracking-widest font-black text-muted mb-6 border-b border-line pb-3 flex justify-between items-center select-none">
@@ -291,13 +296,13 @@ export default function SongLyrics({
             </div>
           )}
 
-          {selectedLanguage === "dual" && stanzasTelugu.length === 0 && stanzasEnglish.length === 0 && (
+          {!loading && selectedLanguage === "dual" && stanzasTelugu.length === 0 && stanzasEnglish.length === 0 && (
             <div className="py-24 text-center">
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
             </div>
           )}
 
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
+          {!loading && selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-24 text-center">
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
             </div>
@@ -315,7 +320,9 @@ export default function SongLyrics({
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-2xl mx-auto space-y-8">
-          {selectedLanguage === "chords" ? (
+          {loading ? (
+            <LyricsSkeleton language={selectedLanguage} isImmersive={false} />
+          ) : selectedLanguage === "chords" ? (
             <div className="max-w-2xl mx-auto py-2 bg-card-hover/20 rounded-xl p-4 md:p-6 border border-line/45 shadow-inner">
               {song.chordCredits && (
                 <div className="text-[10px] sm:text-xs uppercase tracking-widest font-black text-muted mb-4 border-b border-line pb-2 flex justify-between items-center select-none">
@@ -392,13 +399,13 @@ export default function SongLyrics({
             ))
           )}
 
-          {selectedLanguage === "dual" && dualStanzas.length === 0 && (
+          {!loading && selectedLanguage === "dual" && dualStanzas.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-sm text-muted">Lyrics not available for this track.</p>
             </div>
           )}
 
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
+          {!loading && selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-sm text-muted">Lyrics not available for this track.</p>
             </div>

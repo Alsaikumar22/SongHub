@@ -1,3 +1,5 @@
+import { Spiral } from "@/components/ui/Spiral";
+
 export function SongCardSkeleton() {
   return (
     <div className="group relative w-48 shrink-0 animate-pulse" role="status" aria-label="Loading song">
@@ -100,6 +102,40 @@ export function SongPageSkeleton() {
           <div key={i} className="h-5 bg-card-hover rounded-md w-full" style={{ width: `${60 + (i % 4) * 10}%` }} />
         ))}
       </div>
+    </div>
+  );
+}
+
+export function CategoryDetailsSkeleton({ language = "telugu" }) {
+  const loadingLabels = {
+    telugu: "కేటగిరీ పాటలు లోడ్ అవుతున్నాయి...",
+    english: "Loading category songs...",
+    hindi: "कैटेगरी के गाने लोड हो रहे हैं...",
+    tamil: "வகைப் பாடல்கள் ஏற்றப்படுகின்றன...",
+  };
+  const label = loadingLabels[language] || loadingLabels.english;
+
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 animate-in fade-in duration-200">
+      <Spiral className="w-12 h-12 text-[#D4A32A]" dots={10} radius={34} />
+      <p className="text-xs md:text-sm font-bold text-title tracking-tight font-telugu">{label}</p>
+    </div>
+  );
+}
+
+export function LyricsSkeleton({ language = "telugu" }) {
+  const loadingLabels = {
+    telugu: "తెలుగు లిరిక్స్ లోడ్ అవుతున్నాయి...",
+    english: "Loading lyrics...",
+    hindi: "हिन्दी लिरिक्स लोड हो रहे हैं...",
+    tamil: "பாடல் வரிகள் ஏற்றப்படுகின்றன...",
+  };
+  const label = loadingLabels[language] || loadingLabels.english;
+
+  return (
+    <div className="w-full text-center space-y-4 animate-in fade-in duration-200 py-16 flex flex-col items-center justify-center">
+      <Spiral className="w-12 h-12 text-[#D4A32A]" dots={10} radius={34} />
+      <p className="text-xs md:text-sm font-bold text-title tracking-tight font-telugu">{label}</p>
     </div>
   );
 }

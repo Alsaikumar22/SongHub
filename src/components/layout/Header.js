@@ -13,6 +13,7 @@ import {
   Music,
   Home,
   Mic,
+  ChevronDown,
 } from "lucide-react";
 import { useSearch } from "@/context/search-context";
 import { useLyricsSearch } from "@/hooks/useLyricsSearch";
@@ -56,8 +57,15 @@ export default function Header({ setShowAuth, setAuthMode }) {
     setMounted(true);
     return () => setMounted(false);
   }, []);
-  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults, searchMode, setSearchMode, voiceSearchTrigger } =
-    useSearch();
+  const {
+    searchQuery,
+    setSearchQuery,
+    showFullResults,
+    setShowFullResults,
+    searchMode,
+    setSearchMode,
+    voiceSearchTrigger,
+  } = useSearch();
   const {
     songs,
     playSong,
@@ -66,6 +74,8 @@ export default function Header({ setShowAuth, setAuthMode }) {
     setActivePlaylistId,
     setViewedSongId,
     setShowFullHome,
+    lyricsLanguage,
+    setLyricsLanguage,
   } = useAudio();
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
@@ -113,9 +123,12 @@ export default function Header({ setShowAuth, setAuthMode }) {
 
   const startVoiceSearch = () => {
     if (typeof window === "undefined") return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Voice search is not supported in this browser. Please try Chrome, Edge, or Safari.");
+      alert(
+        "Voice search is not supported in this browser. Please try Chrome, Edge, or Safari.",
+      );
       return;
     }
 
@@ -198,28 +211,35 @@ export default function Header({ setShowAuth, setAuthMode }) {
 
   const trimmedQuery = searchQuery.trim().toLowerCase().normalize("NFC");
 
-  const normalizeText = (value) => (value || "").toString().toLowerCase().normalize("NFC");
+  const normalizeText = (value) =>
+    (value || "").toString().toLowerCase().normalize("NFC");
 
   const totalMatches = songs.filter((song) => {
     if (!trimmedQuery) return false;
     const titleMatch = normalizeText(song.title).includes(trimmedQuery);
-    const telTitleMatch = normalizeText(song.teluguTitle).includes(trimmedQuery);
-    const titleEnglishMatch = normalizeText(song.titleEnglish).includes(trimmedQuery);
+    const telTitleMatch = normalizeText(song.teluguTitle).includes(
+      trimmedQuery,
+    );
+    const titleEnglishMatch = normalizeText(song.titleEnglish).includes(
+      trimmedQuery,
+    );
     const artistMatch = normalizeText(song.artist).includes(trimmedQuery);
 
     // Check all possible lyrics fields to match Telugu and English lyrics
-    const lyricsSources = [
-      song.lyrics,
-      song.lyricsTelugu,
-      song.lyricsEnglish,
-    ];
+    const lyricsSources = [song.lyrics, song.lyricsTelugu, song.lyricsEnglish];
     const lyricsMatch = lyricsSources.some((source) => {
       if (!source) return false;
       const text = Array.isArray(source) ? source.join(" ") : source;
       return text.toLowerCase().normalize("NFC").includes(trimmedQuery);
     });
 
-    return titleMatch || telTitleMatch || titleEnglishMatch || artistMatch || lyricsMatch;
+    return (
+      titleMatch ||
+      telTitleMatch ||
+      titleEnglishMatch ||
+      artistMatch ||
+      lyricsMatch
+    );
   });
 
   const matchingSongs = totalMatches.slice(0, 5);
@@ -234,21 +254,35 @@ export default function Header({ setShowAuth, setAuthMode }) {
     }
   };
 
+  const handleGoHome = (e) => {
+    if (e) e.preventDefault();
+    setActiveTab("discover");
+    setActivePlaylistId(null);
+    setViewedSongId(null);
+    clearSearch();
+    setShowFullHome(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const scrollContainers = document.querySelectorAll(
+        ".overflow-y-auto, [class*='overflow-y-auto']",
+      );
+      scrollContainers.forEach((el) => {
+        el.scrollTop = 0;
+      });
+    }
+    router.push("/home?tab=discover");
+  };
+
   return (
     <header
       className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex flex`}
     >
       <Link
         href="/home"
-        onClick={() => {
-          setActiveTab("discover");
-          setActivePlaylistId(null);
-          setViewedSongId(null);
-          setSearchQuery("");
-          setShowFullResults(false);
-          setShowFullHome(true);
-        }}
-        className="flex items-center gap-2 md:gap-4 flex-shrink-0 group"
+        onClick={handleGoHome}
+        className="flex items-center gap-2 md:gap-4 flex-shrink-0 group cursor-pointer"
         aria-label="You Worship home"
       >
         <div className="bg-black rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-md">
@@ -260,26 +294,19 @@ export default function Header({ setShowAuth, setAuthMode }) {
             className="w-8 h-8 md:w-10 md:h-10 object-contain"
           />
         </div>
-        <div className="flex min-w-0 flex-col leading-none">
-          <span className="text-sm md:text-[19px] font-black tracking-[0.01em] text-title whitespace-nowrap">
-            You Worship
+        <div className="flex min-w-0 flex-col justify-center leading-none">
+          <span className="text-base md:text-[22px] font-black tracking-tight text-title whitespace-nowrap">
+            YouWorship
           </span>
-          <span className="mt-1 text-[11px] font-bold tracking-[0.16em] text-amber-400">
-            Anywhere
+          <span className="mt-1 text-[8px] md:text-[9px] font-semibold tracking-[0.05em] text-amber-400 whitespace-nowrap">
+            All Your Worship Songs in One Place
           </span>
         </div>
       </Link>
 
       <div className="hidden lg:flex items-center gap-3 flex-1 max-w-[480px] mx-auto h-full">
         <button
-          onClick={() => {
-            setActiveTab("discover");
-            setActivePlaylistId(null);
-            setViewedSongId(null);
-            clearSearch();
-            setShowFullHome(true);
-            router.push("/home");
-          }}
+          onClick={handleGoHome}
           className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-90 flex-shrink-0"
           title="Home"
           aria-label="Go to Home"
@@ -287,7 +314,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
           <Home className="w-5 h-5" />
         </button>
 
-        <div className="relative flex-1 h-full group">
+        <div id="tour-search-bar" className="relative flex-1 h-full group">
           <Search className="w-4.5 h-4.5 text-muted absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none transition-colors group-focus-within:text-copy" />
           <input
             type="text"
@@ -311,6 +338,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
               </button>
             )}
             <button
+              id="tour-search-categories-btn"
               onClick={() => {
                 setActiveTab(
                   activeTab === "categories" ? "discover" : "categories",
@@ -334,10 +362,8 @@ export default function Header({ setShowAuth, setAuthMode }) {
           {/* Unified Quick Search Dropdown */}
           {isFocused && searchQuery && !showFullResults && (
             <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-card border border-line rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
-              
               {/* Results Container */}
               <div className="max-h-[360px] overflow-y-auto no-scrollbar py-1">
-                
                 {/* 1. Song matches */}
                 {matchingSongs.length > 0 && (
                   <>
@@ -352,7 +378,9 @@ export default function Header({ setShowAuth, setAuthMode }) {
                         onMouseDown={() => {
                           playSong(song);
                           setIsFocused(false);
-                          router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                          router.push(
+                            `/song/${encodeURIComponent(song.slug || song.id)}`,
+                          );
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover/40 text-left transition-colors cursor-pointer group"
                       >
@@ -364,7 +392,12 @@ export default function Header({ setShowAuth, setAuthMode }) {
                             {song.teluguTitle || song.title}
                           </span>
                           <span className="text-[10px] text-muted block truncate mt-0.5">
-                            {song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) ? `${song.titleEnglish} • ` : ""}{song.artist}
+                            {song.titleEnglish &&
+                            song.titleEnglish !==
+                              (song.teluguTitle || song.title)
+                              ? `${song.titleEnglish} • `
+                              : ""}
+                            {song.artist}
                           </span>
                         </div>
                         <div className="w-7 h-7 rounded-full bg-card-hover group-hover:bg-white flex items-center justify-center text-title group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
@@ -397,12 +430,19 @@ export default function Header({ setShowAuth, setAuthMode }) {
                             slug: song.slug,
                           });
                           setIsFocused(false);
-                          router.push(`/song/${encodeURIComponent(song.slug || song.songId)}`);
+                          router.push(
+                            `/song/${encodeURIComponent(song.slug || song.songId)}`,
+                          );
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover/40 text-left transition-colors cursor-pointer group"
                       >
                         <div className="w-8 h-8 rounded-lg overflow-hidden border border-line shrink-0 bg-card-hover">
-                          <SearchResultImage song={{ coverUrl: song.imageUrl, title: song.title }} />
+                          <SearchResultImage
+                            song={{
+                              coverUrl: song.imageUrl,
+                              title: song.title,
+                            }}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-xs font-medium text-title block truncate transition-colors">
@@ -410,7 +450,10 @@ export default function Header({ setShowAuth, setAuthMode }) {
                           </span>
                           {song.matchedLines.length > 0 && (
                             <span className="text-[10px] text-amber-400/80 block truncate mt-0.5">
-                              {song.matchedLines[0].text.slice(0, 50)}{song.matchedLines[0].text.length > 50 ? "..." : ""}
+                              {song.matchedLines[0].text.slice(0, 50)}
+                              {song.matchedLines[0].text.length > 50
+                                ? "..."
+                                : ""}
                             </span>
                           )}
                         </div>
@@ -430,12 +473,16 @@ export default function Header({ setShowAuth, setAuthMode }) {
                 )}
 
                 {/* Empty state */}
-                {matchingSongs.length === 0 && lyricsResults.length === 0 && !lyricsLoading && (
-                  <div className="px-4 py-8 text-center">
-                    <Search className="w-5 h-5 text-dim mx-auto mb-2" />
-                    <p className="text-xs text-muted">No matching songs found</p>
-                  </div>
-                )}
+                {matchingSongs.length === 0 &&
+                  lyricsResults.length === 0 &&
+                  !lyricsLoading && (
+                    <div className="px-4 py-8 text-center">
+                      <Search className="w-5 h-5 text-dim mx-auto mb-2" />
+                      <p className="text-xs text-muted">
+                        No matching songs found
+                      </p>
+                    </div>
+                  )}
               </div>
 
               {/* See all results */}
@@ -490,32 +537,34 @@ export default function Header({ setShowAuth, setAuthMode }) {
           )}
         </button>
 
-        {isAuthenticated && user ? (
-          /* ─── Logged In: ProfileDropdown ─── */
-          <ProfileDropdown />
-        ) : (
-          /* ─── Logged Out: Sign Up + Log In ─── */
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setAuthMode("signup");
-                setShowAuth(true);
-              }}
-              className="px-4 py-1.5 rounded-full bg-[#D4A32A] text-black text-xs font-bold hover:bg-[#c49527] transition-all active:scale-95 cursor-pointer"
-            >
-              Sign Up
-            </button>
-            <button
-              onClick={() => {
-                setAuthMode("login");
-                setShowAuth(true);
-              }}
-              className="px-4 py-1.5 rounded-full border border-[#D4A32A] text-[#D4A32A] text-xs font-bold hover:bg-[#D4A32A]/10 transition-all active:scale-95 cursor-pointer"
-            >
-              Log In
-            </button>
-          </div>
-        )}
+        <div id="tour-profile-btn" className="flex items-center">
+          {isAuthenticated && user ? (
+            /* ─── Logged In: ProfileDropdown ─── */
+            <ProfileDropdown />
+          ) : (
+            /* ─── Logged Out: Sign Up + Log In ─── */
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setAuthMode("signup");
+                  setShowAuth(true);
+                }}
+                className="px-4 py-1.5 rounded-full bg-[#D4A32A] text-black text-xs font-bold hover:bg-[#c49527] transition-all active:scale-95 cursor-pointer"
+              >
+                Sign Up
+              </button>
+              <button
+                onClick={() => {
+                  setAuthMode("login");
+                  setShowAuth(true);
+                }}
+                className="px-4 py-1.5 rounded-full border border-[#D4A32A] text-[#D4A32A] text-xs font-bold hover:bg-[#D4A32A]/10 transition-all active:scale-95 cursor-pointer"
+              >
+                Log In
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Voice Search Immersive Modal Overlay (using Portal to escape relative layout clip bounds) */}
@@ -552,10 +601,14 @@ export default function Header({ setShowAuth, setAuthMode }) {
                     {/* Text Indicator */}
                     <div className="text-center space-y-2 mt-4">
                       <h3 className="text-xl font-bold text-title tracking-tight transition-all duration-300">
-                        {voiceSearchState === "listening" ? "Listening..." : "Didn't hear that. Try again."}
+                        {voiceSearchState === "listening"
+                          ? "Listening..."
+                          : "Didn't hear that. Try again."}
                       </h3>
                       <p className="text-xs text-muted">
-                        {voiceSearchState === "listening" ? "Speak now in Telugu or English" : "Tap the microphone below to try again"}
+                        {voiceSearchState === "listening"
+                          ? "Speak now in Telugu or English"
+                          : "Tap the microphone below to try again"}
                       </p>
                     </div>
 
@@ -601,10 +654,9 @@ export default function Header({ setShowAuth, setAuthMode }) {
                 </motion.div>
               )}
             </AnimatePresence>,
-            document.body
+            document.body,
           )
         : null}
-
     </header>
   );
 }

@@ -15,6 +15,12 @@ import {
   updateFavorites,
   updatePlaylists,
   updateRecentlyPlayed,
+  fetchUserPlaylists,
+  createPlaylistDoc,
+  updatePlaylistDoc,
+  deletePlaylistDoc,
+  joinPlaylistDoc,
+  migrateLegacyPlaylists,
 } from "@/lib/firestore-service";
 
 const AudioContext = createContext(null);
@@ -128,6 +134,11 @@ export const AudioProvider = ({ children }) => {
   const [showFullHome, setShowFullHome] = useState(true);
   const [isMiniPlayerActive, setIsMiniPlayerActive] = useState(false);
   const [lyricsLanguage, setLyricsLanguage] = useState("telugu");
+  const [addToPlaylistSong, setAddToPlaylistSong] = useState(null);
+  const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState(null);
+  const [collaboratingPlaylist, setCollaboratingPlaylist] = useState(null);
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
 
   const [sections, setSections] = useState({});
   const [sectionsLoading, setSectionsLoading] = useState(false);
@@ -187,6 +198,8 @@ export const AudioProvider = ({ children }) => {
   const sectionsLoadingRef = useRef(sectionsLoading);
   const queueRef = useRef(queue);
   const currentSongRef = useRef(currentSong);
+  const songsRef = useRef(songs);
+  const recentlyPlayedRef = useRef(recentlyPlayed);
   const consecutiveErrorsRef = useRef(0);
 
   useEffect(() => {
@@ -221,6 +234,14 @@ export const AudioProvider = ({ children }) => {
     currentSongRef.current = currentSong;
   }, [currentSong]);
 
+  useEffect(() => {
+    songsRef.current = songs;
+  }, [songs]);
+
+  useEffect(() => {
+    recentlyPlayedRef.current = recentlyPlayed;
+  }, [recentlyPlayed]);
+
   const getCurrentContextSongs = (currentPlayingSong) => {
     let contextSongs = songs;
     if (activeTab === "favorites") {
@@ -251,87 +272,153 @@ export const AudioProvider = ({ children }) => {
   const handleSetIsShuffled = (shuffledVal) => {
     setIsShuffled(shuffledVal);
     if (shuffledVal) {
-      const remaining = originalQueue.filter((s) => s.id !== currentSong?.id);
-      const shuffled = currentSong
-        ? [currentSong, ...shuffleArray(remaining)]
-        : shuffleArray(originalQueue);
+      const remaining = queue.filter(
+        (item) => (item.song?.id || item.id) !== currentSong?.id
+      );
+      const shuffled = shuffleArray(remaining);
       setQueue(shuffled);
-    } else {
-      setQueue(originalQueue);
+      queueRef.current = shuffled;
     }
+  };
+
+  // ─── Play Queue Operations ──────────────────────────────────────
+
+  const addToQueue = (song) => {
+    if (!song) return;
+    if (!currentSongRef.current) {
+      playSong(song);
+      return;
+    }
+    const newItem = {
+      queueId: `qid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      song,
+    };
+    setQueue((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = [...safePrev, newItem];
+      queueRef.current = updated;
+      return updated;
+    });
+  };
+
+  const playNext = (song) => {
+    if (!song) return;
+    if (!currentSongRef.current) {
+      playSong(song);
+      return;
+    }
+    const newItem = {
+      queueId: `qid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      song,
+    };
+    setQueue((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = [newItem, ...safePrev];
+      queueRef.current = updated;
+      return updated;
+    });
+  };
+
+  const removeFromQueue = (queueId) => {
+    setQueue((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.filter(
+        (item) => (item.queueId || item.id) !== queueId
+      );
+      queueRef.current = updated;
+      return updated;
+    });
+  };
+
+  const reorderQueue = (newQueue) => {
+    if (!Array.isArray(newQueue)) return;
+    setQueue(newQueue);
+    queueRef.current = newQueue;
+  };
+
+  const moveQueueItem = (fromIndex, toIndex) => {
+    setQueue((prev) => {
+      const safe = [...(Array.isArray(prev) ? prev : [])];
+      if (
+        fromIndex < 0 ||
+        fromIndex >= safe.length ||
+        toIndex < 0 ||
+        toIndex >= safe.length ||
+        fromIndex === toIndex
+      ) {
+        return safe;
+      }
+      const [moved] = safe.splice(fromIndex, 1);
+      safe.splice(toIndex, 0, moved);
+      queueRef.current = safe;
+      return safe;
+    });
+  };
+
+  const clearQueue = () => {
+    setQueue([]);
+    queueRef.current = [];
   };
 
   const handleNextSong = useCallback(() => {
     const currentQueue = queueRef.current;
-    if (currentQueue.length === 0) return;
-
-    let currentIndex = -1;
-    if (currentSongRef.current) {
-      currentIndex = currentQueue.findIndex(
-        (s) => s.id === currentSongRef.current.id,
-      );
-    }
-
-    let nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % currentQueue.length;
-    let checkedCount = 0;
-
-    // Skip songs that do not have audio
-    while (
-      checkedCount < currentQueue.length &&
-      !isSongPlayable(currentQueue[nextIndex])
-    ) {
-      nextIndex = (nextIndex + 1) % currentQueue.length;
-      checkedCount++;
-    }
-
-    if (checkedCount < currentQueue.length) {
-      if (currentSectionLetterRef.current) {
-        setCurrentIndexInSection(nextIndex);
-        currentIndexInSectionRef.current = nextIndex;
+    if (!currentQueue || currentQueue.length === 0) {
+      if (isLoopingRef.current && currentSongRef.current) {
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch((err) => console.log("Playback error: ", err));
+        }
+      } else {
+        setIsPlaying(false);
       }
-      setCurrentSong(currentQueue[nextIndex]);
+      return;
+    }
+
+    // Find next playable item in queue
+    let nextItemIndex = 0;
+    while (
+      nextItemIndex < currentQueue.length &&
+      !isSongPlayable(currentQueue[nextItemIndex]?.song || currentQueue[nextItemIndex])
+    ) {
+      nextItemIndex++;
+    }
+
+    if (nextItemIndex < currentQueue.length) {
+      const nextItem = currentQueue[nextItemIndex];
+      const nextSong = nextItem.song || nextItem;
+      const remainingQueue = currentQueue.slice(nextItemIndex + 1);
+
+      setQueue(remainingQueue);
+      queueRef.current = remainingQueue;
+      setCurrentSong(nextSong);
+      currentSongRef.current = nextSong;
       setIsPlaying(true);
       setProgress(0);
     } else {
+      setQueue([]);
+      queueRef.current = [];
       setIsPlaying(false);
     }
   }, []);
 
   const handlePrevSong = useCallback(() => {
-    const currentQueue = queueRef.current;
-    if (currentQueue.length === 0) return;
-
-    let currentIndex = -1;
-    if (currentSongRef.current) {
-      currentIndex = currentQueue.findIndex(
-        (s) => s.id === currentSongRef.current.id,
-      );
-    }
-
-    let prevIndex = currentIndex === -1
-      ? currentQueue.length - 1
-      : (currentIndex - 1 + currentQueue.length) % currentQueue.length;
-    let checkedCount = 0;
-
-    // Skip songs that do not have audio
-    while (
-      checkedCount < currentQueue.length &&
-      !isSongPlayable(currentQueue[prevIndex])
-    ) {
-      prevIndex = (prevIndex - 1 + currentQueue.length) % currentQueue.length;
-      checkedCount++;
-    }
-
-    if (checkedCount < currentQueue.length) {
-      if (currentSectionLetterRef.current) {
-        setCurrentIndexInSection(prevIndex);
-        currentIndexInSectionRef.current = prevIndex;
-      }
-      setCurrentSong(currentQueue[prevIndex]);
-      setIsPlaying(true);
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
       setProgress(0);
-    } else {
-      setIsPlaying(false);
+      return;
+    }
+    const recent = recentlyPlayedRef.current;
+    if (recent && recent.length > 1) {
+      const prevSongId = recent[1];
+      const prevSongObj = (songsRef.current || []).find((s) => s.id === prevSongId);
+      if (prevSongObj) {
+        playSong(prevSongObj);
+        return;
+      }
+    }
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      setProgress(0);
     }
   }, []);
 
@@ -365,26 +452,66 @@ export const AudioProvider = ({ children }) => {
     }
   }, [user]);
 
-  // When Firebase user data loads, merge it (Firestore wins over localStorage)
+  // When Firebase user data loads, merge favorites & recently played, and load top-level collaborative playlists
   useEffect(() => {
     if (!firestoreData) return;
 
     const {
       favorites: favs,
-      playlists: pls,
       recentlyPlayed: recent,
     } = firestoreData;
 
     if (Array.isArray(favs) && favs.length > 0) {
       setFavorites(favs);
     }
-    if (Array.isArray(pls) && pls.length > 0) {
-      setPlaylists(pls);
-    }
     if (Array.isArray(recent) && recent.length > 0) {
       setRecentlyPlayed(recent);
     }
   }, [firestoreData]);
+
+  // Load collaborative and owned playlists from top-level collection when user logs in
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    let isMounted = true;
+    const loadPlaylists = async () => {
+      try {
+        const topLevelPlaylists = await fetchUserPlaylists(user.uid);
+
+        // Check if legacy user doc has playlists that need migration
+        if (
+          firestoreData &&
+          Array.isArray(firestoreData.playlists) &&
+          firestoreData.playlists.length > 0
+        ) {
+          const unmigrated = firestoreData.playlists.filter(
+            (legacyPl) => !topLevelPlaylists.some((tp) => tp.id === legacyPl.id)
+          );
+          if (unmigrated.length > 0) {
+            const newlyMigrated = await migrateLegacyPlaylists(user.uid, unmigrated, user);
+            topLevelPlaylists.push(...newlyMigrated);
+          }
+        }
+
+        if (isMounted) {
+          if (topLevelPlaylists.length > 0) {
+            setPlaylists(topLevelPlaylists);
+            try {
+              localStorage.setItem("songhub_playlists", JSON.stringify(topLevelPlaylists));
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user playlists:", err);
+      }
+    };
+
+    loadPlaylists();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, firestoreData]);
 
   // Load songs from the API endpoint.
   // Priority: 1) prefetched global 2) in-progress prefetch promise 3) browser cache / fresh fetch
@@ -651,12 +778,15 @@ export const AudioProvider = ({ children }) => {
         audioRef.current.load();
       }
 
-      // Add to recently played + sync to Firestore if logged in
+      // Add to recently played (cap at 20, deduplicate, newest first) + sync to Firestore if logged in
       setTimeout(() => {
         setRecentlyPlayed((prev) => {
-          const filtered = prev.filter((id) => id !== currentSong.id);
-          const updated = [currentSong.id, ...filtered].slice(0, 10);
-          localStorage.setItem("songhub_recently", JSON.stringify(updated));
+          const safePrev = Array.isArray(prev) ? prev : [];
+          const filtered = safePrev.filter((id) => id !== currentSong.id);
+          const updated = [currentSong.id, ...filtered].slice(0, 20);
+          try {
+            localStorage.setItem("songhub_recently", JSON.stringify(updated));
+          } catch {}
           // Sync to Firestore if authenticated
           const uid = userRef.current?.uid;
           if (uid) {
@@ -1127,13 +1257,25 @@ export const AudioProvider = ({ children }) => {
       // Set queue and originalQueue for this context
       setOriginalQueue(contextSongs);
 
-      if (isShuffled) {
-        const remaining = contextSongs.filter((s) => s.id !== song.id);
-        const shuffled = [song, ...shuffleArray(remaining)];
-        setQueue(shuffled);
+      const songIndex = contextSongs.findIndex((s) => s.id === song.id);
+      let upcomingSongs = [];
+      if (songIndex !== -1) {
+        upcomingSongs = contextSongs.slice(songIndex + 1);
       } else {
-        setQueue(contextSongs);
+        upcomingSongs = contextSongs.filter((s) => s.id !== song.id);
       }
+
+      if (isShuffled) {
+        upcomingSongs = shuffleArray(upcomingSongs);
+      }
+
+      const queueItems = upcomingSongs.map((s) => ({
+        queueId: `qid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        song: s,
+      }));
+
+      setQueue(queueItems);
+      queueRef.current = queueItems;
 
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
@@ -1213,75 +1355,292 @@ export const AudioProvider = ({ children }) => {
     });
   };
 
-  const createPlaylist = (name) => {
-    if (!name.trim()) return;
+  const removeFromRecentlyPlayed = (songId) => {
+    setRecentlyPlayed((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.filter((id) => id !== songId);
+      try {
+        localStorage.setItem("songhub_recently", JSON.stringify(updated));
+      } catch {}
+      const uid = userRef.current?.uid;
+      if (uid) {
+        updateRecentlyPlayed(uid, updated);
+      }
+      return updated;
+    });
+  };
+
+  const clearRecentlyPlayed = () => {
+    setRecentlyPlayed([]);
+    try {
+      localStorage.setItem("songhub_recently", JSON.stringify([]));
+    } catch {}
+    const uid = userRef.current?.uid;
+    if (uid) {
+      updateRecentlyPlayed(uid, []);
+    }
+  };
+
+  const createPlaylist = async (name, description = "", linkDefaultRole = "editor") => {
+    if (!name || !name.trim()) return;
+    const uid = userRef.current?.uid || "guest";
+    const ownerName =
+      userRef.current?.displayName ||
+      userRef.current?.email?.split("@")[0] ||
+      "You";
+
     const newPlaylist = {
-      id: Date.now().toString(),
+      id: `pl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ownerId: uid,
+      ownerName: ownerName,
       name: name.trim(),
+      description: (description || "").trim(),
       songIds: [],
+      songAddedBy: {},
+      collaborators: {},
+      collaboratorUids: [],
+      linkDefaultRole: linkDefaultRole || "editor",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
+
     setPlaylists((prev) => {
-      const updated = [...prev, newPlaylist];
-      localStorage.setItem("songhub_playlists", JSON.stringify(updated));
-      // Sync to Firestore if authenticated
-      const uid = userRef.current?.uid;
-      if (uid) {
-        updatePlaylists(uid, updated);
-      }
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = [...safePrev, newPlaylist];
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
       return updated;
     });
-  };
 
-  const deletePlaylist = (playlistId) => {
-    setPlaylists((prev) => {
-      const updated = prev.filter((list) => list.id !== playlistId);
-      localStorage.setItem("songhub_playlists", JSON.stringify(updated));
-      // Sync to Firestore if authenticated
-      const uid = userRef.current?.uid;
-      if (uid) {
-        updatePlaylists(uid, updated);
+    if (uid && uid !== "guest") {
+      try {
+        await createPlaylistDoc(newPlaylist);
+      } catch (err) {
+        console.error("Error creating playlist in Firestore:", err);
       }
-      return updated;
-    });
+    }
+    return newPlaylist;
   };
 
-  const addSongToPlaylist = (playlistId, songId) => {
+  const editPlaylist = async (playlistId, { name, description, linkDefaultRole }) => {
+    const updates = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (description !== undefined) updates.description = description.trim();
+    if (linkDefaultRole !== undefined) updates.linkDefaultRole = linkDefaultRole;
+
     setPlaylists((prev) => {
-      const updated = prev.map((list) => {
-        if (list.id === playlistId && !list.songIds.includes(songId)) {
-          return { ...list, songIds: [...list.songIds, songId] };
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.map((pl) => {
+        if (pl.id === playlistId) {
+          return {
+            ...pl,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+          };
         }
-        return list;
+        return pl;
       });
-      localStorage.setItem("songhub_playlists", JSON.stringify(updated));
-      // Sync to Firestore if authenticated
-      const uid = userRef.current?.uid;
-      if (uid) {
-        updatePlaylists(uid, updated);
-      }
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
       return updated;
     });
+
+    const uid = userRef.current?.uid;
+    if (uid && uid !== "guest") {
+      try {
+        await updatePlaylistDoc(playlistId, updates);
+      } catch (err) {
+        console.error("Error updating playlist in Firestore:", err);
+      }
+    }
   };
 
-  const removeSongFromPlaylist = (playlistId, songId) => {
+  const deletePlaylist = async (playlistId) => {
     setPlaylists((prev) => {
-      const updated = prev.map((list) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.filter((list) => list.id !== playlistId);
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (activePlaylistId === playlistId) {
+      setActivePlaylistId(null);
+      setActiveTab("discover");
+    }
+
+    const uid = userRef.current?.uid;
+    if (uid && uid !== "guest") {
+      try {
+        await deletePlaylistDoc(playlistId);
+      } catch (err) {
+        console.error("Error deleting playlist from Firestore:", err);
+      }
+    }
+  };
+
+  const addSongToPlaylist = async (playlistId, songId) => {
+    const uid = userRef.current?.uid || "guest";
+    const adderName =
+      userRef.current?.displayName ||
+      userRef.current?.email?.split("@")[0] ||
+      "You";
+
+    let alreadyInPlaylist = false;
+    let newSongIds = [];
+    let newSongAddedBy = {};
+
+    setPlaylists((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.map((list) => {
         if (list.id === playlistId) {
+          if (list.songIds && list.songIds.includes(songId)) {
+            alreadyInPlaylist = true;
+            return list;
+          }
+          newSongIds = [...(list.songIds || []), songId];
+          newSongAddedBy = {
+            ...(list.songAddedBy || {}),
+            [songId]: {
+              userId: uid,
+              name: adderName,
+              addedAt: new Date().toISOString(),
+            },
+          };
           return {
             ...list,
-            songIds: list.songIds.filter((id) => id !== songId),
+            songIds: newSongIds,
+            songAddedBy: newSongAddedBy,
+            updatedAt: new Date().toISOString(),
           };
         }
         return list;
       });
-      localStorage.setItem("songhub_playlists", JSON.stringify(updated));
-      // Sync to Firestore if authenticated
-      const uid = userRef.current?.uid;
-      if (uid) {
-        updatePlaylists(uid, updated);
-      }
+
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
       return updated;
     });
+
+    if (alreadyInPlaylist) {
+      return { alreadyExists: true };
+    }
+
+    if (uid && uid !== "guest") {
+      try {
+        await updatePlaylistDoc(playlistId, {
+          songIds: newSongIds,
+          songAddedBy: newSongAddedBy,
+        });
+      } catch (err) {
+        console.error("Error adding song to playlist in Firestore:", err);
+      }
+    }
+    return { success: true };
+  };
+
+  const removeSongFromPlaylist = async (playlistId, songId) => {
+    const uid = userRef.current?.uid;
+    let newSongIds = [];
+    let newSongAddedBy = {};
+
+    setPlaylists((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const updated = safePrev.map((list) => {
+        if (list.id === playlistId) {
+          newSongIds = (list.songIds || []).filter((id) => id !== songId);
+          newSongAddedBy = { ...(list.songAddedBy || {}) };
+          delete newSongAddedBy[songId];
+          return {
+            ...list,
+            songIds: newSongIds,
+            songAddedBy: newSongAddedBy,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return list;
+      });
+
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (uid && uid !== "guest") {
+      try {
+        await updatePlaylistDoc(playlistId, {
+          songIds: newSongIds,
+          songAddedBy: newSongAddedBy,
+        });
+      } catch (err) {
+        console.error("Error removing song from playlist in Firestore:", err);
+      }
+    }
+  };
+
+  const joinCollaborativePlaylist = async (playlistId, role = "editor") => {
+    if (!userRef.current?.uid) return null;
+    try {
+      const joinedPl = await joinPlaylistDoc(playlistId, userRef.current, role);
+      if (joinedPl) {
+        setPlaylists((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          const exists = safePrev.some((p) => p.id === joinedPl.id);
+          const updated = exists
+            ? safePrev.map((p) => (p.id === joinedPl.id ? joinedPl : p))
+            : [...safePrev, joinedPl];
+          try {
+            localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      }
+      return joinedPl;
+    } catch (err) {
+      console.error("Error joining collaborative playlist:", err);
+      throw err;
+    }
+  };
+
+  const updatePlaylistInState = (updatedPl) => {
+    if (!updatedPl?.id) return;
+    setPlaylists((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const exists = safePrev.some((p) => p.id === updatedPl.id);
+      const updated = exists
+        ? safePrev.map((p) => (p.id === updatedPl.id ? { ...p, ...updatedPl } : p))
+        : [...safePrev, updatedPl];
+      try {
+        localStorage.setItem("songhub_playlists", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const playPlaylist = (playlistOrId, shuffle = false) => {
+    const pl =
+      typeof playlistOrId === "object" && playlistOrId !== null
+        ? playlistOrId
+        : playlists.find((p) => p.id === playlistOrId);
+    if (!pl || !pl.songIds || pl.songIds.length === 0) return;
+
+    const playlistSongs = pl.songIds
+      .map((id) => songs.find((s) => s.id === id))
+      .filter(Boolean);
+
+    if (playlistSongs.length === 0) return;
+
+    if (shuffle) {
+      const shuffled = shuffleArray(playlistSongs);
+      playSong(shuffled[0], null, null, shuffled);
+    } else {
+      playSong(playlistSongs[0], null, null, playlistSongs);
+    }
   };
 
   return (
@@ -1316,9 +1675,31 @@ export const AudioProvider = ({ children }) => {
         setIsShuffled: handleSetIsShuffled,
         toggleFavorite,
         createPlaylist,
+        editPlaylist,
         deletePlaylist,
         addSongToPlaylist,
         removeSongFromPlaylist,
+        playPlaylist,
+        removeFromRecentlyPlayed,
+        clearRecentlyPlayed,
+        addToPlaylistSong,
+        setAddToPlaylistSong,
+        isCreatePlaylistOpen,
+        setIsCreatePlaylistOpen,
+        editingPlaylist,
+        setEditingPlaylist,
+        collaboratingPlaylist,
+        setCollaboratingPlaylist,
+        joinCollaborativePlaylist,
+        updatePlaylistInState,
+        isQueueOpen,
+        setIsQueueOpen,
+        addToQueue,
+        playNext,
+        removeFromQueue,
+        reorderQueue,
+        moveQueueItem,
+        clearQueue,
         viewedSongId,
         setViewedSongId,
         activeTab,

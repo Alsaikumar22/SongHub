@@ -13,6 +13,7 @@ import {
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import { getShareableSongUrl } from "@/utils/share";
+import SongOptionsMenu from "@/components/song/SongOptionsMenu";
 
 export default function CategorySongCard({ song, language, onClick }) {
   const { toggleFavorite, favorites, currentSong, isPlaying, playSong } =
@@ -176,12 +177,7 @@ export default function CategorySongCard({ song, language, onClick }) {
             <Download className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            onClick={handleMoreClick}
-            className="p-1 rounded-full hover:bg-card-hover text-muted hover:text-title transition-colors cursor-pointer"
-          >
-            <MoreVertical className="w-3.5 h-3.5" />
-          </button>
+          <SongOptionsMenu song={song} iconSize="w-3.5 h-3.5" />
         </div>
       </div>
     </motion.div>

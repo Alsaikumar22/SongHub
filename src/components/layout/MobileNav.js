@@ -25,7 +25,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
     setShowFullHome,
   } = useAudio();
 
-  const { setShowFullResults } = useSearch();
+  const { setSearchQuery, setShowFullResults } = useSearch();
   const router = useRouter();
   const pathname = usePathname();
   const [showMoreSheet, setShowMoreSheet] = useState(false);
@@ -37,6 +37,14 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
   const scrollToTop = () => {
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const scrollContainers = document.querySelectorAll(
+        ".overflow-y-auto, [class*='overflow-y-auto']",
+      );
+      scrollContainers.forEach((el) => {
+        el.scrollTop = 0;
+      });
       const mainEl = document.querySelector("main");
       if (mainEl) {
         mainEl.scrollTo(0, 0);
@@ -51,12 +59,13 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Home className="w-5 h-5" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
         setShowFullHome(true);
-        if (isOnSongPage) router.push("/home");
+        router.push("/home?tab=discover");
       },
     },
     {
@@ -65,11 +74,12 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Folder className="w-5 h-5" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("categories");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
-        if (isOnSongPage) router.push("/home");
+        router.push("/home?tab=categories");
       },
     },
     {
@@ -78,12 +88,13 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Music2 className="w-5 h-5" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
         setShowFullHome(false);
-        if (isOnSongPage) router.push("/home");
+        router.push("/home?tab=songs");
       },
     },
     {
@@ -95,8 +106,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("search");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
-        if (isOnSongPage) router.push("/home");
+        router.push("/home?tab=search");
       },
     },
     {
@@ -105,10 +115,12 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Heart className="w-5 h-5" />,
       onClick: () => triggerWelcomeNudge(() => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        if (isOnSongPage) router.push("/home");
+        router.push("/home?tab=favorites");
       }),
     },
   ];
@@ -127,6 +139,19 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
             return (
               <button
                 key={tab.id}
+                id={
+                  tab.id === "home"
+                    ? "tour-mobile-home"
+                    : tab.id === "categories"
+                    ? "tour-mobile-categories"
+                    : tab.id === "songs"
+                    ? "tour-mobile-songs"
+                    : tab.id === "search"
+                    ? "tour-mobile-search"
+                    : tab.id === "favorites"
+                    ? "tour-mobile-favorites"
+                    : undefined
+                }
                 onClick={tab.onClick}
                 className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive

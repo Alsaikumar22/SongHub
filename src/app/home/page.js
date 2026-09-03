@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAudio } from "@/context/audio-context";
@@ -16,6 +16,12 @@ import { useLyricsSearch } from "@/hooks/useLyricsSearch";
 import SongArtwork from "@/components/ui/SongArtwork";
 import CategoryExplorer from "@/components/categories/CategoryExplorer";
 import { FullAppSkeleton } from "@/components/ui/SongSkeleton";
+import RecentlyPlayedView from "@/components/home/RecentlyPlayedView";
+import LikedSongsView from "@/components/home/LikedSongsView";
+import PlaylistsOverview from "@/components/playlist/PlaylistsOverview";
+import PlaylistDetailView from "@/components/playlist/PlaylistDetailView";
+import CreatePlaylistModal from "@/components/playlist/CreatePlaylistModal";
+import AddToPlaylistModal from "@/components/playlist/AddToPlaylistModal";
 
 import {
   FolderHeart,
@@ -46,6 +52,7 @@ const searchableText = (value) => {
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const {
     songs,
@@ -67,6 +74,13 @@ function HomeContent() {
     setActivePlaylistId,
     setViewedSongId,
     showFullHome,
+    setShowFullHome,
+    addToPlaylistSong,
+    setAddToPlaylistSong,
+    isCreatePlaylistOpen,
+    setIsCreatePlaylistOpen,
+    editingPlaylist,
+    setEditingPlaylist,
   } = useAudio();
 
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults, searchMode, setSearchMode, triggerVoiceSearch } = useSearch();
@@ -135,17 +149,22 @@ function HomeContent() {
     if (!searchParams) return;
     
     const tabParam = searchParams.get("tab");
-    if (tabParam) {
-      if (tabParam !== activeTab) {
-        setActiveTab(tabParam);
-      }
-    } else {
+    const viewParam = searchParams.get("view");
+    if (tabParam === "songs" || viewParam === "songs") {
+      setActiveTab("discover");
+      setShowFullHome(false);
+    } else if (tabParam === "discover" || !tabParam) {
       if (activeTab !== "discover") {
         setActiveTab("discover");
       }
+      setShowFullHome(true);
+    } else if (tabParam) {
+      if (tabParam !== activeTab) {
+        setActiveTab(tabParam);
+      }
     }
     
-    const playlistIdParam = searchParams.get("playlistId");
+    const playlistIdParam = searchParams.get("playlistId") || searchParams.get("id");
     if (playlistIdParam) {
       if (playlistIdParam !== activePlaylistId) {
         setActivePlaylistId(playlistIdParam);
@@ -244,7 +263,9 @@ function HomeContent() {
     }
 
     if (changed) {
-      router.push(`/home?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/home?${params.toString()}`);
+      });
     }
   }, [activeTab, activePlaylistId, searchQuery, showFullResults, selectedLetter]);
 
@@ -317,39 +338,14 @@ function HomeContent() {
       {/* ─── DESKTOP VIEW ─── */}
       {/* ──────────────────────────────────────────────────────── */}
       <div className="hidden lg:block p-4">
-        {/* VIEW HEADER */}
-        {activeTab && activeTab !== "discover" && activeTab !== "categories" && !selectedLetter && (
+        {/* VIEW HEADER (Favorites only; Recently Played and Playlists have dedicated banners) */}
+        {activeTab === "favorites" && !selectedLetter && !(searchQuery && showFullResults) && (
           <div className="mb-8">
-            {activeTab === "favorites" && (
-              <div>
-                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
-                  <FolderHeart className="w-5 h-5 text-red-500" />
-                  My Favorites
-                </h1>
-                <p className="text-xs text-muted mt-1">Your curated collection of loved songs.</p>
-              </div>
-            )}
-            {activeTab === "playlist" && activePlaylist && (
-              <div>
-                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
-                  <ListMusic className="w-5 h-5 text-muted" />
-                  {activePlaylist.name}
-                </h1>
-                <p className="text-xs text-muted mt-1">
-                  Playlist containing {activePlaylist.songIds.length} track
-                  {activePlaylist.songIds.length !== 1 && "s"}.
-                </p>
-              </div>
-            )}
-            {activeTab === "recently-played" && (
-              <div>
-                <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-muted" />
-                  Recently Played
-                </h1>
-                <p className="text-xs text-muted mt-1">Your recently listened tracks.</p>
-              </div>
-            )}
+            <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
+              <FolderHeart className="w-5 h-5 text-red-500" />
+              My Favorites
+            </h1>
+            <p className="text-xs text-muted mt-1">Your curated collection of loved songs.</p>
           </div>
         )}
 
@@ -367,11 +363,46 @@ function HomeContent() {
           </div>
         )}
 
-        {/* Recently Played */}
+        {/* Recently Played Carousel */}
         {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
           <div className="mb-8">
             <RecentlyPlayed />
           </div>
+        )}
+
+        {/* Dedicated Recently Played View */}
+        {activeTab === "recently-played" && !(searchQuery && showFullResults) && (
+          <RecentlyPlayedView />
+        )}
+
+        {/* Dedicated Playlists Overview (when no playlist is selected) */}
+        {(activeTab === "playlists" || activeTab === "playlist") && !activePlaylistId && !(searchQuery && showFullResults) && (
+          <PlaylistsOverview
+            onSelectPlaylist={(id) => {
+              setActiveTab("playlist");
+              setActivePlaylistId(id);
+            }}
+            onCreateClick={() => setIsCreatePlaylistOpen(true)}
+            onEditClick={(pl) => {
+              setEditingPlaylist(pl);
+              setIsCreatePlaylistOpen(true);
+            }}
+          />
+        )}
+
+        {/* Dedicated Playlist Detail View (when a playlist is selected) */}
+        {(activeTab === "playlist" || activeTab === "playlists") && activePlaylistId && !(searchQuery && showFullResults) && (
+          <PlaylistDetailView
+            playlistId={activePlaylistId}
+            onBack={() => {
+              setActivePlaylistId(null);
+              setActiveTab("playlists");
+            }}
+            onEdit={(pl) => {
+              setEditingPlaylist(pl);
+              setIsCreatePlaylistOpen(true);
+            }}
+          />
         )}
 
         {/* Category Explorer View */}
@@ -379,8 +410,13 @@ function HomeContent() {
           <CategoryExplorer />
         )}
 
+        {/* Liked Songs / Favorites View */}
+        {activeTab === "favorites" && !(searchQuery && showFullResults) && (
+          <LikedSongsView />
+        )}
+
         {/* Songs Section or Search Results */}
-        {activeTab !== "categories" && (
+        {activeTab !== "categories" && activeTab !== "recently-played" && activeTab !== "playlists" && activeTab !== "favorites" && !(activeTab === "playlist") && (
           searchQuery && showFullResults ? (
             <div className="flex-1 flex flex-col min-h-0 space-y-8">
               {filteredSongs.length > 0 && (
@@ -691,264 +727,51 @@ function HomeContent() {
           </div>
         )}
 
-        {/* 4. FAVORITES TAB */}
+        {/* 4. FAVORITES TAB (MOBILE) */}
         {activeTab === "favorites" && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Visual Hero Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-600 to-indigo-950 p-6 shadow-xl border border-line">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-card-hover rounded-full blur-2xl pointer-events-none" />
-              <div className="relative z-10 flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-xl bg-card-hover backdrop-blur-md border border-line flex items-center justify-center shadow-md">
-                  <Heart className="w-6 h-6 text-white fill-white animate-pulse" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black text-white tracking-tight">Favorites</h1>
-                  <p className="text-xs text-title/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"} liked by you</p>
-                </div>
-
-                {filteredSongs.length > 0 && (
-                  <button
-                    onClick={() => {
-                      const randomIndex = Math.floor(Math.random() * filteredSongs.length);
-                      playSong(filteredSongs[randomIndex]);
-                    }}
-                    className="self-start px-5 py-2.5 bg-white text-black font-bold text-xs rounded-full shadow-md active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Shuffle Play</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* List of liked songs */}
-            <div className="space-y-2">
-              {filteredSongs.length === 0 ? (
-                <div className="text-center py-16 text-muted border border-dashed border-line rounded-2xl">
-                  <Heart className="w-8 h-8 text-dim mx-auto mb-3 opacity-40" />
-                  <p className="font-semibold text-sm">No liked songs yet</p>
-                  <p className="text-xs text-dim mt-1 max-w-xs mx-auto px-4">Tap the heart icon on any song to save it in your favorites collection.</p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {filteredSongs.map((song, index) => {
-                    const isCurrent = currentSong?.id === song.id;
-                    return (
-                      <div
-                        key={song.id}
-                        className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                          isCurrent ? "bg-card-hover border border-line" : ""
-                        }`}
-                      >
-                        <div onClick={() => playSong(song)} className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
-                            <SongArtwork song={song} className="w-full h-full object-cover" iconSize="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm font-semibold block truncate ${
-                              isCurrent ? "text-title" : "text-title"
-                            } ${song.teluguTitle ? "font-telugu" : ""}`}>
-                              {song.teluguTitle || song.title}
-                            </span>
-                            <span className="text-xs text-muted block truncate mt-0.5">
-                              {song.titleEnglish}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 flex items-center gap-3 pr-1">
-                          <button
-                            onClick={() => toggleFavorite(song.id)}
-                            className="p-2 hover:bg-card-hover rounded-full text-red-500 cursor-pointer"
-                          >
-                            <Heart className="w-4.5 h-4.5 fill-current" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <LikedSongsView />
           </div>
         )}
 
-        {/* 5. PLAYLISTS TAB */}
-        {activeTab === "playlist" && (
+        {/* 5. RECENTLY PLAYED TAB (MOBILE) */}
+        {activeTab === "recently-played" && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            
-            {/* 4a. PLAYLIST DETAIL SCREEN */}
-            {activePlaylistId && activePlaylist ? (
-              <div className="space-y-6">
-                <button
-                  onClick={() => setActivePlaylistId(null)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-muted hover:text-title transition-colors cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Back to Playlists</span>
-                </button>
+            <RecentlyPlayedView />
+          </div>
+        )}
 
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-800 to-slate-950 p-6 shadow-xl border border-line">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-card-hover rounded-full blur-2xl pointer-events-none" />
-                  <div className="relative z-10 flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-card-hover backdrop-blur-md border border-line flex items-center justify-center shadow-md">
-                      <ListMusic className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-black text-white tracking-tight">{activePlaylist.name}</h1>
-                      <p className="text-xs text-title/70 mt-1">{filteredSongs.length} track{filteredSongs.length !== 1 && "s"}</p>
-                    </div>
-
-                    {filteredSongs.length > 0 && (
-                      <button
-                        onClick={() => playSong(filteredSongs[0])}
-                        className="self-start px-5 py-2.5 bg-white text-black font-bold text-xs rounded-full shadow-md active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Play Now</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Playlist Tracks List */}
-                <div className="space-y-2">
-                  {filteredSongs.length === 0 ? (
-                    <div className="text-center py-16 text-muted border border-dashed border-line rounded-2xl">
-                      <Music className="w-8 h-8 text-dim mx-auto mb-3 opacity-40" />
-                      <p className="font-semibold text-sm">No songs in playlist</p>
-                      <p className="text-xs text-dim mt-1 max-w-xs mx-auto px-4">Browse music and add songs to this playlist from song lyric detail pages.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {filteredSongs.map((song) => {
-                        const isCurrent = currentSong?.id === song.id;
-                        return (
-                          <div
-                            key={song.id}
-                            className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
-                              isCurrent ? "bg-card-hover border border-line" : ""
-                            }`}
-                          >
-                            <div onClick={() => playSong(song)} className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
-                                <SongArtwork song={song} className="w-full h-full object-cover" iconSize="w-4 h-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-sm font-semibold block truncate ${
-                                  isCurrent ? "text-title" : "text-title"
-                                } ${song.teluguTitle ? "font-telugu" : ""}`}>
-                                  {song.teluguTitle || song.title}
-                                </span>
-                                <span className="text-xs text-muted block truncate mt-0.5">
-                                  {song.titleEnglish}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="shrink-0 flex items-center gap-3 pr-1">
-                              <button
-                                onClick={() => removeSongFromPlaylist(activePlaylist.id, song.id)}
-                                className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-red-400 cursor-pointer"
-                                title="Remove from playlist"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+        {/* 6. PLAYLISTS TAB (MOBILE) */}
+        {(activeTab === "playlist" || activeTab === "playlists") && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {activePlaylistId ? (
+              <PlaylistDetailView
+                playlistId={activePlaylistId}
+                onBack={() => {
+                  setActivePlaylistId(null);
+                  setActiveTab("playlists");
+                }}
+                onEdit={(pl) => {
+                  setEditingPlaylist(pl);
+                  setIsCreatePlaylistOpen(true);
+                }}
+              />
             ) : (
-              /* 4b. PLAYLISTS HUB (LIST OF PLAYLISTS) */
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-black text-title tracking-tight">Playlists</h1>
-                  <button
-                    onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-card-hover border border-line rounded-lg text-xs font-bold text-title cursor-pointer active:scale-95 transition-transform"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create</span>
-                  </button>
-                </div>
-
-                {/* Inline Creation Form */}
-                {isCreatingPlaylist && (
-                  <form onSubmit={handleCreatePlaylistMobile} className="p-4 bg-card-hover border border-line rounded-xl space-y-3 animate-in slide-in-from-top-4 duration-200">
-                    <span className="text-[10px] font-bold text-dim uppercase tracking-wider block">New Playlist Name</span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Gospel, Devotional Vibes"
-                      value={newPlaylistName}
-                      onChange={(e) => setNewPlaylistName(e.target.value)}
-                      className="w-full px-3 py-2 border border-line rounded-lg text-xs focus:outline-none focus:border-dim text-title bg-card"
-                    />
-                    <div className="flex justify-end gap-2 pt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setIsCreatingPlaylist(false)}
-                        className="px-3 py-1.5 border border-line rounded-lg text-[10px] font-bold text-muted hover:bg-card"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-3 py-1.5 bg-white text-black rounded-lg text-[10px] font-bold shadow-sm"
-                      >
-                        Create
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Playlist Grid */}
-                <div className="grid grid-cols-1 gap-3">
-                  {playlists.length === 0 ? (
-                    <div className="text-center py-16 text-muted border border-dashed border-line rounded-2xl">
-                      <Library className="w-8 h-8 text-dim mx-auto mb-3 opacity-40" />
-                      <p className="font-semibold text-sm">No playlists created</p>
-                      <p className="text-xs text-dim mt-1 max-w-xs mx-auto px-4">Create your first playlist and start organizing your favorite songs.</p>
-                    </div>
-                  ) : (
-                    playlists.map((list) => (
-                      <div
-                        key={list.id}
-                        className="group relative flex items-center justify-between p-3.5 bg-card border border-line/65 rounded-xl hover:border-line active:bg-card-hover transition-colors"
-                      >
-                        <div
-                          onClick={() => setActivePlaylistId(list.id)}
-                          className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer"
-                        >
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-card-hover border border-line text-dim">
-                            <ListMusic className="w-5.5 h-5.5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-title block truncate">{list.name}</span>
-                            <span className="text-xs text-muted block mt-0.5">{list.songIds.length} song{list.songIds.length !== 1 && "s"}</span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 pl-2">
-                          <button
-                            onClick={() => deletePlaylist(list.id)}
-                            className="p-2 text-dim hover:text-red-400 rounded-full cursor-pointer"
-                            title="Delete playlist"
-                          >
-                            <Trash2 className="w-4.5 h-4.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              <PlaylistsOverview
+                onSelectPlaylist={(id) => {
+                  setActiveTab("playlist");
+                  setActivePlaylistId(id);
+                }}
+                onCreateClick={() => setIsCreatePlaylistOpen(true)}
+                onEditClick={(pl) => {
+                  setEditingPlaylist(pl);
+                  setIsCreatePlaylistOpen(true);
+                }}
+              />
             )}
           </div>
         )}
       </div>
-
     </div>
   );
 }

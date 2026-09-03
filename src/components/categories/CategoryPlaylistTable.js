@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
+import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock, Plus } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
-  const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
+  const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites, setAddToPlaylistSong } = useAudio();
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [sharedSongId, setSharedSongId] = useState(null);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
@@ -246,6 +246,17 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
                     {activeMenuSongId === song.id && (
                       <div className="absolute right-0 top-[110%] bg-dropdown border border-line rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddToPlaylistSong(song);
+                            setActiveMenuSongId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-title hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add to Playlist</span>
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

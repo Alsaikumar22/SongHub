@@ -60,19 +60,18 @@ export default function RecentlyPlayed() {
   return (
     <div className="space-y-3.5">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-bold text-title/90 uppercase tracking-wider">
-          Recently Played
+        <h2 className="text-sm font-bold text-title/90 uppercase tracking-wider flex items-center gap-2">
+          <span>🕘</span>
+          <span>Recently Played</span>
         </h2>
         <button
           onClick={() => {
-            requireAuth(() => {
-              setActiveTab("recently-played");
-              setActivePlaylistId(null);
-            });
+            setActiveTab("recently-played");
+            setActivePlaylistId(null);
           }}
-          className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
+          className="text-xs font-bold text-[#D4A32A] hover:underline transition-colors cursor-pointer"
         >
-          Show all
+          See All &rarr;
         </button>
       </div>
       <div className="relative group/row">

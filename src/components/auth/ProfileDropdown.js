@@ -8,9 +8,11 @@ import {
   Shield,
   LogOut,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useAudio } from "@/context/audio-context";
+import { useTour } from "@/context/tour-context";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -22,6 +24,7 @@ import Image from "next/image";
 export default function ProfileDropdown() {
   const { user, isAuthenticated, signOut, firestoreData } = useAuth();
   const { setActiveTab, setActivePlaylistId, setViewedSongId } = useAudio();
+  const { startTour } = useTour();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -62,6 +65,10 @@ export default function ProfileDropdown() {
       setActivePlaylistId(null);
       setViewedSongId(null);
       router.push("/home");
+    }},
+    { icon: <HelpCircle className="w-4 h-4" />, label: "Replay Tour", onClick: () => {
+      setIsOpen(false);
+      startTour();
     }},
   ];
 

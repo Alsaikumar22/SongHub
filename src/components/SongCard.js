@@ -2,13 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { Play, Music, Clock, VolumeX } from "lucide-react";
+import { Play, Music, Clock, VolumeX, Plus } from "lucide-react";
 import SongArtwork from "./ui/SongArtwork";
+import { useAudio } from "@/context/audio-context";
+import SongOptionsMenu from "@/components/song/SongOptionsMenu";
 
 /**
  * Reusable SongCard component to display individual song details
  */
 export default function SongCard({ song, onPlay }) {
+  const { setAddToPlaylistSong } = useAudio();
   if (!song) return null;
 
   const hasAudio = !!(song.audioUrl || song.media?.audio || song.youtubeId);
@@ -44,6 +47,13 @@ export default function SongCard({ song, onPlay }) {
             <Play className="w-4 h-4 fill-current ml-0.5" />
           </button>
         )}
+
+        {/* Options Menu & Add to Playlist */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
+          <div className="rounded-full bg-black/60 backdrop-blur-sm md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
+            <SongOptionsMenu song={song} triggerClassName="text-white/80 hover:text-white" />
+          </div>
+        </div>
 
         {/* Muted/Lyrics-Only Badge */}
         {!hasAudio && (

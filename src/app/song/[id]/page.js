@@ -2,7 +2,7 @@
 
 import React, { use, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Music,
@@ -16,6 +16,8 @@ import {
   Heart,
   Maximize2,
   Minimize2,
+  AArrowDown,
+  AArrowUp,
   Link as LinkIcon,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
@@ -25,8 +27,7 @@ import { useAuth } from "@/context/auth-context";
 
 import SongLyrics, { LanguageSegmented } from "@/components/song/SongLyrics";
 import YouTubeIcon from "@/components/ui/YouTubeIcon";
-import { extractDominantColor } from "@/utils/extract-color";
-import { SongPageSkeleton } from "@/components/ui/SongSkeleton";
+import { SongPageSkeleton, LyricsSkeleton } from "@/components/ui/SongSkeleton";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import { songService } from "@/services/songService";
 import {
@@ -34,6 +35,7 @@ import {
   getShareableSongText,
   getShareableSongTitle,
 } from "@/utils/share";
+import SongOptionsMenu from "@/components/song/SongOptionsMenu";
 
 function formatVideoEmbedUrl(url) {
   if (!url || typeof url !== "string") return "";
@@ -92,14 +94,8 @@ function SongPageContent({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
   const router = useRouter();
-
-  // Read view mode from URL synchronously on every render.
-  // Avoids useSearchParams() which can crash during client-side navigation in Next.js 16.
-  // Safe because SongPageContent only renders on the client (use(params) suspends during SSR).
-  const viewMode =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("view") || null
-      : null; // "video" | "lyrics" | null
+  const searchParams = useSearchParams();
+  const viewMode = searchParams?.get("view") || null; // "video" | "lyrics" | null
 
   const lyricsContainerRef = useRef(null);
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
@@ -151,6 +147,7 @@ function SongPageContent({ params }) {
     playlists,
     addSongToPlaylist,
     removeSongFromPlaylist,
+    setAddToPlaylistSong,
     setActiveTab,
     lyricsLanguage,
     setLyricsLanguage,
@@ -502,17 +499,20 @@ function SongPageContent({ params }) {
   };
 
   if (!song) {
+    if (songsLoading) {
+      return (
+        <div className="flex-1 flex flex-col h-full bg-canvas p-6 md:p-12 items-center justify-center">
+          <LyricsSkeleton language={selectedLanguage || "telugu"} />
+        </div>
+      );
+    }
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-[#070707]">
-        <Music className="w-12 h-12 text-title mb-4 animate-pulse" />
-        <h2 className="text-xl font-bold text-white">
-          {songsLoading ? "Loading song..." : "Song not found"}
-        </h2>
-        {!songsLoading && (
-          <Link href="/home" className="mt-4 text-sm text-title hover:underline">
-            Return to home
-          </Link>
-        )}
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-canvas">
+        <Music className="w-12 h-12 text-dim mb-4" />
+        <h2 className="text-xl font-bold text-title">Song not found</h2>
+        <Link href="/home" className="mt-4 text-sm text-amber-400 hover:underline">
+          Return to home
+        </Link>
       </div>
     );
   }
@@ -636,17 +636,17 @@ function SongPageContent({ params }) {
             <div className="flex items-center bg-card-hover/80 backdrop-blur-sm border border-line/40 rounded-full p-0.5 shadow-sm h-8 md:h-9 overflow-hidden shrink-0">
               <button
                 onClick={decreaseFontSize}
-                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-[11px]"
+                className="px-2 md:px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
                 title="Decrease Font Size"
               >
-                A
+                <AArrowDown className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
               <button
                 onClick={increaseFontSize}
-                className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-sm md:text-base"
+                className="px-2 md:px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
                 title="Increase Font Size"
               >
-                A
+                <AArrowUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
             </div>
 
@@ -657,6 +657,15 @@ function SongPageContent({ params }) {
               title="Share song"
             >
               <Share2 className="w-4 h-4" />
+            </button>
+
+            {/* Add to Playlist Button */}
+            <button
+              onClick={() => setAddToPlaylistSong(song)}
+              className="p-1.5 md:p-2 rounded-full text-muted hover:text-[#D4A32A] hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+              title="Add to playlist"
+            >
+              <Plus className="w-4 h-4" />
             </button>
 
             {/* Copy Lyrics Button */}
@@ -684,6 +693,7 @@ function SongPageContent({ params }) {
             selectedLanguage={selectedLanguage}
             setSelectedLanguage={setSelectedLanguage}
             fontSizeMultiplier={fontSizeMultiplier}
+            loading={lyricsLoading}
           />
         </div>
 
@@ -768,59 +778,18 @@ function SongPageContent({ params }) {
               </button>
             </ProtectedAction>
 
-            {/* 3. Add to Playlist Icon with Dropdown */}
-            <div className="relative" ref={playlistDropdownRef}>
-              <ProtectedAction
-                action={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+            {/* 3. Add to Playlist Button */}
+            <ProtectedAction
+              action={() => setAddToPlaylistSong(song)}
+            >
+              <button
+                onClick={() => setAddToPlaylistSong(song)}
+                className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
+                title="Add to playlist"
               >
-                <button
-                  onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
-                  className="w-9 h-9 rounded-full bg-card hover:bg-card-hover border border-line text-muted hover:text-title flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer shadow-sm"
-                  title="Add to playlist"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </ProtectedAction>
-              {showPlaylistDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-card border border-line rounded-2xl shadow-xl py-1.5 z-50 w-48 max-h-48 overflow-y-auto">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider border-b border-line">
-                    Select Playlist
-                  </div>
-                  {playlists.length > 0 ? (
-                    playlists.map((list) => {
-                      const isInPlaylist = list.songIds.includes(song.id);
-                      return (
-                        <button
-                          key={list.id}
-                          onClick={() => {
-                            if (isInPlaylist) {
-                              removeSongFromPlaylist(list.id, song.id);
-                            } else {
-                              addSongToPlaylist(list.id, song.id);
-                            }
-                            setShowPlaylistDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-xs text-copy hover:bg-card-hover text-left flex items-center justify-between"
-                        >
-                          <span className="truncate">{list.name}</span>
-                          {isInPlaylist ? (
-                            <span className="text-[10px] bg-card-hover text-handle px-1.5 py-0.5 rounded font-semibold border border-line flex-shrink-0">
-                              Added
-                            </span>
-                          ) : (
-                            <Plus className="w-3.5 h-3.5 text-muted" />
-                          )}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="px-3 py-2 text-xs text-muted italic text-center">
-                      No custom playlists
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                <Plus className="w-4 h-4" />
+              </button>
+            </ProtectedAction>
 
             {/* 4. Watch Video Button */}
             {rawVideoUrl && embedUrl && (
@@ -886,6 +855,9 @@ function SongPageContent({ params }) {
             >
               <Copy className="w-4 h-4" />
             </button>
+
+            {/* 7. Song Options Menu (Play Next, Add to Queue, etc.) */}
+            <SongOptionsMenu song={song} triggerClassName="w-9 h-9 border border-line bg-card hover:bg-card-hover text-muted hover:text-title flex items-center justify-center shadow-sm" />
           </div>
         </div>
 
@@ -912,18 +884,18 @@ function SongPageContent({ params }) {
                 {/* A- (Decrease Font Size) */}
                 <button
                   onClick={decreaseFontSize}
-                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-bold text-xs"
+                  className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
                   title="Decrease Font Size"
                 >
-                  A
+                  <AArrowDown className="w-4 h-4" />
                 </button>
                 {/* A+ (Increase Font Size) */}
                 <button
                   onClick={increaseFontSize}
-                  className="px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer font-black text-base"
+                  className="px-2.5 md:px-3 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
                   title="Increase Font Size"
                 >
-                  A
+                  <AArrowUp className="w-4 h-4" />
                 </button>
                 <div className="w-[1px] h-4 bg-line/30 mx-1 shrink-0" />
                 {/* Full Screen Toggle */}
@@ -937,6 +909,15 @@ function SongPageContent({ params }) {
                   title="Toggle Fullscreen Lyrics"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-[1px] h-4 bg-line/30 mx-1 shrink-0" />
+                {/* Add to Playlist */}
+                <button
+                  onClick={() => setAddToPlaylistSong(song)}
+                  className="px-3 h-full flex items-center justify-center text-muted hover:text-[#D4A32A] hover:bg-card/45 rounded-full transition-all cursor-pointer"
+                  title="Add to Playlist"
+                >
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -984,6 +965,7 @@ function SongPageContent({ params }) {
                 selectedLanguage={selectedLanguage}
                 setSelectedLanguage={setSelectedLanguage}
                 fontSizeMultiplier={fontSizeMultiplier}
+                loading={lyricsLoading}
               />
             )}
           </div>
