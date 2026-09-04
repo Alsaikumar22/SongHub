@@ -8,12 +8,13 @@ import {
   LayoutGrid,
   Music2,
   Mic,
+  Plus,
 } from "lucide-react";
 
 const TOUR_STEPS = [
   {
     id: "search",
-    stepNum: "1/4",
+    stepNum: "1/5",
     targetId: "tour-search-bar",
     targetMobileId: "tour-search-bar",
     preferredPlacement: "bottom",
@@ -24,7 +25,7 @@ const TOUR_STEPS = [
   },
   {
     id: "categories",
-    stepNum: "2/4",
+    stepNum: "2/5",
     targetId: "tour-search-categories-btn",
     targetMobileId: "tour-mobile-categories",
     preferredPlacement: "bottom",
@@ -35,7 +36,7 @@ const TOUR_STEPS = [
   },
   {
     id: "songs",
-    stepNum: "3/4",
+    stepNum: "3/5",
     targetId: "tour-nav-songs",
     targetMobileId: "tour-mobile-songs",
     preferredPlacement: "right",
@@ -45,8 +46,19 @@ const TOUR_STEPS = [
     description: "Browse and discover all worship songs in the catalog.",
   },
   {
+    id: "song-card-playlist",
+    stepNum: "4/5",
+    targetId: "tour-song-card-playlist-btn",
+    targetMobileId: "tour-song-card-playlist-btn",
+    preferredPlacement: "bottom",
+    icon: Plus,
+    iconColor: "text-amber-400 bg-amber-500/15 border-amber-500/25",
+    title: "Add to Playlist",
+    description: "Tap the '+' icon on any song card to save songs directly into your custom worship playlists.",
+  },
+  {
     id: "lyrics",
-    stepNum: "4/4",
+    stepNum: "5/5",
     targetId: "tour-lyrics-btn",
     targetMobileId: "tour-mobile-lyrics-btn",
     preferredPlacement: "top",
@@ -84,6 +96,12 @@ export default function FeatureTour() {
       // If target element is not found, center the card
       setTargetRect(null);
       return;
+    }
+
+    // Scroll into view if element is outside comfortable viewport bounds
+    const initialRect = el.getBoundingClientRect();
+    if (initialRect.top < 60 || initialRect.bottom > window.innerHeight - 80) {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     }
 
     const rect = el.getBoundingClientRect();

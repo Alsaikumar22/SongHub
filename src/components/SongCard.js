@@ -51,6 +51,7 @@ export default function SongCard({ song, onPlay }) {
         {/* Top Right: Add to Playlist (+) & Options Menu */}
         <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
           <button
+            id="tour-song-card-playlist-btn"
             type="button"
             onClick={(e) => {
               e.preventDefault();

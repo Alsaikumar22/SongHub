@@ -312,27 +312,6 @@ export default function PlayerBar() {
 
             {/* Right: Controls */}
             <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
-              {/* Mobile Play Queue Button */}
-              <button
-                id="tour-mobile-queue-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsQueueOpen(!isQueueOpen);
-                }}
-                className={`p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer relative ${
-                  isQueueOpen ? "text-[#D4A32A]" : "text-muted hover:text-title"
-                }`}
-                aria-label="Play Queue"
-                title="Play Queue"
-              >
-                <ListMusic className="w-4.5 h-4.5" />
-                {queue?.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#D4A32A] text-black text-[7px] font-black flex items-center justify-center pointer-events-none">
-                    {queue.length > 9 ? "9+" : queue.length}
-                  </span>
-                )}
-              </button>
-
               <button
                 id="tour-mobile-lyrics-btn"
                 onClick={(e) => {
@@ -362,72 +341,6 @@ export default function PlayerBar() {
                     />
                   </button>
                 </ProtectedAction>
-              )}
-
-              {/* Volume (Speaker) control with slider popover */}
-              {hasAudio && (
-                <div className="relative">
-                  <button
-                    ref={volumeBtnRef}
-                    onClick={toggleVolumePopover}
-                    className={`p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer ${
-                      isVolumeOpen
-                        ? "text-title bg-white/5"
-                        : "text-muted hover:text-title"
-                    }`}
-                    aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                    aria-haspopup="dialog"
-                    aria-expanded={isVolumeOpen}
-                    title="Volume"
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="w-4.5 h-4.5" />
-                    ) : (
-                      <Volume2 className="w-4.5 h-4.5" />
-                    )}
-                  </button>
-
-                  {/* Volume popover — anchored above the speaker icon */}
-                  {isVolumeOpen && (
-                    <div
-                      ref={volumePopoverRef}
-                      role="dialog"
-                      aria-label="Volume"
-                      className="absolute bottom-full right-0 mb-2 z-50 w-44 rounded-2xl border border-line bg-card/95 backdrop-blur-xl shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3.5 animate-in fade-in slide-in-from-bottom-2 duration-150"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          onClick={toggleMute}
-                          className="text-muted hover:text-title cursor-pointer active:scale-90 transition-transform shrink-0 p-0.5"
-                          aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                          title={isMuted || volume === 0 ? "Unmute" : "Mute"}
-                        >
-                          {isMuted || volume === 0 ? (
-                            <VolumeX className="w-4 h-4" />
-                          ) : (
-                            <Volume2 className="w-4 h-4" />
-                          )}
-                        </button>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={isMuted ? 0 : volume}
-                          onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                          className="flex-1 h-1 bg-line rounded-full appearance-none cursor-pointer accent-[#D4A32A] focus:outline-none"
-                          style={{
-                            background: `linear-gradient(to right, #D4A32A 0%, #D4A32A ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.12) 100%)`,
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-muted tabular-nums w-8 text-right shrink-0">
-                          {Math.round((isMuted ? 0 : volume) * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
               )}
 
               {hasAudio && (

@@ -74,6 +74,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
 
         {/* Top Right: Add to Playlist (+) button */}
         <button
+          id="tour-song-card-playlist-btn"
           type="button"
           onClick={(e) => {
             e.preventDefault();

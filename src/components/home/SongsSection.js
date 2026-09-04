@@ -880,6 +880,7 @@ export default function SongsSection({
 
                               {/* Add to Playlist (+) Button */}
                               <button
+                                id="tour-song-card-playlist-btn"
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();

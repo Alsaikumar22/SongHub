@@ -115,6 +115,7 @@ export default function CategorySongCard({ song, language, onClick }) {
 
         {/* Top Right: Add to Playlist (+) button */}
         <button
+          id="tour-song-card-playlist-btn"
           type="button"
           onClick={(e) => {
             e.stopPropagation();
