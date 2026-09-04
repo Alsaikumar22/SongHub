@@ -17,7 +17,7 @@ const ENTERED_COOKIE = "yw_entered";
  * Shows a loading spinner while songs are being prefetched so the user
  * navigates to /home only when data is ready.
  */
-export default function EnterAppButton({ href }) {
+export default function EnterAppButton({ href = "/?tab=discover", onEnter }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +27,8 @@ export default function EnterAppButton({ href }) {
 
       // Set the session cookie
       document.cookie = `${ENTERED_COOKIE}=1; path=/; SameSite=Lax`;
+
+      if (onEnter) onEnter();
 
       // If songs are already prefetched, navigate instantly
       const prefetched = window.__SONGHUB_PREFETCHED_SONGS;
@@ -42,6 +44,7 @@ export default function EnterAppButton({ href }) {
       const navigate = () => {
         if (!navigated) {
           navigated = true;
+          if (onEnter) onEnter();
           router.push(href);
         }
       };
@@ -81,17 +84,17 @@ export default function EnterAppButton({ href }) {
       href={href}
       prefetch={true}
       onClick={handleClick}
-      className="landing-cta group relative inline-flex items-center justify-center gap-2.5 md:gap-3 rounded-[30px] px-7 py-3.5 md:px-11 md:py-[18px] text-[clamp(0.95rem,min(2vh,4.2vw),1.35rem)] font-serif font-bold text-white bg-white/[0.06] backdrop-blur-xl border border-[#D9A544]/50 shadow-[0_0_30px_rgba(242,193,78,0.22),inset_0_1px_0_rgba(255,255,255,0.14)] cursor-pointer"
+      className="landing-cta group relative inline-flex items-center justify-center gap-2 sm:gap-2.5 md:gap-3 rounded-full px-6 py-3 sm:px-8 sm:py-3.5 md:px-11 md:py-[18px] text-[clamp(0.88rem,min(1.8vh,3.8vw),1.25rem)] font-serif font-bold text-white bg-white/[0.06] backdrop-blur-xl border border-[#D9A544]/50 shadow-[0_0_24px_rgba(242,193,78,0.2),inset_0_1px_0_rgba(255,255,255,0.14)] active:scale-95 transition-all cursor-pointer select-none"
     >
       {loading ? (
         <>
-          <Loader2 className="w-4 h-4 md:w-6 md:h-6 text-[#F2C14E] animate-spin" />
+          <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[#F2C14E] animate-spin" />
           <span>Loading songs...</span>
         </>
       ) : (
         <>
           <span>Explore Songs</span>
-          <ArrowRight className="w-4 h-4 md:w-6 md:h-6 text-[#F2C14E] transition-transform duration-300 group-hover:translate-x-1.5" />
+          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[#F2C14E] transition-transform duration-300 group-hover:translate-x-1.5" />
         </>
       )}
     </Link>

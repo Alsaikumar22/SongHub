@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useAudio } from "@/context/audio-context";
 import { useSearch } from "@/context/search-context";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
 import PlayerBar from "@/components/player-bar";
@@ -65,14 +65,16 @@ export default function AppLayout({ children }) {
         setAuthMode("signup");
       }}
     >
-      <AppLayoutInner
-        showAuth={showAuth}
-        setShowAuth={setShowAuth}
-        authMode={authMode}
-        setAuthMode={setAuthMode}
-      >
-        {children}
-      </AppLayoutInner>
+      <Suspense fallback={<>{children}</>}>
+        <AppLayoutInner
+          showAuth={showAuth}
+          setShowAuth={setShowAuth}
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+        >
+          {children}
+        </AppLayoutInner>
+      </Suspense>
     </WelcomeModalProvider>
   );
 }
@@ -122,6 +124,7 @@ function AppLayoutInner({
     setEditingPlaylist,
     collaboratingPlaylist,
     setCollaboratingPlaylist,
+    hasEnteredApp,
   } = useAudio();
 
   const pathname = usePathname();
@@ -256,8 +259,18 @@ function AppLayoutInner({
     }
   };
 
-  const isLanding = pathname === "/";
-  const isDiscover = pathname === "/home";
+  const searchParams = useSearchParams();
+  const isLanding =
+    pathname === "/" &&
+    !searchParams?.get("tab") &&
+    !searchParams?.get("q") &&
+    !searchParams?.get("category") &&
+    !searchParams?.get("playlistId") &&
+    !searchParams?.get("view") &&
+    !searchParams?.get("letter") &&
+    !searchParams?.get("app") &&
+    !searchParams?.get("auth");
+  const isDiscover = pathname === "/" || pathname === "/home";
 
   // Footer / header links open drawers via custom events
   useEffect(() => {
@@ -276,11 +289,8 @@ function AppLayoutInner({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Disable the hotkey on the landing page (no player chrome there).
-      // Read the live pathname so the deps array stays constant-sized
-      // (prevents a React Compiler size-mismatch error).
-      if (typeof window !== "undefined" && window.location.pathname === "/")
-        return;
+      // Disable hotkey when on the Explore Songs landing screen
+      if (isLanding) return;
 
       if (e.code === "Space" || e.key === " ") {
         // Skip hotkey when typing in input, textarea, select, button, or contenteditable
@@ -310,11 +320,6 @@ function AppLayoutInner({
     };
   }, [togglePlay, isAuthenticated]);
 
-  // ─── LANDING PAGE (root URL): render children without app chrome ───
-  if (isLanding) {
-    return <>{children}</>;
-  }
-
   // ─── AUTH LOADING: no splash screen ──────────────────────────────────────
   // The app renders immediately while Firebase resolves the auth state in the
   // background (isAuthenticated flips a moment later). Removing the branded
@@ -325,10 +330,15 @@ function AppLayoutInner({
   // and triggers the auth modal. This prevents ProtectedAction double-modals and
   // gives the user a clean "browse first, then authenticate" experience.
 
+  // ─── LANDING SCREEN (Explore Songs): render children without app chrome ───
+  if (isLanding) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
+    <div className="fixed inset-0 w-full h-full flex flex-col bg-canvas text-copy font-sans overflow-hidden select-none">
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
-      <div className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0">
+      <div className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0 overflow-hidden">
         {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
@@ -349,7 +359,7 @@ function AppLayoutInner({
                   setActivePlaylistId(null);
                   setViewedSongId(null);
                   setShowFullHome(false);
-                  router.push("/home?tab=songs");
+                  router.push("/?tab=songs");
                 }}
               />
             </div>
@@ -369,7 +379,7 @@ function AppLayoutInner({
                   setShowFullResults(false);
                   setActivePlaylistId(null);
                   setViewedSongId(null);
-                  router.push("/home");
+                  router.push("/");
                 }
               }}
             />
@@ -386,7 +396,7 @@ function AppLayoutInner({
                   setActiveTab("categories");
                   setActivePlaylistId(null);
                   setViewedSongId(null);
-                  router.push("/home?tab=categories");
+                  router.push("/?tab=categories");
                 }}
               />
             </div>
@@ -434,7 +444,7 @@ function AppLayoutInner({
                     setActivePlaylistId(null);
                     setViewedSongId(null);
                     setActiveTab("recently-played");
-                    router.push("/home?tab=recently-played");
+                    router.push("/?tab=recently-played");
                   }}
                   className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
                     isDiscover && activeTab === "recently-played"
@@ -483,7 +493,7 @@ function AppLayoutInner({
                         setActivePlaylistId(null);
                         setViewedSongId(null);
                         setActiveTab("favorites");
-                        router.push("/home?tab=favorites");
+                        router.push("/?tab=favorites");
                       });
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
@@ -540,7 +550,7 @@ function AppLayoutInner({
                     setActivePlaylistId(null);
                     setViewedSongId(null);
                     setActiveTab("playlists");
-                    router.push("/home?tab=playlists");
+                    router.push("/?tab=playlists");
                   }}
                   className="text-[10px] font-bold text-dim hover:text-title uppercase tracking-wider transition-colors cursor-pointer"
                 >
@@ -580,7 +590,7 @@ function AppLayoutInner({
                         setActiveTab("playlist");
                         setActivePlaylistId(list.id);
                         setViewedSongId(null);
-                        router.push(`/home?tab=playlist&playlistId=${list.id}`);
+                        router.push(`/?tab=playlist&playlistId=${list.id}`);
                       });
                     }}
                   />
@@ -730,7 +740,7 @@ function AppLayoutInner({
         {/* MAIN PANEL CONTENT */}
         <main
           className={`flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative ${
-            isAuthenticated ? "pb-[116px]" : "pb-[64px]"
+            currentSong ? "pb-[120px]" : "pb-[60px]"
           } lg:pb-0`}
         >
           {children}

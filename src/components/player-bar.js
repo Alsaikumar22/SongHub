@@ -657,7 +657,7 @@ export default function PlayerBar() {
                 )
               ) : (
                 <button
-                  onClick={() => router.push("/home?tab=discover")}
+                  onClick={() => router.push("/?tab=discover")}
                   className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
                   title="Lyrics"
                 >
@@ -778,7 +778,7 @@ export default function PlayerBar() {
                 Playing From
               </span>
               <span className="text-xs font-bold text-white block mt-0.5 truncate max-w-[200px]">
-                {pathname === "/home" ? "Home Catalog" : "Details Page"}
+                {pathname === "/" || pathname === "/home" ? "Home Catalog" : "Details Page"}
               </span>
             </div>
             <div className="flex items-center gap-1">

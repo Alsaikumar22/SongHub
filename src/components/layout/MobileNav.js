@@ -65,7 +65,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullHome(true);
-        router.push("/home?tab=discover");
+        router.push("/?tab=discover");
       },
     },
     {
@@ -79,7 +79,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("categories");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        router.push("/home?tab=categories");
+        router.push("/?tab=categories");
       },
     },
     {
@@ -94,7 +94,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullHome(false);
-        router.push("/home?tab=songs");
+        router.push("/?tab=songs");
       },
     },
     {
@@ -106,7 +106,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("search");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        router.push("/home?tab=search");
+        router.push("/?tab=search");
       },
     },
     {
@@ -120,16 +120,16 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        router.push("/home?tab=favorites");
+        router.push("/?tab=favorites");
       }),
     },
   ];
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-line z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-line z-50 shadow-[0_-4px_16px_rgba(0,0,0,0.3)] select-none pointer-events-auto">
         {/* ─── Tab Buttons ─── */}
-        <div className="flex items-center justify-around px-2 pt-0 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex items-center justify-around px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
           {tabs.map((tab) => {
             const isActive = !isOnSongPage && (
               activeTab === tab.id ||
@@ -153,15 +153,15 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
                     : undefined
                 }
                 onClick={tab.onClick}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "text-title"
+                    ? "text-title font-bold"
                     : "text-dim hover:text-copy"
                 }`}
               >
-                <span className={isActive ? "scale-105" : ""}>{tab.icon}</span>
-                <span className={`text-[9px] font-semibold tracking-tight ${
-                  isActive ? "opacity-100" : "opacity-70"
+                <span className={isActive ? "scale-105 text-white" : "text-dim"}>{tab.icon}</span>
+                <span className={`text-[10px] font-semibold tracking-tight ${
+                  isActive ? "opacity-100 text-white" : "opacity-70 text-dim"
                 }`}>
                   {tab.label}
                 </span>
@@ -172,11 +172,11 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
           {/* ─── More Tab ─── */}
           <button
             onClick={() => setShowMoreSheet(true)}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
+            className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
             title="More"
           >
-            <Ellipsis className="w-5 h-5" />
-            <span className="text-[9px] font-semibold tracking-tight opacity-70">
+            <Ellipsis className="w-5 h-5 text-dim" />
+            <span className="text-[10px] font-semibold tracking-tight opacity-70 text-dim">
               More
             </span>
           </button>

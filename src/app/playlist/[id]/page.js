@@ -119,7 +119,7 @@ export default function PlaylistSharePage({ params }) {
         </div>
         <h3 className="text-base font-bold text-title">{error}</h3>
         <button
-          onClick={() => router.push("/home")}
+          onClick={() => router.push("/")}
           className="px-5 py-2.5 rounded-full bg-[#D4A32A] text-black font-bold text-xs shadow-md transition-all cursor-pointer"
         >
           Go to Home
@@ -132,7 +132,7 @@ export default function PlaylistSharePage({ params }) {
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
       <PlaylistDetailView
         playlistId={playlistId}
-        onBack={() => router.push("/home?tab=playlists")}
+        onBack={() => router.push("/?tab=playlists")}
         onEdit={(pl) => {
           setEditingPlaylist(pl);
           setIsCreatePlaylistOpen(true);

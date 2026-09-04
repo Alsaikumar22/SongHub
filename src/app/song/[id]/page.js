@@ -510,7 +510,7 @@ function SongPageContent({ params }) {
       <div className="flex flex-col items-center justify-center p-12 text-center h-full bg-canvas">
         <Music className="w-12 h-12 text-dim mb-4" />
         <h2 className="text-xl font-bold text-title">Song not found</h2>
-        <Link href="/home" className="mt-4 text-sm text-amber-400 hover:underline">
+        <Link href="/" className="mt-4 text-sm text-amber-400 hover:underline">
           Return to home
         </Link>
       </div>

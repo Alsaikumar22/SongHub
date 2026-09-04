@@ -124,7 +124,7 @@ export default function HeroCarousel() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full min-h-[380px] sm:min-h-[420px] md:h-[450px] rounded-2xl sm:rounded-3xl overflow-hidden bg-card border border-line shadow-2xl flex flex-col justify-between p-4 sm:p-6 md:p-10 group select-none transition-all duration-500"
+      className="relative w-full min-h-[340px] sm:min-h-[400px] md:h-[450px] rounded-2xl sm:rounded-3xl overflow-hidden bg-card border border-line shadow-2xl flex flex-col justify-between p-4 sm:p-6 md:p-10 group select-none transition-all duration-500"
     >
       {/* 1. ATMOSPHERIC AMBIENT BLUR BACKDROP */}
       <AnimatePresence mode="wait">

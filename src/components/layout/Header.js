@@ -170,7 +170,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
           setSearchQuery(resultText);
           setShowFullResults(true);
           setVoiceSearchState("inactive");
-          router.push("/home");
+          router.push("/");
         }
       };
 
@@ -250,7 +250,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
       setShowFullResults(true);
       setIsFocused(false);
       e.target.blur();
-      router.push("/home");
+      router.push("/");
     }
   };
 
@@ -272,33 +272,33 @@ export default function Header({ setShowAuth, setAuthMode }) {
         el.scrollTop = 0;
       });
     }
-    router.push("/home?tab=discover");
+    router.push("/?tab=discover");
   };
 
   return (
     <header
-      className={`h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted p-2 items-center justify-between gap-6 shrink-0 sticky top-0 z-50 lg:flex flex`}
+      className={`h-14 sm:h-16 bg-canvas/95 backdrop-blur-md border-b border-line-muted px-3 sm:px-6 py-2 items-center justify-between gap-2 sm:gap-6 shrink-0 sticky top-0 z-50 flex`}
     >
       <Link
-        href="/home"
+        href="/"
         onClick={handleGoHome}
-        className="flex items-center gap-2 md:gap-4 flex-shrink-0 group cursor-pointer"
+        className="flex items-center gap-2 md:gap-4 flex-shrink-0 group cursor-pointer min-w-0"
         aria-label="You Worship home"
       >
-        <div className="bg-black rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-md">
+        <div className="bg-black rounded-xl p-1 sm:p-1.5 flex items-center justify-center shrink-0 shadow-md">
           <ImageWithFallback
             src="/youworship-logo.png"
             alt="You Worship"
             width={44}
             height={44}
-            className="w-8 h-8 md:w-10 md:h-10 object-contain"
+            className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
           />
         </div>
         <div className="flex min-w-0 flex-col justify-center leading-none">
-          <span className="text-base md:text-[22px] font-black tracking-tight text-title whitespace-nowrap">
+          <span className="text-base sm:text-lg md:text-[22px] font-black tracking-tight text-title whitespace-nowrap">
             YouWorship
           </span>
-          <span className="mt-1 text-[8px] md:text-[9px] font-semibold tracking-[0.05em] text-amber-400 whitespace-nowrap">
+          <span className="mt-0.5 sm:mt-1 text-[7.5px] sm:text-[9px] md:text-[10px] font-semibold tracking-[0.02em] sm:tracking-[0.05em] text-amber-400 whitespace-nowrap block">
             All Your Worship Songs in One Place
           </span>
         </div>
@@ -345,7 +345,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                 );
                 if (activeTab !== "categories") {
                   clearSearch();
-                  router.push("/home");
+                  router.push("/");
                 }
               }}
               className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
@@ -491,7 +491,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   onMouseDown={() => {
                     setShowFullResults(true);
                     setIsFocused(false);
-                    router.push("/home");
+                    router.push("/");
                   }}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-card-hover/20 hover:bg-card-hover/50 text-[10px] font-semibold text-muted hover:text-title uppercase tracking-widest border-t border-line transition-all cursor-pointer"
                 >
@@ -543,13 +543,13 @@ export default function Header({ setShowAuth, setAuthMode }) {
             <ProfileDropdown />
           ) : (
             /* ─── Logged Out: Sign Up + Log In ─── */
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={() => {
                   setAuthMode("signup");
                   setShowAuth(true);
                 }}
-                className="px-4 py-1.5 rounded-full bg-[#D4A32A] text-black text-xs font-bold hover:bg-[#c49527] transition-all active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-[#D4A32A] text-black text-[11px] sm:text-xs font-bold hover:bg-[#c49527] transition-all active:scale-95 cursor-pointer whitespace-nowrap"
               >
                 Sign Up
               </button>
@@ -558,7 +558,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   setAuthMode("login");
                   setShowAuth(true);
                 }}
-                className="px-4 py-1.5 rounded-full border border-[#D4A32A] text-[#D4A32A] text-xs font-bold hover:bg-[#D4A32A]/10 transition-all active:scale-95 cursor-pointer"
+                className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full border border-[#D4A32A] text-[#D4A32A] text-[11px] sm:text-xs font-bold hover:bg-[#D4A32A]/10 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
               >
                 Log In
               </button>

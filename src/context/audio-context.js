@@ -142,6 +142,27 @@ export const AudioProvider = ({ children }) => {
 
   const [sections, setSections] = useState({});
   const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [hasEnteredApp, setHasEnteredApp] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isCookieSet = document.cookie.includes("yw_entered=1");
+    const params = new URLSearchParams(window.location.search);
+    const hasParams =
+      params.has("tab") ||
+      params.has("q") ||
+      params.has("category") ||
+      params.has("playlistId") ||
+      params.has("auth") ||
+      params.has("view") ||
+      params.has("letter") ||
+      params.has("app");
+    const isNotRoot = window.location.pathname !== "/";
+
+    if (isCookieSet || hasParams || isNotRoot) {
+      setHasEnteredApp(true);
+    }
+  }, []);
 
   // ─── Pre-build alphabetical sections synchronously ─────────────
   // Called immediately when songs load so SongsSection never shows a spinner.
@@ -1716,6 +1737,8 @@ export const AudioProvider = ({ children }) => {
         sectionsLoading,
         initializeAlphabeticalSections,
         showAllSongsForLetter,
+        hasEnteredApp,
+        setHasEnteredApp,
       }}
     >
       {children}

@@ -76,6 +76,13 @@ const inter = Inter({
   preload: true,
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0B0F18",
+};
+
 export const metadata = {
   metadataBase: new URL("https://youworship.world"),
   title: {
@@ -149,7 +156,7 @@ export default function RootLayout({ children }) {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://youworship.world/home?q={search_term_string}",
+        urlTemplate: "https://youworship.world/?q={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },

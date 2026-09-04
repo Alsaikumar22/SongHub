@@ -93,26 +93,26 @@ export default function MobileMoreSheet({
             );
           } else {
             setActiveTab("discover");
-            router.push("/home");
+            router.push("/");
           }
           break;
         case "recently-played":
           setActiveTab("recently-played");
           setActivePlaylistId(null);
           setViewedSongId(null);
-          router.push("/home?tab=recently-played");
+          router.push("/?tab=recently-played");
           break;
         case "playlists":
           setActiveTab("playlists");
           setActivePlaylistId(null);
           setViewedSongId(null);
-          router.push("/home?tab=playlists");
+          router.push("/?tab=playlists");
           break;
         case "categories":
           setActiveTab("categories");
           setActivePlaylistId(null);
           setViewedSongId(null);
-          router.push("/home");
+          router.push("/?tab=categories");
           break;
         case "contact":
           onOpenTalkToUs?.();

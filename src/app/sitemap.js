@@ -7,12 +7,6 @@ export default function sitemap() {
       priority: 1,
     },
     {
-      url: "https://youworship.world/home",
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
       url: "https://youworship.world/privacy",
       lastModified: new Date(),
       changeFrequency: "monthly",

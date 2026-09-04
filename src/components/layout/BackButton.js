@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
  * to `fallbackHref` instead.
  */
 export default function BackButton({
-  fallbackHref = "/home",
+  fallbackHref = "/",
   className = "",
 }) {
   const router = useRouter();

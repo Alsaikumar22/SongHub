@@ -3,7 +3,7 @@ export default function manifest() {
     name: "YouWorship — Christian Songs, Lyrics, Audio & Videos",
     short_name: "YouWorship",
     description: "Discover thousands of Telugu, English, and Hindi Christian worship songs with lyrics, audio, and videos.",
-    start_url: "/home",
+    start_url: "/",
     display: "standalone",
     background_color: "#070707",
     theme_color: "#D4A32A",

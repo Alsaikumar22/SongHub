@@ -1,158 +1,808 @@
-import Image from "next/image";
-import { redirect } from "next/navigation";
-import EnterAppButton from "@/components/landing/EnterAppButton";
-import SongsPrefetcher from "@/components/landing/SongsPrefetcher";
+"use client";
 
-/**
- * Landing / Welcome screen — shown at the root URL (youworship.world).
- * Premium gold-on-navy hero per the product design:
- *   deep navy → black gradient, glowing logo, luxury serif title,
- *   subtitle, tagline and a glassmorphism "Explore Songs" CTA that
- *   opens the application at /home.
- */
-const APP_PARAMS = ["tab", "q", "category", "playlistId", "auth"];
+import React, { useState, useEffect, useMemo, useCallback, Suspense, useTransition } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAudio } from "@/context/audio-context";
+import { useSearch } from "@/context/search-context";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import SongsSection from "@/components/home/SongsSection";
+import HeroCarousel from "@/components/home/HeroCarousel";
+import VerseOfTheWeek from "@/components/home/VerseOfTheWeek";
+import RecentlyPlayed from "@/components/home/RecentlyPlayed";
+import SearchResults from "@/components/layout/SearchResults";
+import LyricsSearchResults from "@/components/search/LyricsSearchResults";
+import { useLyricsSearch } from "@/hooks/useLyricsSearch";
+import SongArtwork from "@/components/ui/SongArtwork";
+import CategoryExplorer from "@/components/categories/CategoryExplorer";
+import { FullAppSkeleton } from "@/components/ui/SongSkeleton";
+import RecentlyPlayedView from "@/components/home/RecentlyPlayedView";
+import LikedSongsView from "@/components/home/LikedSongsView";
+import PlaylistsOverview from "@/components/playlist/PlaylistsOverview";
+import PlaylistDetailView from "@/components/playlist/PlaylistDetailView";
+import CreatePlaylistModal from "@/components/playlist/CreatePlaylistModal";
+import AddToPlaylistModal from "@/components/playlist/AddToPlaylistModal";
+import LandingHero from "@/components/landing/LandingHero";
 
-export default async function LandingPage({ searchParams }) {
-  const params = await searchParams;
+import {
+  FolderHeart,
+  ListMusic,
+  Clock,
+  Plus,
+  Search,
+  Heart,
+  Trash2,
+  ChevronLeft,
+  Play,
+  ArrowLeft,
+  TrendingUp,
+  Library,
+  X,
+  Music,
+  Mic
+} from "lucide-react";
 
-  let redirectTo = null;
-  if (typeof params?.redirect === "string" && params.redirect) {
-    try {
-      const decoded = decodeURIComponent(params.redirect);
-      if (decoded.startsWith("/") && !decoded.startsWith("//")) {
-        redirectTo = decoded;
+const searchableText = (value) => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value.toLowerCase();
+  if (typeof value === "number") return String(value).toLowerCase();
+  if (typeof value === "object" && typeof value.name === "string") return value.name.toLowerCase();
+  return "";
+};
+
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const {
+    songs,
+    songsLoading,
+    currentSong,
+    isPlaying,
+    playSong,
+    favorites,
+    toggleFavorite,
+    playlists,
+    createPlaylist,
+    deletePlaylist,
+    addSongToPlaylist,
+    removeSongFromPlaylist,
+    recentlyPlayed,
+    activeTab,
+    setActiveTab,
+    activePlaylistId,
+    setActivePlaylistId,
+    setViewedSongId,
+    showFullHome,
+    setShowFullHome,
+    addToPlaylistSong,
+    setAddToPlaylistSong,
+    isCreatePlaylistOpen,
+    setIsCreatePlaylistOpen,
+    editingPlaylist,
+    setEditingPlaylist,
+    hasEnteredApp,
+    setHasEnteredApp,
+  } = useAudio();
+
+  const { searchQuery, setSearchQuery, showFullResults, setShowFullResults, searchMode, setSearchMode, triggerVoiceSearch } = useSearch();
+
+  // Lyrics search (used when searchMode === "lyrics")
+  const {
+    query: lyricsQuery,
+    setQuery: setLyricsQuery,
+    results: lyricsResults,
+    total: lyricsTotal,
+    loading: lyricsLoading,
+    error: lyricsError,
+    hasMore: lyricsHasMore,
+    loadMore: lyricsLoadMore,
+    clear: clearLyricsSearch,
+  } = useLyricsSearch({ debounceMs: 350 });
+
+  // Sync searchQuery -> lyricsQuery when in lyrics mode
+  useEffect(() => {
+    if (searchMode === "lyrics" && searchQuery) {
+      setLyricsQuery(searchQuery);
+      setShowFullResults(true);
+    }
+  }, [searchMode]);
+
+  const commitMobileSearch = useCallback((value) => {
+    setSearchQuery(value);
+    if (value) {
+      setShowFullResults(true);
+    }
+    // Always update lyrics query when in lyrics mode
+    if (searchMode === "lyrics") {
+      setLyricsQuery(value || "");
+    }
+  }, [setSearchQuery, setShowFullResults, searchMode, setLyricsQuery]);
+
+  const {
+    inputValue: mobileInputValue,
+    handleChange: handleMobileSearchChange,
+    flush: flushMobileSearch,
+    clear: clearMobileSearch,
+  } = useDebouncedSearch({
+    initialValue: searchQuery,
+    onCommit: commitMobileSearch,
+    debounceMs: 250,
+  });
+
+  const onMobileSearchChange = useCallback((e) => {
+    handleMobileSearchChange(e);
+    setLyricsQuery(e.target.value || "");
+  }, [handleMobileSearchChange, setLyricsQuery]);
+
+  const [selectedLetter, setSelectedLetter] = useState(null);
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([
+    "ఉదయ ఆరాధన",
+    "స్తుతి పాటలు",
+    "శ్రీమంతుడు",
+    "Jesus worship"
+  ]);
+
+  const isLandingVisible =
+    !searchParams?.get("tab") &&
+    !searchParams?.get("q") &&
+    !searchParams?.get("category") &&
+    !searchParams?.get("playlistId") &&
+    !searchParams?.get("view") &&
+    !searchParams?.get("letter") &&
+    !searchParams?.get("app") &&
+    !searchParams?.get("auth");
+
+  // Sync 1: browser URL parameters -> context tab/search/letter state (on load/popstate)
+  useEffect(() => {
+    if (!searchParams) return;
+    
+    const tabParam = searchParams.get("tab");
+    const viewParam = searchParams.get("view");
+    if (tabParam === "songs" || viewParam === "songs") {
+      setActiveTab("discover");
+      setShowFullHome(false);
+    } else if (tabParam === "discover" || !tabParam) {
+      if (activeTab !== "discover") {
+        setActiveTab("discover");
       }
-    } catch {
-      // Malformed encoding → ignore.
+      setShowFullHome(true);
+    } else if (tabParam) {
+      if (tabParam !== activeTab) {
+        setActiveTab(tabParam);
+      }
     }
-  }
+    
+    const playlistIdParam = searchParams.get("playlistId") || searchParams.get("id");
+    if (playlistIdParam) {
+      if (playlistIdParam !== activePlaylistId) {
+        setActivePlaylistId(playlistIdParam);
+      }
+    } else {
+      if (activePlaylistId) {
+        setActivePlaylistId(null);
+      }
+    }
+    
+    const queryParam = searchParams.get("q");
+    if (queryParam) {
+      if (queryParam !== searchQuery) {
+        setSearchQuery(queryParam);
+        setShowFullResults(true);
+      }
+    } else {
+      if (searchQuery) {
+        setSearchQuery("");
+        setShowFullResults(false);
+      }
+    }
 
-  // Forward legacy queries directly to /home
-  if (params && APP_PARAMS.some((key) => params[key] !== undefined)) {
-    const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-      if (Array.isArray(value)) value.forEach((v) => query.append(key, v));
-      else if (value !== undefined && value !== null) query.set(key, String(value));
+    const letterParam = searchParams.get("letter");
+    if (letterParam) {
+      if (letterParam !== selectedLetter) {
+        setSelectedLetter(letterParam);
+      }
+    } else {
+      if (selectedLetter) {
+        setSelectedLetter(null);
+      }
     }
-    redirect(`/home?${query.toString()}`);
+
+    // Sync searchMode param
+    const smParam = searchParams.get("searchMode");
+    if (smParam === "lyrics" && searchMode !== "lyrics") {
+      setSearchMode("lyrics");
+    }
+  }, [searchParams]);
+
+  // Sync 2: context state changes -> browser URL parameters
+  useEffect(() => {
+    if (!searchParams) return;
+    if (isLandingVisible) return;
+
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
+    // Sync tab param
+    const currentTabInUrl = params.get("tab");
+    if (activeTab && activeTab !== currentTabInUrl) {
+      params.set("tab", activeTab);
+      changed = true;
+    }
+
+    // Sync playlistId param
+    const currentPlaylistIdInUrl = params.get("playlistId");
+    if (activeTab === "playlist" && activePlaylistId) {
+      if (activePlaylistId !== currentPlaylistIdInUrl) {
+        params.set("playlistId", activePlaylistId);
+        changed = true;
+      }
+    } else if (currentPlaylistIdInUrl) {
+      params.delete("playlistId");
+      changed = true;
+    }
+
+    // Clean up category param if tab is no longer categories
+    if (activeTab !== "categories" && params.has("category")) {
+      params.delete("category");
+      changed = true;
+    }
+
+    // Sync search query param
+    const currentQueryInUrl = params.get("q");
+    if (searchQuery && showFullResults) {
+      if (searchQuery !== currentQueryInUrl) {
+        params.set("q", searchQuery);
+        changed = true;
+      }
+    } else if (currentQueryInUrl) {
+      params.delete("q");
+      changed = true;
+    }
+
+    // Sync letter param
+    const currentLetterInUrl = params.get("letter");
+    if (selectedLetter) {
+      if (selectedLetter !== currentLetterInUrl) {
+        params.set("letter", selectedLetter);
+        changed = true;
+      }
+    } else if (currentLetterInUrl) {
+      params.delete("letter");
+      changed = true;
+    }
+
+    if (changed) {
+      startTransition(() => {
+        router.push(`/?${params.toString()}`);
+      });
+    }
+  }, [activeTab, activePlaylistId, searchQuery, showFullResults, selectedLetter]);
+
+  // Reset letter if user switches tabs or runs search query
+  useEffect(() => {
+    if (activeTab !== "discover" || (searchQuery && showFullResults)) {
+      setSelectedLetter(null);
+    }
+  }, [activeTab, searchQuery, showFullResults]);
+
+  const getFilteredSongs = () => {
+    const safeSongs = Array.isArray(songs) ? songs : [];
+    let list = [...safeSongs];
+    if (activeTab === "favorites") {
+      list = list.filter((song) => favorites.includes(song.id));
+    } else if (activeTab === "playlist" && activePlaylistId) {
+      const pl = playlists.find((p) => p.id === activePlaylistId);
+      if (pl) list = list.filter((song) => pl.songIds.includes(song.id));
+      else list = [];
+    } else if (activeTab === "recently-played") {
+      list = recentlyPlayed
+        .map((id) => songs.find((s) => s.id === id))
+        .filter(Boolean);
+    }
+    const trimmedQuery = (searchQuery || "").toString().trim();
+    if (trimmedQuery && showFullResults) {
+      const q = trimmedQuery.toLowerCase();
+      list = list.filter(
+        (s) =>
+          searchableText(s.teluguTitle || s.title).includes(q) ||
+          searchableText(s.titleEnglish).includes(q) ||
+          searchableText(s.title).includes(q) ||
+          searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
+          searchableText(s.album).includes(q),
+      );
+    }
+    return list;
+  };
+
+  const filteredSongs = getFilteredSongs();
+  const activePlaylist = playlists.find((p) => p.id === activePlaylistId);
+
+  // Mobile specific search results
+  const mobileSearchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return songs.filter(
+      (s) =>
+        searchableText(s.teluguTitle || s.title).includes(q) ||
+        searchableText(s.titleEnglish).includes(q) ||
+        searchableText(s.title).includes(q) ||
+        searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
+        searchableText(s.album).includes(q)
+    );
+  }, [songs, searchQuery]);
+
+  const handleCreatePlaylistMobile = (e) => {
+    e.preventDefault();
+    if (newPlaylistName.trim()) {
+      createPlaylist(newPlaylistName.trim());
+      setNewPlaylistName("");
+      setIsCreatingPlaylist(false);
+    }
+  };
+
+  if (isLandingVisible) {
+    return (
+      <LandingHero
+        onEnter={() => router.push("/?tab=discover")}
+        redirectTo={searchParams?.get("redirect")}
+      />
+    );
   }
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-[#0B0F18] flex flex-col items-center justify-center px-5 sm:px-6 select-none">
-      {/* Inline script: starts fetching songs BEFORE React hydrates */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              if (window.__SONGHUB_SONGS_PREFETCHED) return;
-              window.__SONGHUB_SONGS_PREFETCHED = true;
-              fetch('/api/songs?all=true', { cache: 'default' })
-                .then(function(r) { return r.ok ? r.json() : null; })
-                .then(function(d) {
-                  if (d && d.songs) {
-                    window.__SONGHUB_PREFETCHED_SONGS = d.songs;
-                  }
-                })
-                .catch(function() {});
-            })();
-          `,
-        }}
-      />
-      {/* Also prefetch the /home page JS bundle and API */}
-      <link rel="prefetch" href="/home" />
-      <link rel="prefetch" href="/api/songs?all=true" />
-      <SongsPrefetcher />
-      {/* Deep navy (#0B0F18) → black gradient */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-[#0B0F18] via-[#02040E] to-black"
-      />
+    <div className={`flex-1 flex flex-col min-h-0 overflow-y-auto`}>
+      
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* ─── DESKTOP VIEW ─── */}
+      {/* ──────────────────────────────────────────────────────── */}
+      <div className="hidden lg:block p-4">
+        {/* VIEW HEADER (Favorites only; Recently Played and Playlists have dedicated banners) */}
+        {activeTab === "favorites" && !selectedLetter && !(searchQuery && showFullResults) && (
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-title tracking-tight flex items-center gap-2">
+              <FolderHeart className="w-5 h-5 text-red-500" />
+              My Favorites
+            </h1>
+            <p className="text-xs text-muted mt-1">Your curated collection of loved songs.</p>
+          </div>
+        )}
 
-      {/* Soft golden ambient glow radiating from behind the centered logo */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[14%] flex justify-center">
-        <div className="landing-glow h-[min(58vw,500px)] w-[min(88vw,740px)] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(242,193,78,0.18)_0%,rgba(242,193,78,0.05)_42%,transparent_70%)] blur-2xl" />
+        {/* Hero Carousel (full width, above) */}
+        {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
+          <div className="mb-8">
+            <HeroCarousel />
+          </div>
+        )}
+
+        {/* Verse of the Day */}
+        {activeTab === "discover" && !(searchQuery && showFullResults) && !selectedLetter && (
+          <div className="mb-8">
+            <VerseOfTheWeek />
+          </div>
+        )}
+
+        {/* Recently Played Carousel */}
+        {activeTab === "discover" && showFullHome && !(searchQuery && showFullResults) && !selectedLetter && (
+          <div className="mb-8">
+            <RecentlyPlayed />
+          </div>
+        )}
+
+        {/* Dedicated Recently Played View */}
+        {activeTab === "recently-played" && !(searchQuery && showFullResults) && (
+          <RecentlyPlayedView />
+        )}
+
+        {/* Dedicated Playlists Overview (when no playlist is selected) */}
+        {(activeTab === "playlists" || activeTab === "playlist") && !activePlaylistId && !(searchQuery && showFullResults) && (
+          <PlaylistsOverview
+            onSelectPlaylist={(id) => {
+              setActiveTab("playlist");
+              setActivePlaylistId(id);
+            }}
+            onCreateClick={() => setIsCreatePlaylistOpen(true)}
+            onEditClick={(pl) => {
+              setEditingPlaylist(pl);
+              setIsCreatePlaylistOpen(true);
+            }}
+          />
+        )}
+
+        {/* Dedicated Playlist Detail View (when a playlist is selected) */}
+        {(activeTab === "playlist" || activeTab === "playlists") && activePlaylistId && !(searchQuery && showFullResults) && (
+          <PlaylistDetailView
+            playlistId={activePlaylistId}
+            onBack={() => {
+              setActivePlaylistId(null);
+              setActiveTab("playlists");
+            }}
+            onEdit={(pl) => {
+              setEditingPlaylist(pl);
+              setIsCreatePlaylistOpen(true);
+            }}
+          />
+        )}
+
+        {/* Category Explorer View */}
+        {activeTab === "categories" && !(searchQuery && showFullResults) && (
+          <CategoryExplorer />
+        )}
+
+        {/* Liked Songs / Favorites View */}
+        {activeTab === "favorites" && !(searchQuery && showFullResults) && (
+          <LikedSongsView />
+        )}
+
+        {/* Songs Section or Search Results */}
+        {activeTab !== "categories" && activeTab !== "recently-played" && activeTab !== "playlists" && activeTab !== "favorites" && !(activeTab === "playlist") && (
+          searchQuery && showFullResults ? (
+            <div className="flex-1 flex flex-col min-h-0 space-y-8">
+              {filteredSongs.length > 0 && (
+                <SearchResults
+                  results={filteredSongs}
+                  query={searchQuery}
+                  currentSong={currentSong}
+                  isPlaying={isPlaying}
+                  playSong={playSong}
+                />
+              )}
+              {lyricsResults.length > 0 && (
+                <div className={`${filteredSongs.length > 0 ? "border-t border-line/30 pt-6" : ""}`}>
+                  <LyricsSearchResults
+                    results={lyricsResults}
+                    total={lyricsTotal}
+                    query={searchQuery}
+                    loading={lyricsLoading}
+                    error={lyricsError}
+                    hasMore={lyricsHasMore}
+                    onLoadMore={lyricsLoadMore}
+                  />
+                </div>
+              )}
+              {filteredSongs.length === 0 && lyricsResults.length === 0 && !lyricsLoading && (
+                <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+                  <Search className="w-8 h-8 text-dim mb-4" />
+                  <h2 className="text-lg font-semibold text-title">No matches found</h2>
+                  <p className="text-sm text-muted mt-1.5 max-w-xs">
+                    We couldn&apos;t find any songs or lyrics matching &ldquo;{searchQuery}&rdquo;.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <SongsSection
+              songs={filteredSongs}
+              songsLoading={songsLoading}
+              currentSong={currentSong}
+              isPlaying={isPlaying}
+              playSong={playSong}
+              selectedLetter={selectedLetter}
+              setSelectedLetter={setSelectedLetter}
+            />
+          )
+        )}
       </div>
 
-      {/* Subtle bottom fade for depth */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 to-transparent"
-      />
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* ─── MOBILE VIEW ─── */}
+      {/* ──────────────────────────────────────────────────────── */}
+      <div className="block lg:hidden p-4 space-y-6">
+        
+        {/* 1. BROWSE TAB */}
+        {activeTab === "discover" && (
+          <div className="space-y-6">
+            
+            {!selectedLetter && showFullHome && <HeroCarousel />}
+            {!selectedLetter && <VerseOfTheWeek />}
+            {!selectedLetter && showFullHome && <RecentlyPlayed />}
 
-      {/* ─── Content ─── */}
-      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full">
-        {/* LOGO */}
-        <div className="landing-fade-up relative mb-6 md:mb-8">
-          <div
-            aria-hidden
-            className="landing-glow pointer-events-none absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(242,193,78,0.32)_0%,transparent_70%)] blur-2xl"
-          />
-          <div className="landing-float relative">
-            <Image
-              src="/youworship-logo.png"
-              alt="You Worship"
-              width={1254}
-              height={1254}
-              priority
-              className="relative w-[clamp(10.5rem,18vh,16rem)] h-auto drop-shadow-[0_0_20px_rgba(242,193,78,0.25)]"
-            />
-            <div
-              aria-hidden
-              className="landing-shimmer pointer-events-none absolute inset-0 rounded-full"
+            <SongsSection
+              songs={filteredSongs}
+              songsLoading={songsLoading}
+              currentSong={currentSong}
+              isPlaying={isPlaying}
+              playSong={playSong}
+              selectedLetter={selectedLetter}
+              setSelectedLetter={setSelectedLetter}
             />
           </div>
-        </div>
+        )}
 
-        {/* TITLE */}
-        <h1
-          className="landing-fade-up font-serif text-[clamp(2.25rem,min(9vh,13vw),6.5rem)] font-bold leading-[1.15] tracking-[0.04em] whitespace-nowrap gold-title-text"
-          style={{ animationDelay: "0.15s" }}
-        >
-          You Worship
-        </h1>
+        {/* 2. CATEGORIES TAB */}
+        {activeTab === "categories" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <CategoryExplorer />
+          </div>
+        )}
 
-        {/* SUBTITLE */}
-        <p
-          className="landing-fade-up mt-5 md:mt-6 text-[clamp(0.85rem,min(2.2vh,4vw),1.25rem)] text-[#A9B2C6] md:text-[#8A93A8] font-normal md:font-light tracking-[0.18em] md:tracking-[0.3em] uppercase"
-          style={{ animationDelay: "0.3s" }}
-        >
-          <span className="inline-flex items-center gap-x-3 gap-y-1 flex-wrap justify-center">
-            <span>Christian Songs</span>
-            <span className="text-[#F2C14E] text-[0.6em] leading-none">•</span>
-            <span>Lyrics</span>
-            <span className="text-[#F2C14E] text-[0.6em] leading-none">•</span>
-            <span>Audio</span>
-            <span className="text-[#F2C14E] text-[0.6em] leading-none">•</span>
-            <span>Videos</span>
-          </span>
-        </p>
+        {/* 3. SEARCH TAB */}
+        {activeTab === "search" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {!searchParams?.get("category") && (
+              <>
+                {!(isSearchFocused || searchQuery.trim() !== "") ? (
+                  /* Standard Spotify header & clean input */
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex flex-col">
+                      <h1 className="text-3xl font-black text-title tracking-tight">Search</h1>
+                    </div>
+                    <div className="relative flex items-center w-full gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="What do you want to listen to?"
+                          value={mobileInputValue}
+                          onFocus={() => setIsSearchFocused(true)}
+                          onChange={(e) => {
+                            onMobileSearchChange(e);
+                          }}
+                          className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
+                        />
+                      </div>
+                      
+                      {/* Mobile Mic Button */}
+                      <button
+                        onClick={triggerVoiceSearch}
+                        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                        title="Voice Search"
+                      >
+                        <Mic className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Focused / active search sticky layout */
+                  <div className="sticky top-0 bg-card py-2 z-30 flex items-center gap-2.5 w-full animate-in slide-in-from-top-1.5 duration-200">
+                    <div className="relative flex-1">
+                      <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search songs, artists, genres..."
+                        value={mobileInputValue}
+                        onChange={(e) => {
+                          onMobileSearchChange(e);
+                        }}
+                        className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => {
+                            clearMobileSearch();
+                          }}
+                          className="p-1 hover:bg-card-hover rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-title cursor-pointer transition-colors duration-150"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
 
-        {/* TAGLINE */}
-        <div
-          className="landing-fade-up mt-5 md:mt-7 space-y-1.5 md:space-y-2 text-[clamp(1.1rem,min(2.4vh,4.5vw),1.75rem)] font-serif italic font-medium leading-relaxed text-[#F2F2F2]"
-          style={{ animationDelay: "0.45s" }}
-        >
-          <p>
-            Songs that <span className="text-[#F2C14E] font-medium">inspire</span>.
-          </p>
-          <p>
-            Lyrics that <span className="text-[#F2C14E] font-medium">touch</span> the heart.
-          </p>
-        </div>
+                    {/* Mobile Mic Button */}
+                    <button
+                      onClick={triggerVoiceSearch}
+                      className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                      title="Voice Search"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
 
-        {/* CTA BUTTON */}
-        <div
-          className="landing-fade-up mt-7 md:mt-9"
-          style={{ animationDelay: "0.6s" }}
-        >
-          <EnterAppButton href={redirectTo || "/home"} />
-          {redirectTo && (
-            <p className="mt-4 text-xs md:text-sm text-[#8A93A8]/90 tracking-wide">
-              You were sent to a song — open it after entering.
-            </p>
-          )}
-        </div>
+                    <button
+                      onClick={() => {
+                        setIsSearchFocused(false);
+                        clearMobileSearch();
+                      }}
+                      className="text-xs font-bold text-title hover:text-dim active:scale-95 transition-all duration-150 pr-1 shrink-0"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {searchParams?.get("category") ? (
+              /* Category details page always takes precedence */
+              <CategoryExplorer />
+            ) : isSearchFocused && searchQuery.trim() === "" ? (
+              /* focused empty state: Recent Searches */
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-title">Recent searches</h2>
+                  {recentSearches.length > 0 && (
+                    <button
+                      onClick={() => setRecentSearches([])}
+                      className="text-xs font-bold text-dim hover:text-title transition-colors cursor-pointer"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {recentSearches.length === 0 ? (
+                  <div className="text-center py-16 text-muted">
+                    <p className="text-sm font-semibold">Search for songs, artists, or categories</p>
+                    <p className="text-xs text-dim mt-1">Your recent searches will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentSearches.map((query, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-card-hover/40 cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSearchQuery(query);
+                          setShowFullResults(true);
+                        }}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <Clock className="w-4 h-4 text-muted" />
+                          <span className="text-sm font-semibold text-title">{query}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecentSearches(recentSearches.filter((_, i) => i !== index));
+                          }}
+                          className="p-1 hover:bg-card-hover rounded-full text-dim hover:text-title cursor-pointer transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : searchQuery.trim() === "" ? (
+              /* Search Hub default: Dynamic Category Explorer */
+              <CategoryExplorer />
+            ) : (
+              /* Inline Search Results */
+              <div className="space-y-6">
+                {/* 1. Songs metadata matches */}
+                {mobileSearchResults.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Songs</span>
+                      <span className="text-xs text-dim">{mobileSearchResults.length} found</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {mobileSearchResults.map((song) => {
+                        const isCurrent = currentSong?.id === song.id;
+                        return (
+                          <div
+                            key={song.id}
+                            onClick={() => {
+                              playSong(song);
+                              router.push(`/song/${encodeURIComponent(song.slug || song.id)}`);
+                            }}
+                            className={`flex items-center gap-3 p-2 rounded-xl active:bg-card-hover transition-colors cursor-pointer ${
+                              isCurrent ? "bg-card-hover border border-line" : ""
+                            }`}
+                          >
+                            <div className="w-11 h-11 rounded-lg overflow-hidden border border-line shrink-0">
+                              <SongArtwork song={song} className="w-full h-full object-cover" iconSize="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-sm font-semibold block truncate ${
+                                isCurrent ? "text-title" : "text-title"
+                              } ${song.teluguTitle ? "font-telugu" : ""}`}>
+                                {song.teluguTitle || song.title}
+                              </span>
+                              <span className="text-xs text-muted block truncate mt-0.5">
+                                {song.titleEnglish}
+                              </span>
+                            </div>
+                            <div className="shrink-0 text-xs text-dim pr-1">
+                              {isCurrent && isPlaying ? (
+                                <div className="flex items-end gap-[2px] h-3">
+                                  <span className="w-[2px] bg-white rounded-full h-3 animate-music-bar-1" />
+                                  <span className="w-[2px] bg-white rounded-full h-2 animate-music-bar-2" />
+                                  <span className="w-[2px] bg-white rounded-full h-2.5 animate-music-bar-3" />
+                                </div>
+                              ) : (
+                                song.duration
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Lyrics matches */}
+                {lyricsResults.length > 0 && (
+                  <div className="space-y-4">
+                    <LyricsSearchResults
+                      results={lyricsResults}
+                      total={lyricsTotal}
+                      query={searchQuery}
+                      loading={lyricsLoading}
+                      error={lyricsError}
+                      hasMore={lyricsHasMore}
+                      onLoadMore={lyricsLoadMore}
+                    />
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {lyricsLoading && mobileSearchResults.length === 0 && lyricsResults.length === 0 && (
+                  <div className="text-center py-12 text-muted">
+                    <p className="text-sm">Searching...</p>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {mobileSearchResults.length === 0 && lyricsResults.length === 0 && !lyricsLoading && (
+                  <div className="text-center py-12 text-muted">
+                    <p className="font-semibold text-sm">No matches found</p>
+                    <p className="text-xs mt-1 text-dim">Try another spelling or phrase</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. FAVORITES TAB (MOBILE) */}
+        {activeTab === "favorites" && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <LikedSongsView />
+          </div>
+        )}
+
+        {/* 5. RECENTLY PLAYED TAB (MOBILE) */}
+        {activeTab === "recently-played" && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <RecentlyPlayedView />
+          </div>
+        )}
+
+        {/* 6. PLAYLISTS TAB (MOBILE) */}
+        {(activeTab === "playlist" || activeTab === "playlists") && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {activePlaylistId ? (
+              <PlaylistDetailView
+                playlistId={activePlaylistId}
+                onBack={() => {
+                  setActivePlaylistId(null);
+                  setActiveTab("playlists");
+                }}
+                onEdit={(pl) => {
+                  setEditingPlaylist(pl);
+                  setIsCreatePlaylistOpen(true);
+                }}
+              />
+            ) : (
+              <PlaylistsOverview
+                onSelectPlaylist={(id) => {
+                  setActiveTab("playlist");
+                  setActivePlaylistId(id);
+                }}
+                onCreateClick={() => setIsCreatePlaylistOpen(true)}
+                onEditClick={(pl) => {
+                  setEditingPlaylist(pl);
+                  setIsCreatePlaylistOpen(true);
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<FullAppSkeleton />}>
+      <HomeContent />
+    </Suspense>
   );
 }
