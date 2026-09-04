@@ -27,6 +27,7 @@ import SongArtwork from "@/components/ui/SongArtwork";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import { subscribeToPlaylist } from "@/lib/firestore-service";
 import SongOptionsMenu from "@/components/song/SongOptionsMenu";
+import AddSongsToPlaylistModal from "@/components/playlist/AddSongsToPlaylistModal";
 
 export default function PlaylistDetailView({ playlistId, onBack, onEdit }) {
   const { user } = useAuth();
@@ -48,6 +49,7 @@ export default function PlaylistDetailView({ playlistId, onBack, onEdit }) {
   } = useAudio();
 
   const [isDeleted, setIsDeleted] = useState(false);
+  const [isAddSongsModalOpen, setIsAddSongsModalOpen] = useState(false);
   const router = useRouter();
 
   // Find playlist from state
@@ -288,8 +290,8 @@ export default function PlaylistDetailView({ playlistId, onBack, onEdit }) {
 
         {canAddSongs && (
           <button
-            onClick={() => setActiveTab("discover")}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card-hover hover:bg-line border border-line text-xs font-bold text-title transition-all cursor-pointer active:scale-95 shadow-sm"
+            onClick={() => setIsAddSongsModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#D4A32A]/10 hover:bg-[#D4A32A]/20 border border-[#D4A32A]/40 text-xs font-bold text-[#D4A32A] transition-all cursor-pointer active:scale-95 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5 text-[#D4A32A]" />
             <span>Add Song</span>
@@ -311,10 +313,10 @@ export default function PlaylistDetailView({ playlistId, onBack, onEdit }) {
           </div>
           {canAddSongs && (
             <button
-              onClick={() => setActiveTab("discover")}
-              className="px-5 py-2.5 rounded-full bg-[#D4A32A] hover:bg-[#c49527] text-black font-bold text-xs shadow-md transition-all cursor-pointer"
+              onClick={() => setIsAddSongsModalOpen(true)}
+              className="px-6 py-2.5 rounded-full bg-[#D4A32A] hover:bg-[#c49527] text-black font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
             >
-              Explore Songs
+              + Add Songs
             </button>
           )}
         </div>
@@ -437,6 +439,13 @@ export default function PlaylistDetailView({ playlistId, onBack, onEdit }) {
           })}
         </div>
       )}
+
+      {/* Add Songs Picker Modal */}
+      <AddSongsToPlaylistModal
+        playlist={playlist}
+        isOpen={isAddSongsModalOpen}
+        onClose={() => setIsAddSongsModalOpen(false)}
+      />
     </div>
   );
 }

@@ -12,7 +12,8 @@ import {
   Heart,
   Music,
   Clock,
-  Volume2
+  Volume2,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -25,7 +26,7 @@ const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 
 export default function HeroCarousel() {
   const router = useRouter();
-  const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading } = useAudio();
+  const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading, setAddToPlaylistSong } = useAudio();
   const { weeklySongs } = useWeeklySongs({ songs, count: 7 });
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -321,6 +322,15 @@ export default function HeroCarousel() {
             />
           </button>
           </ProtectedAction>
+
+          {/* Add to Playlist (+) Button */}
+          <button
+            onClick={() => setAddToPlaylistSong(current.originalSong)}
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-card/85 hover:bg-card border border-line text-muted hover:text-[#D4A32A] flex items-center justify-center backdrop-blur-xl transition-all hover:scale-105 active:scale-90 cursor-pointer shadow-sm"
+            title="Add to Playlist"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
 
         {/* Right: Up Next thumbnails (hidden on mobile) + Nav Arrows */}

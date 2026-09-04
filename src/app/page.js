@@ -698,7 +698,7 @@ function HomeContent() {
                                 {song.titleEnglish}
                               </span>
                             </div>
-                            <div className="shrink-0 text-xs text-dim pr-1">
+                            <div className="shrink-0 flex items-center gap-1 text-xs text-dim pr-1">
                               {isCurrent && isPlaying ? (
                                 <div className="flex items-end gap-[2px] h-3">
                                   <span className="w-[2px] bg-white rounded-full h-3 animate-music-bar-1" />
@@ -706,8 +706,21 @@ function HomeContent() {
                                   <span className="w-[2px] bg-white rounded-full h-2.5 animate-music-bar-3" />
                                 </div>
                               ) : (
-                                song.duration
+                                <span>{song.duration}</span>
                               )}
+
+                              {/* Add to Playlist (+) button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAddToPlaylistSong(song);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-card-hover text-muted hover:text-[#D4A32A] transition-colors cursor-pointer"
+                                title="Add to Playlist"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         );

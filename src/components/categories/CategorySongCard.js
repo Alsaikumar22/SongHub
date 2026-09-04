@@ -9,6 +9,7 @@ import {
   Download,
   MoreVertical,
   Check,
+  Plus,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
@@ -16,7 +17,7 @@ import { getShareableSongUrl } from "@/utils/share";
 import SongOptionsMenu from "@/components/song/SongOptionsMenu";
 
 export default function CategorySongCard({ song, language, onClick }) {
-  const { toggleFavorite, favorites, currentSong, isPlaying, playSong } =
+  const { toggleFavorite, favorites, currentSong, isPlaying, playSong, setAddToPlaylistSong } =
     useAudio();
   const [isShared, setIsShared] = useState(false);
 
@@ -112,6 +113,19 @@ export default function CategorySongCard({ song, language, onClick }) {
           transition={{ duration: 0.4 }}
         />
 
+        {/* Top Right: Add to Playlist (+) button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAddToPlaylistSong(song);
+          }}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer z-30"
+          title="Add to Playlist"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+
         {/* Hover overlay with Play button — always visible on mobile, hover on desktop */}
         <div
           onClick={handlePlayClick}
@@ -152,6 +166,18 @@ export default function CategorySongCard({ song, language, onClick }) {
         </span>
 
         <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+          {/* Add to Playlist (+) button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setAddToPlaylistSong(song);
+            }}
+            className="p-1 rounded-full hover:bg-card-hover text-muted hover:text-[#D4A32A] transition-colors cursor-pointer"
+            title="Add to Playlist"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
           <button
             onClick={handleFavoriteClick}
             className={`p-1 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-muted hover:text-title"}`}

@@ -48,8 +48,20 @@ export default function SongCard({ song, onPlay }) {
           </button>
         )}
 
-        {/* Options Menu & Add to Playlist */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
+        {/* Top Right: Add to Playlist (+) & Options Menu */}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setAddToPlaylistSong(song);
+            }}
+            className="w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+            title="Add to Playlist"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
           <div className="rounded-full bg-black/60 backdrop-blur-sm md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
             <SongOptionsMenu song={song} triggerClassName="text-white/80 hover:text-white" />
           </div>

@@ -2,7 +2,8 @@
 
 import React from "react";
 import Image from "next/image";
-import { Play, Pause, Music } from "lucide-react";
+import { Play, Pause, Music, Plus } from "lucide-react";
+import { useAudio } from "@/context/audio-context";
 
 const letterGradients = {
   A: "from-red-600 to-red-900",
@@ -40,6 +41,7 @@ function getLetterGradient(song) {
 }
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md", language }) {
+  const { setAddToPlaylistSong } = useAudio();
   const isCurrent = currentSong?.id === song.id;
   const isThisPlaying = isCurrent && isPlaying;
 
@@ -69,6 +71,22 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
             <Music className="w-10 h-10 text-white/25" />
           </div>
         )}
+
+        {/* Top Right: Add to Playlist (+) button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setAddToPlaylistSong(song);
+          }}
+          className={`absolute top-2 right-2 ${
+            isSmall ? "w-7 h-7" : "w-8 h-8"
+          } rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer z-20`}
+          title="Add to Playlist"
+        >
+          <Plus className={isSmall ? "w-3.5 h-3.5" : "w-4 h-4"} />
+        </button>
 
         {/* Overlay: centered play/pause — always visible on mobile, hover on desktop */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">

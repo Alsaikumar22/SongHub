@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 function Spiral({
@@ -13,35 +12,29 @@ function Spiral({
   return (
     <span
       role="status"
+      suppressHydrationWarning
       className={cn("relative inline-block", className)}
       {...props}
     >
       {Array.from({ length: dots }, (_, index) => {
         const angle = (index / dots) * (2 * Math.PI);
-        const x = `${50 + radius * Math.cos(angle)}%`;
-        const y = `${50 + radius * Math.sin(angle)}%`;
+        const x = `${(50 + radius * Math.cos(angle)).toFixed(4)}%`;
+        const y = `${(50 + radius * Math.sin(angle)).toFixed(4)}%`;
+        const size = `${(150 / dots).toFixed(4)}%`;
+        const delay = `${((index / dots) * 1.5).toFixed(4)}s`;
 
         return (
-          <motion.span
+          <span
             key={index}
             aria-hidden="true"
-            className="absolute inline-block rounded-full bg-current"
+            suppressHydrationWarning
+            className="absolute inline-block rounded-full bg-current animate-spiral-dot"
             style={{
               left: x,
               top: y,
-              translate: "-50% -50%",
-              width: `${150 / dots}%`,
-              height: `${150 / dots}%`,
-            }}
-            animate={{
-              scale: [0, 1, 0],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              delay: (index / dots) * 1.5,
-              ease: "easeInOut",
+              width: size,
+              height: size,
+              animationDelay: delay,
             }}
           />
         );

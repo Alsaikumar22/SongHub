@@ -10,6 +10,7 @@ import {
   AlertCircle,
   ChevronDown,
   Mic2,
+  Plus,
 } from "lucide-react";
 import SongArtwork from "@/components/ui/SongArtwork";
 import { useAudio } from "@/context/audio-context";
@@ -78,7 +79,7 @@ export default function LyricsSearchResults({
   onLoadMore,
 }) {
   const router = useRouter();
-  const { playSong, currentSong, isPlaying } = useAudio();
+  const { playSong, currentSong, isPlaying, setAddToPlaylistSong } = useAudio();
 
   if (loading && results.length === 0) {
     return (
@@ -220,6 +221,27 @@ export default function LyricsSearchResults({
                     <span className="w-[2px] bg-amber-400 rounded-full h-2.5 animate-music-bar-3" />
                   </div>
                 )}
+
+                {/* Add to Playlist (+) button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAddToPlaylistSong({
+                      id: song.songId,
+                      title: song.title,
+                      teluguTitle: song.teluguTitle,
+                      titleEnglish: song.titleEnglish,
+                      artist: song.artist,
+                      imageUrl: song.imageUrl,
+                      slug: song.slug,
+                    });
+                  }}
+                  className="p-2 rounded-lg hover:bg-card-hover text-muted hover:text-[#D4A32A] transition-colors cursor-pointer shrink-0"
+                  title="Add to Playlist"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Matched Lyric Lines */}

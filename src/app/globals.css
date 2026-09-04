@@ -403,3 +403,19 @@ input:-webkit-autofill:focus {
   animation: voice-wave-grow 0.8s ease-in-out infinite;
   animation-delay: 0.3s;
 }
+
+/* Spiral Loading Spinner Animation */
+@keyframes spiral-dot {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-spiral-dot {
+  animation: spiral-dot 1.5s ease-in-out infinite;
+}

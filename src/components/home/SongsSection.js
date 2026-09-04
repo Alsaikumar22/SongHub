@@ -236,6 +236,7 @@ export default function SongsSection({
   const {
     playlists,
     addSongToPlaylist,
+    setAddToPlaylistSong,
     favorites,
     toggleFavorite,
     showFullHome,
@@ -848,7 +849,7 @@ export default function SongsSection({
                               </div>
                             </div>
 
-                            {/* Right: Circular Play Button (▷) + Rounded Square Chevron Details Button (>) */}
+                            {/* Right: Circular Play Button (▷) + Add to Playlist (+) + Rounded Square Chevron Details Button (>) */}
                             <div className="flex items-center gap-1.5 shrink-0 select-none">
                               {/* Circular Play Button */}
                               {song.audioUrl || song.media?.audio || song.youtubeId ? (
@@ -876,6 +877,19 @@ export default function SongsSection({
                                   <VolumeX className="w-3.5 h-3.5" />
                                 </div>
                               )}
+
+                              {/* Add to Playlist (+) Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAddToPlaylistSong(song);
+                                }}
+                                className="w-8 h-8 rounded-lg border border-line/60 hover:border-[#D4A32A]/80 hover:bg-[#D4A32A]/10 text-muted hover:text-[#D4A32A] flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                                title="Add to Playlist"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
 
                               {/* Rounded Square Chevron Details Button */}
                               <button
