@@ -3,8 +3,16 @@ export default function robots() {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/admin/"],
+      disallow: [
+        "/api/",
+        "/admin/",
+        "/*?tab=",
+        "/*?view=",
+        "/*?redirect=",
+        "/*?playlistId=",
+      ],
     },
     sitemap: "https://youworship.world/sitemap.xml",
   };
 }
+

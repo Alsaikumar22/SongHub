@@ -74,7 +74,7 @@ export default function RecentlyPlayed() {
           See All &rarr;
         </button>
       </div>
-      <div className="relative group/row">
+      <div className="relative isolate group/row">
         {/* Left overlay arrow — centered vertically on sm cover art (top-[72px]) */}
         <button
           onClick={() => scrollRecent("left")}

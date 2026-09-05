@@ -87,7 +87,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   return (
     <div className="w-full flex flex-col select-none">
       {/* Sticky Table Header */}
-      <div className="sticky top-0 z-20 bg-canvas py-3 border-b border-line grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
+      <div className="sticky top-0 z-30 bg-canvas/95 backdrop-blur-md py-3 border-b border-line grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
         <div className="text-center">#</div>
         <div>Title</div>
         <div className="hidden md:block">Album</div>

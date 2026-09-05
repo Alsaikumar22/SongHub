@@ -33,6 +33,10 @@ export function SongRowSkeleton() {
 export function SongsSectionSkeleton() {
   return (
     <div className="space-y-8 py-4">
+      <div className="sr-only">
+        <h2>Christian Worship Songs & Lyrics Collection</h2>
+        <p>Explore thousands of Christian worship songs in Telugu, English, and Hindi with lyrics and audio.</p>
+      </div>
       {Array.from({ length: 4 }).map((_, i) => (
         <SongRowSkeleton key={i} />
       ))}
@@ -143,6 +147,10 @@ export function LyricsSkeleton({ language = "telugu" }) {
 export function FullAppSkeleton() {
   return (
     <div className="flex-1 bg-canvas p-6 space-y-8 animate-pulse">
+      <div className="sr-only">
+        <h1>YouWorship — Christian Songs, Lyrics, Audio & Videos</h1>
+        <p>A Christ-centered worship platform. Discover thousands of Telugu, English, and Hindi Christian worship songs with synchronized lyrics, chords, audio, and videos.</p>
+      </div>
       <HeroCarouselSkeleton />
       <VerseSkeleton />
       <SongsSectionSkeleton />

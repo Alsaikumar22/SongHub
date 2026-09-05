@@ -23,7 +23,7 @@ export default function SongCard({ song, onPlay }) {
           onPlay(song);
         }
       }}
-      className="group relative bg-card border border-line/40 hover:border-line rounded-md p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+      className="group relative isolate bg-card border border-line/40 hover:border-line rounded-md p-3 flex flex-col justify-between transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
     >
       {/* Cover Artwork Container */}
       <div className="relative aspect-square w-full rounded-sm overflow-hidden bg-card-hover mb-3 border border-line/30">
@@ -49,7 +49,7 @@ export default function SongCard({ song, onPlay }) {
         )}
 
         {/* Top Right: Add to Playlist (+) & Options Menu */}
-        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
           <button
             id="tour-song-card-playlist-btn"
             type="button"

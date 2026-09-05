@@ -117,6 +117,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
   };
 
   const [voiceSearchState, setVoiceSearchState] = useState("inactive"); // "inactive" | "listening" | "error"
+  const [liveVoiceTranscript, setLiveVoiceTranscript] = useState("");
   const recognitionRef = useRef(null);
   const hasVoiceResultRef = useRef(false);
   const isManualCloseRef = useRef(false);
@@ -135,11 +136,12 @@ export default function Header({ setShowAuth, setAuthMode }) {
     try {
       const rec = new SpeechRecognition();
       rec.continuous = false;
-      rec.interimResults = false;
+      rec.interimResults = true;
       rec.lang = "te-IN";
 
       hasVoiceResultRef.current = false;
       isManualCloseRef.current = false;
+      setLiveVoiceTranscript("");
 
       rec.onstart = () => {
         setVoiceSearchState("listening");
@@ -155,6 +157,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
       rec.onend = () => {
         if (isManualCloseRef.current) {
           setVoiceSearchState("inactive");
+          setLiveVoiceTranscript("");
           return;
         }
         if (!hasVoiceResultRef.current) {
@@ -163,14 +166,22 @@ export default function Header({ setShowAuth, setAuthMode }) {
       };
 
       rec.onresult = (event) => {
-        const resultText = event.results[0][0].transcript;
-        if (resultText) {
-          hasVoiceResultRef.current = true;
-          onSearchChange({ target: { value: resultText } });
-          setSearchQuery(resultText);
-          setShowFullResults(true);
-          setVoiceSearchState("inactive");
-          router.push("/");
+        let interim = "";
+        for (let i = 0; i < event.results.length; i++) {
+          interim += event.results[i][0].transcript;
+        }
+        setLiveVoiceTranscript(interim);
+        if (event.results[0]?.isFinal) {
+          const resultText = event.results[0][0].transcript;
+          if (resultText && resultText.trim()) {
+            hasVoiceResultRef.current = true;
+            onSearchChange({ target: { value: resultText.trim() } });
+            setSearchQuery(resultText.trim());
+            setShowFullResults(true);
+            setVoiceSearchState("inactive");
+            setLiveVoiceTranscript("");
+            router.push("/");
+          }
         }
       };
 
@@ -307,11 +318,11 @@ export default function Header({ setShowAuth, setAuthMode }) {
       <div className="hidden lg:flex items-center gap-3 flex-1 max-w-[480px] mx-auto h-full">
         <button
           onClick={handleGoHome}
-          className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-90 flex-shrink-0"
+          className="w-10 h-10 flex items-center justify-center hover:bg-card-hover rounded-full text-dim hover:text-amber-400 cursor-pointer transition-all duration-200 active:scale-90 flex-shrink-0 border border-line/40 hover:border-amber-500/30 shadow-xs"
           title="Home"
           aria-label="Go to Home"
         >
-          <Home className="w-5 h-5" />
+          <Home className="w-6 h-6 stroke-[2.2]" />
         </button>
 
         <div id="tour-search-bar" className="relative flex-1 h-full group">
@@ -503,20 +514,21 @@ export default function Header({ setShowAuth, setAuthMode }) {
           )}
         </div>
 
-        {/* Circular Microphone Button for Voice Search */}
+        {/* Circular Microphone Button for Voice Search (Beside Search Bar) */}
         <button
           onClick={handleVoiceSearch}
-          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-all duration-200 cursor-pointer ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border transition-all duration-200 cursor-pointer shadow-sm ${
             voiceSearchState === "listening"
-              ? "bg-red-500/10 border-red-500/30 text-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.2)]"
-              : "bg-card border-line hover:border-white/35 text-dim hover:text-title hover:bg-card-hover"
+              ? "bg-red-500 border-red-400 text-white animate-pulse shadow-[0_0_16px_rgba(239,68,68,0.4)] ring-2 ring-red-400/50 scale-105"
+              : "bg-amber-500/15 hover:bg-amber-500/30 border-amber-500/40 hover:border-amber-400 text-amber-400 hover:text-amber-300 shadow-amber-500/10 hover:shadow-amber-500/25 active:scale-95"
           }`}
-          title="Voice Search"
+          title="Voice Search (Speak Telugu or English)"
+          aria-label="Voice Search"
         >
           {voiceSearchState === "listening" ? (
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+            <span className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
           ) : (
-            <Mic className="w-4 h-4" />
+            <Mic className="w-5 h-5" />
           )}
         </button>
       </div>
@@ -599,16 +611,18 @@ export default function Header({ setShowAuth, setAuthMode }) {
                     </button>
 
                     {/* Text Indicator */}
-                    <div className="text-center space-y-2 mt-4">
+                    <div className="text-center space-y-2.5 mt-2 w-full max-w-xs">
                       <h3 className="text-xl font-bold text-title tracking-tight transition-all duration-300">
                         {voiceSearchState === "listening"
                           ? "Listening..."
                           : "Didn't hear that. Try again."}
                       </h3>
-                      <p className="text-xs text-muted">
-                        {voiceSearchState === "listening"
-                          ? "Speak now in Telugu or English"
-                          : "Tap the microphone below to try again"}
+                      <p className="text-xs text-amber-300/90 font-medium px-4 py-2 rounded-xl bg-card-hover/80 border border-amber-500/20 min-h-[2.5rem] flex items-center justify-center italic">
+                        {liveVoiceTranscript
+                          ? `"${liveVoiceTranscript}"`
+                          : (voiceSearchState === "listening"
+                              ? "Speak now in Telugu or English (e.g. 'యెహోవా నా కాపరి')..."
+                              : "Tap the microphone below to try again")}
                       </p>
                     </div>
 

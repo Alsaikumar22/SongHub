@@ -344,7 +344,7 @@ function AppLayoutInner({
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
         >
           {/* ─── Main Navigation ─── */}
-          <div className="px-3 pt-3 pb-2 space-y-0.5">
+          <div className="px-3 pt-3 pb-2 space-y-0.5 shrink-0">
             <div id="tour-nav-songs">
               <SidebarNavItem
                 icon={<Music className="w-5 h-5" />}
@@ -403,13 +403,13 @@ function AppLayoutInner({
           </div>
 
           {/* ─── Divider ─── */}
-          <div className="mx-3 border-t border-line/10" />
+          <div className="mx-3 border-t border-line/10 shrink-0" />
 
           {/* ─── Your Library Section ─── */}
-          <div className="flex-1 flex flex-col overflow-hidden px-3 pt-2 pb-1">
+          <div className="min-h-0 flex-1 flex flex-col px-3 pt-2 pb-1 overflow-hidden">
             {/* Library Header */}
             <div
-              className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}
+              className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2 shrink-0`}
             >
               {!sidebarCollapsed && (
                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
@@ -435,7 +435,7 @@ function AppLayoutInner({
 
             {/* Recently Played */}
             {!sidebarCollapsed && (
-              <div className="px-1 mb-1">
+              <div className="px-1 mb-1 shrink-0">
                 <button
                   onClick={() => {
                     scrollToTop();
@@ -482,7 +482,7 @@ function AppLayoutInner({
 
             {/* Collection (Favorites) */}
             {!sidebarCollapsed && (
-              <div className="px-1 mb-1">
+              <div className="px-1 mb-1 shrink-0">
                 <div id="tour-nav-favorites" className="group relative">
                   <button
                     onClick={() => {
@@ -541,7 +541,7 @@ function AppLayoutInner({
 
             {/* Playlists label */}
             {!sidebarCollapsed && (
-              <div className="px-1 pt-2 pb-1 flex items-center justify-between">
+              <div className="px-1 pt-2 pb-1 flex items-center justify-between shrink-0">
                 <button
                   onClick={() => {
                     scrollToTop();
@@ -559,9 +559,9 @@ function AppLayoutInner({
               </div>
             )}
 
-            {/* Playlist items */}
+            {/* Playlist items — Expanded vertical scroll height */}
             <div
-              className={`flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-0.5 px-1 py-0.5`}
+              className={`min-h-0 flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-1 px-1 py-1`}
             >
               {playlists.length === 0 && !sidebarCollapsed && (
                 <div className="px-2 py-6 text-center">
@@ -609,10 +609,10 @@ function AppLayoutInner({
           </div>
 
           {/* ─── Divider ─── */}
-          <div className="mx-3 border-t border-line/10" />
+          <div className="mx-3 border-t border-line/10 shrink-0" />
 
           {/* ─── Queries Dropdown Section ─── */}
-          <div className="px-3 pt-1.5 pb-2 space-y-0.5">
+          <div className="px-3 pt-1.5 pb-2 space-y-0.5 shrink-0">
             <button
               onClick={() => {
                 if (sidebarCollapsed) {
@@ -1201,25 +1201,25 @@ function LibraryItem({ icon, title, subtitle, collapsed, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative cursor-pointer ${
-        active ? "bg-card-hover" : "hover:bg-card-hover"
+      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left group relative cursor-pointer min-h-[48px] ${
+        active ? "bg-card-hover border border-line/40 text-title" : "hover:bg-card-hover border border-transparent"
       }`}
       title={collapsed ? title : undefined}
     >
       {icon}
       {!collapsed && (
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <div className="flex-1 min-w-0 flex flex-col justify-center leading-snug">
           <span
-            className={`text-sm font-medium truncate ${active ? "text-title" : "text-copy"}`}
+            className={`text-sm font-semibold truncate block ${active ? "text-title" : "text-copy group-hover:text-title"}`}
           >
             {title}
           </span>
-          <span className="text-[11px] text-muted truncate">{subtitle}</span>
+          <span className="text-[11px] text-muted truncate block mt-0.5">{subtitle}</span>
         </div>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-title text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
-          <div className="font-medium">{title}</div>
+        <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-card text-title text-xs font-semibold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
+          <div className="font-semibold">{title}</div>
           <div className="text-[10px] text-muted">{subtitle}</div>
         </div>
       )}

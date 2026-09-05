@@ -429,7 +429,7 @@ export default function SongsSection({
   return (
     <div className="space-y-4">
       {!selectedLetter && (
-        <div className="sticky top-0 z-20 bg-card/90 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
+        <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
           {/* Immersive Script Selector */}
           <div className="flex bg-card-hover/60 p-0.5 rounded-xl border border-line self-start shadow-inner">
             <button
@@ -727,7 +727,7 @@ export default function SongsSection({
                     </div>
 
                     {/* Original Horizontal Scrolling Row */}
-                    <div className="relative group/row flex flex-col">
+                    <div className="relative isolate group/row flex flex-col">
                       {/* Left overlay arrow */}
                       <button
                         onClick={() => scrollRow(letter, "left")}

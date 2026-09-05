@@ -56,7 +56,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
     {
       id: "home",
       label: "Home",
-      icon: <Home className="w-5 h-5" />,
+      icon: <Home className="w-6 h-6 stroke-[2.2]" />,
       onClick: () => {
         scrollToTop();
         setSearchQuery("");

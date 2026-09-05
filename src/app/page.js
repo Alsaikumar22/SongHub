@@ -549,7 +549,7 @@ function HomeContent() {
                       {/* Mobile Mic Button */}
                       <button
                         onClick={triggerVoiceSearch}
-                        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-amber-500/35 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:text-amber-300 active:scale-95 transition-all duration-150 cursor-pointer shadow-sm shadow-amber-500/10"
                         title="Voice Search"
                       >
                         <Mic className="w-5 h-5" />
@@ -586,7 +586,7 @@ function HomeContent() {
                     {/* Mobile Mic Button */}
                     <button
                       onClick={triggerVoiceSearch}
-                      className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-line bg-card-hover text-title hover:bg-line active:scale-95 transition-all duration-150 cursor-pointer"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-amber-500/35 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:text-amber-300 active:scale-95 transition-all duration-150 cursor-pointer shadow-sm shadow-amber-500/10"
                       title="Voice Search"
                     >
                       <Mic className="w-5 h-5" />

@@ -50,7 +50,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
   return (
     <div
       onClick={() => playSong(song)}
-      className={`relative flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
+      className={`relative isolate flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
     >
       <div
         className={`relative aspect-square w-full rounded-md overflow-hidden border border-line/50 shadow-md bg-card ${
@@ -83,7 +83,7 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
           }}
           className={`absolute top-2 right-2 ${
             isSmall ? "w-7 h-7" : "w-8 h-8"
-          } rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer z-20`}
+          } rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer z-10`}
           title="Add to Playlist"
         >
           <Plus className={isSmall ? "w-3.5 h-3.5" : "w-4 h-4"} />
