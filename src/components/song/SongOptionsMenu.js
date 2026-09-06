@@ -32,6 +32,7 @@ export default function SongOptionsMenu({
     setAddToPlaylistSong,
     favorites,
     toggleFavorite,
+    currentSectionLetter,
   } = useAudio();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -146,7 +147,8 @@ export default function SongOptionsMenu({
                     e.stopPropagation();
                     e.preventDefault();
                     if (song) {
-                      router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
+                      const letterParam = currentSectionLetter || song.teluguFirstLetter || song.firstLetter;
+                      router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterParam ? `&letter=${encodeURIComponent(letterParam)}` : ""}`);
                     }
                     setIsOpen(false);
                   }}

@@ -39,7 +39,8 @@ import {
   Library,
   X,
   Music,
-  Mic
+  Mic,
+  LayoutGrid,
 } from "lucide-react";
 
 const searchableText = (value) => {
@@ -84,6 +85,8 @@ function HomeContent() {
     setEditingPlaylist,
     hasEnteredApp,
     setHasEnteredApp,
+    currentSectionLetter,
+    setCurrentSectionLetter,
   } = useAudio();
 
   const { searchQuery, setSearchQuery, showFullResults, setShowFullResults, searchMode, setSearchMode, triggerVoiceSearch } = useSearch();
@@ -136,7 +139,17 @@ function HomeContent() {
     setLyricsQuery(e.target.value || "");
   }, [handleMobileSearchChange, setLyricsQuery]);
 
-  const [selectedLetter, setSelectedLetter] = useState(null);
+  const [selectedLetter, setSelectedLetter] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("letter") || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -163,6 +176,8 @@ function HomeContent() {
     
     const tabParam = searchParams.get("tab");
     const viewParam = searchParams.get("view");
+    const letterParam = searchParams.get("letter");
+
     if (tabParam === "songs" || viewParam === "songs") {
       setActiveTab("discover");
       setShowFullHome(false);
@@ -170,7 +185,7 @@ function HomeContent() {
       if (activeTab !== "discover") {
         setActiveTab("discover");
       }
-      setShowFullHome(true);
+      setShowFullHome(!letterParam);
     } else if (tabParam) {
       if (tabParam !== activeTab) {
         setActiveTab(tabParam);
@@ -194,17 +209,20 @@ function HomeContent() {
         setSearchQuery(queryParam);
         setShowFullResults(true);
       }
-    } else {
-      if (searchQuery) {
-        setSearchQuery("");
-        setShowFullResults(false);
-      }
+    } else if (showFullResults) {
+      setSearchQuery("");
+      setShowFullResults(false);
     }
 
-    const letterParam = searchParams.get("letter");
     if (letterParam) {
       if (letterParam !== selectedLetter) {
         setSelectedLetter(letterParam);
+      }
+      if (setCurrentSectionLetter) setCurrentSectionLetter(letterParam);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("yw_selected_letter", letterParam);
+        } catch (e) {}
       }
     } else {
       if (selectedLetter) {
@@ -217,7 +235,7 @@ function HomeContent() {
     if (smParam === "lyrics" && searchMode !== "lyrics") {
       setSearchMode("lyrics");
     }
-  }, [searchParams]);
+  }, [searchParams, currentSectionLetter, setCurrentSectionLetter]);
 
   // Sync 2: context state changes -> browser URL parameters
   useEffect(() => {
@@ -229,8 +247,9 @@ function HomeContent() {
 
     // Sync tab param
     const currentTabInUrl = params.get("tab");
-    if (activeTab && activeTab !== currentTabInUrl) {
-      params.set("tab", activeTab);
+    const targetTab = activeTab === "discover" ? (showFullHome && !selectedLetter ? "discover" : "songs") : activeTab;
+    if (targetTab && targetTab !== currentTabInUrl) {
+      params.set("tab", targetTab);
       changed = true;
     }
 
@@ -281,11 +300,11 @@ function HomeContent() {
         router.push(`/?${params.toString()}`);
       });
     }
-  }, [activeTab, activePlaylistId, searchQuery, showFullResults, selectedLetter]);
+  }, [activeTab, showFullHome, activePlaylistId, searchQuery, showFullResults, selectedLetter]);
 
-  // Reset letter if user switches tabs or runs search query
+  // Reset letter if user switches away from discover/songs tabs or runs search query
   useEffect(() => {
-    if (activeTab !== "discover" || (searchQuery && showFullResults)) {
+    if ((activeTab !== "discover" && activeTab !== "songs") || (searchQuery && showFullResults)) {
       setSelectedLetter(null);
     }
   }, [activeTab, searchQuery, showFullResults]);
@@ -531,7 +550,7 @@ function HomeContent() {
                     <div className="flex flex-col">
                       <h1 className="text-3xl font-black text-title tracking-tight">Search</h1>
                     </div>
-                    <div className="relative flex items-center w-full gap-2">
+                    <div className="relative flex items-center w-full">
                       <div className="relative flex-1">
                         <Search className="w-5 h-5 text-dim absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                         <input
@@ -542,18 +561,40 @@ function HomeContent() {
                           onChange={(e) => {
                             onMobileSearchChange(e);
                           }}
-                          className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
+                          className="w-full h-11 pl-12 pr-24 text-sm bg-card-hover rounded-lg focus:outline-none focus:bg-line transition-all duration-150 text-title placeholder-muted border-none font-medium shadow-inner"
                         />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                          {mobileInputValue && (
+                            <button
+                              onClick={clearMobileSearch}
+                              className="p-1 hover:bg-line/30 rounded-full text-dim hover:text-title cursor-pointer transition-all duration-150"
+                              title="Clear Search"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <div className="w-px h-4.5 bg-line mx-1 self-center shrink-0" aria-hidden="true" />
+                          <button
+                            id="tour-mobile-search-mic-btn"
+                            onClick={triggerVoiceSearch}
+                            className="p-1.5 rounded-full text-dim hover:text-amber-400 hover:bg-line/30 active:scale-95 transition-all duration-200 cursor-pointer"
+                            title="Voice Search"
+                          >
+                            <Mic className="w-5 h-5" />
+                          </button>
+                          <button
+                            id="tour-mobile-categories"
+                            onClick={() => {
+                              setActiveTab("categories");
+                              router.push("/?tab=categories");
+                            }}
+                            className="p-1.5 rounded-full text-dim hover:text-amber-400 hover:bg-line/30 active:scale-95 transition-all duration-200 cursor-pointer"
+                            title="Browse Categories"
+                          >
+                            <LayoutGrid className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
-                      
-                      {/* Mobile Mic Button */}
-                      <button
-                        onClick={triggerVoiceSearch}
-                        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-amber-500/35 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:text-amber-300 active:scale-95 transition-all duration-150 cursor-pointer shadow-sm shadow-amber-500/10"
-                        title="Voice Search"
-                      >
-                        <Mic className="w-5 h-5" />
-                      </button>
                     </div>
                   </div>
                 ) : (
@@ -569,28 +610,42 @@ function HomeContent() {
                         onChange={(e) => {
                           onMobileSearchChange(e);
                         }}
-                        className="w-full h-11 pl-12 pr-10 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
+                        className="w-full h-11 pl-12 pr-24 text-sm bg-card-hover rounded-lg focus:outline-none transition-all duration-150 text-title placeholder-muted border-none font-medium"
                       />
-                      {searchQuery && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                        {mobileInputValue && (
+                          <button
+                            onClick={() => {
+                              clearMobileSearch();
+                            }}
+                            className="p-1 hover:bg-card-hover rounded-full text-dim hover:text-title cursor-pointer transition-colors duration-150"
+                            title="Clear Search"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <div className="w-px h-4.5 bg-line mx-1 self-center shrink-0" aria-hidden="true" />
+                        <button
+                          id="tour-mobile-search-mic-btn-focused"
+                          onClick={triggerVoiceSearch}
+                          className="p-1.5 rounded-full text-dim hover:text-amber-400 hover:bg-line/30 active:scale-95 transition-all duration-200 cursor-pointer"
+                          title="Voice Search"
+                        >
+                          <Mic className="w-5 h-5" />
+                        </button>
                         <button
                           onClick={() => {
-                            clearMobileSearch();
+                            setIsSearchFocused(false);
+                            setActiveTab("categories");
+                            router.push("/?tab=categories");
                           }}
-                          className="p-1 hover:bg-card-hover rounded-full absolute right-2.5 top-1/2 -translate-y-1/2 text-dim hover:text-title cursor-pointer transition-colors duration-150"
+                          className="p-1.5 rounded-full text-dim hover:text-amber-400 hover:bg-line/30 active:scale-95 transition-all duration-200 cursor-pointer"
+                          title="Browse Categories"
                         >
-                          <X className="w-3 h-3" />
+                          <LayoutGrid className="w-5 h-5" />
                         </button>
-                      )}
+                      </div>
                     </div>
-
-                    {/* Mobile Mic Button */}
-                    <button
-                      onClick={triggerVoiceSearch}
-                      className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border border-amber-500/35 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 hover:text-amber-300 active:scale-95 transition-all duration-150 cursor-pointer shadow-sm shadow-amber-500/10"
-                      title="Voice Search"
-                    >
-                      <Mic className="w-5 h-5" />
-                    </button>
 
                     <button
                       onClick={() => {

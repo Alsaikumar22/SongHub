@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Play, Pause, Music, Plus } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 
@@ -41,11 +42,12 @@ function getLetterGradient(song) {
 }
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md", language }) {
-  const { setAddToPlaylistSong } = useAudio();
+  const { setAddToPlaylistSong, currentSectionLetter } = useAudio();
   const isCurrent = currentSong?.id === song.id;
   const isThisPlaying = isCurrent && isPlaying;
 
   const isSmall = size === "sm";
+  const letterKey = currentSectionLetter || song.teluguFirstLetter || song.firstLetter;
 
   return (
     <div
@@ -110,15 +112,17 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
         </div>
       </div>
 
-      <span
-        className={`font-bold text-title block truncate group-hover:text-handle transition-colors ${
+      <Link
+        href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`}
+        onClick={(e) => e.stopPropagation()}
+        className={`font-bold text-title block truncate group-hover:text-handle hover:underline transition-colors ${
           isSmall ? "text-sm" : "text-base"
         } font-song-title`}
       >
         {language === "english"
           ? (song.titleEnglish || song.title)
           : (song.teluguTitle || song.title)}
-      </span>
+      </Link>
 
       {((language === "english"
         ? (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null)

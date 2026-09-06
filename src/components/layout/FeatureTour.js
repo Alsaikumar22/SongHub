@@ -14,7 +14,7 @@ import {
 const TOUR_STEPS = [
   {
     id: "search",
-    stepNum: "1/5",
+    stepNum: "1/6",
     targetId: "tour-search-bar",
     targetMobileId: "tour-search-bar",
     preferredPlacement: "bottom",
@@ -24,8 +24,19 @@ const TOUR_STEPS = [
     description: "Find any song, artist, album or lyrics instantly using search.",
   },
   {
+    id: "voice-search",
+    stepNum: "2/6",
+    targetId: "tour-search-mic-btn",
+    targetMobileId: "tour-mobile-search-mic-btn",
+    preferredPlacement: "bottom",
+    icon: Mic,
+    iconColor: "text-amber-400 bg-amber-500/15 border-amber-500/25",
+    title: "Voice Search",
+    description: "Tap the mic icon inside the search bar to search songs or lyrics with your voice in Telugu or English.",
+  },
+  {
     id: "categories",
-    stepNum: "2/5",
+    stepNum: "3/6",
     targetId: "tour-search-categories-btn",
     targetMobileId: "tour-mobile-categories",
     preferredPlacement: "bottom",
@@ -36,7 +47,7 @@ const TOUR_STEPS = [
   },
   {
     id: "songs",
-    stepNum: "3/5",
+    stepNum: "4/6",
     targetId: "tour-nav-songs",
     targetMobileId: "tour-mobile-songs",
     preferredPlacement: "right",
@@ -47,7 +58,7 @@ const TOUR_STEPS = [
   },
   {
     id: "song-card-playlist",
-    stepNum: "4/5",
+    stepNum: "5/6",
     targetId: "tour-song-card-playlist-btn",
     targetMobileId: "tour-song-card-playlist-btn",
     preferredPlacement: "bottom",
@@ -58,7 +69,7 @@ const TOUR_STEPS = [
   },
   {
     id: "lyrics",
-    stepNum: "5/5",
+    stepNum: "6/6",
     targetId: "tour-lyrics-btn",
     targetMobileId: "tour-mobile-lyrics-btn",
     preferredPlacement: "top",

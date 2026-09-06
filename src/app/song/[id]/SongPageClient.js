@@ -90,6 +90,36 @@ function YouTubeVideoPlayer({ embedUrl, title, isPlaying }) {
   );
 }
 
+function getSongLetter(song, language = "telugu") {
+  if (!song) return null;
+  if (language === "english") {
+    const engTitle = song?.titleEnglish || song?.title || "";
+    const first = engTitle.trim().charAt(0).toUpperCase();
+    if (/[A-Z]/.test(first)) return first;
+    return "#";
+  }
+
+  const title = song?.teluguTitle || song?.title || "";
+  const storedLetter = song?.teluguFirstLetter || song?.firstLetter || "";
+  const nativePattern =
+    language === "telugu"
+      ? /[\u0C00-\u0C7F]/
+      : language === "hindi"
+        ? /[\u0900-\u097F]/
+        : language === "tamil"
+          ? /[\u0B80-\u0BFF]/
+          : null;
+
+  if (nativePattern) {
+    if (nativePattern.test(storedLetter)) return storedLetter;
+    const firstChar = title.trim().charAt(0);
+    if (nativePattern.test(firstChar)) return firstChar;
+  }
+
+  const fallbackChar = storedLetter || title.trim().charAt(0).toUpperCase();
+  return fallbackChar || null;
+}
+
 export default function SongPageClient({ params, initialSong = null }) {
   const unwrappedParams = params ? (typeof params.then === "function" ? use(params) : params) : {};
   const id = unwrappedParams?.id;
@@ -151,7 +181,43 @@ export default function SongPageClient({ params, initialSong = null }) {
     setActiveTab,
     lyricsLanguage,
     setLyricsLanguage,
+    currentSectionLetter,
+    setCurrentSectionLetter,
   } = useAudio();
+
+  useEffect(() => {
+    const letterFromQuery = searchParams?.get("letter") || searchParams?.get("fromLetter");
+    if (letterFromQuery) {
+      if (setCurrentSectionLetter) setCurrentSectionLetter(letterFromQuery);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("yw_selected_letter", letterFromQuery);
+        } catch (e) {}
+      }
+    }
+  }, [searchParams, setCurrentSectionLetter]);
+
+  const handleBack = () => {
+    let storedLetter = null;
+    try {
+      if (typeof window !== "undefined") {
+        storedLetter = sessionStorage.getItem("yw_selected_letter");
+      }
+    } catch (e) {}
+
+    const letterFromQuery = searchParams?.get("letter") || searchParams?.get("fromLetter");
+    const targetLetter =
+      letterFromQuery ||
+      currentSectionLetter ||
+      storedLetter ||
+      getSongLetter(song, lyricsLanguage || "telugu");
+
+    if (targetLetter && targetLetter !== "#") {
+      router.push(`/?tab=songs&letter=${encodeURIComponent(targetLetter)}`);
+    } else {
+      router.push("/?tab=songs");
+    }
+  };
 
   const { setSearchQuery, setShowFullResults } = useSearch();
 
@@ -545,7 +611,7 @@ export default function SongPageClient({ params, initialSong = null }) {
         {/* Minimal back link */}
         <div className="p-6 flex items-center justify-between z-40">
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-muted hover:text-title text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer bg-card hover:bg-card-hover px-3 py-1.5 rounded-full border border-line shadow-sm"
             title="Back"
           >
@@ -641,7 +707,7 @@ export default function SongPageClient({ params, initialSong = null }) {
           {/* Left Side: Back button + Song Name & Author Name */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
               title="Go back"
             >
@@ -660,21 +726,29 @@ export default function SongPageClient({ params, initialSong = null }) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap shrink-0 select-none">
-            {/* Font Size Controls */}
-            <div className="flex items-center bg-card-hover/80 backdrop-blur-sm border border-line/40 rounded-full p-0.5 shadow-sm h-8 md:h-9 overflow-hidden shrink-0">
+            {/* Font Size Controls — Custom a | A Pill Design */}
+            <div
+              className="flex items-center bg-card border border-line/60 rounded-xl px-1 py-0.5 shadow-sm h-8 md:h-9 shrink-0 select-none backdrop-blur-md"
+              title="Adjust Font Size"
+            >
               <button
+                type="button"
                 onClick={decreaseFontSize}
-                className="px-2 md:px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
+                className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
                 title="Decrease Font Size"
+                aria-label="Decrease Font Size"
               >
-                <AArrowDown className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="font-extrabold text-xs">a</span>
               </button>
+              <div className="w-[1.5px] h-4 bg-amber-500/80 mx-0.5 rounded-full shrink-0" aria-hidden="true" />
               <button
+                type="button"
                 onClick={increaseFontSize}
-                className="px-2 md:px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card/45 rounded-full transition-all cursor-pointer"
+                className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
                 title="Increase Font Size"
+                aria-label="Increase Font Size"
               >
-                <AArrowUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="font-black text-sm">A</span>
               </button>
             </div>
 
@@ -753,7 +827,7 @@ export default function SongPageClient({ params, initialSong = null }) {
           {/* Left Side: Back button + Titles */}
           <div className="flex items-center gap-3.5 min-w-0">
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
               title="Go back"
             >
@@ -958,34 +1032,14 @@ export default function SongPageClient({ params, initialSong = null }) {
                 <span className="hidden sm:inline">Exit Fullscreen</span>
               </button>
             )}
-            {lyricsLoading ? (
-              <div className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 select-none bg-card">
-                <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center space-y-6 animate-pulse">
-                  <div className="max-w-2xl mx-auto text-center space-y-8 w-full">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="space-y-3">
-                        <div className="h-6 md:h-8 bg-card-hover rounded-lg mx-auto" style={{ width: `${50 + (i % 4) * 12}%` }} />
-                        {i % 3 === 0 && (
-                          <div className="h-5 md:h-7 bg-card-hover rounded-lg mx-auto" style={{ width: `${40 + (i % 3) * 15}%` }} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-center pt-4">
-                    <span className="text-xs text-muted font-medium">Loading lyrics...</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <SongLyrics
-                song={song}
-                isImmersive={true}
-                selectedLanguage={selectedLanguage}
-                setSelectedLanguage={setSelectedLanguage}
-                fontSizeMultiplier={fontSizeMultiplier}
-                loading={lyricsLoading}
-              />
-            )}
+            <SongLyrics
+              song={song}
+              isImmersive={true}
+              selectedLanguage={selectedLanguage}
+              setSelectedLanguage={setSelectedLanguage}
+              fontSizeMultiplier={fontSizeMultiplier}
+              loading={lyricsLoading}
+            />
           </div>
         </div>
       </div>

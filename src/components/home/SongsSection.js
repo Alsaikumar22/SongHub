@@ -227,6 +227,8 @@ export default function SongsSection({
     if (selectedLetter) {
       if (/[\u0C00-\u0C7F]/.test(selectedLetter)) return "telugu";
       if (/[\u0900-\u097F]/.test(selectedLetter)) return "hindi";
+      if (/[\u0B80-\u0BFF]/.test(selectedLetter)) return "tamil";
+      if (/[A-Z]/i.test(selectedLetter)) return "english";
     }
     // Default to Telugu so Telugu songs show first
     return "telugu";
@@ -240,10 +242,14 @@ export default function SongsSection({
     favorites,
     toggleFavorite,
     showFullHome,
+    setShowFullHome,
+    setActiveTab,
     sections,
     sectionsLoading,
     initializeAlphabeticalSections,
     showAllSongsForLetter,
+    currentSectionLetter,
+    setCurrentSectionLetter,
   } = useAudio();
  
   const [viewMode, setViewMode] = useState("playlist"); // "playlist" | "cards"
@@ -251,6 +257,10 @@ export default function SongsSection({
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [scrollStates, setScrollStates] = useState({});
   const [pendingScrollToLetter, setPendingScrollToLetter] = useState(null);
+  const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1);
+
+  const increaseSongFontSize = () => setFontSizeMultiplier((prev) => Math.min(prev + 0.15, 1.4));
+  const decreaseSongFontSize = () => setFontSizeMultiplier((prev) => Math.max(prev - 0.15, 0.8));
  
   useEffect(() => {
     if (!songsLoading) {
@@ -261,16 +271,24 @@ export default function SongsSection({
   // Auto-switch scriptLang when a letter is clicked
   useEffect(() => {
     if (selectedLetter) {
-      // Detect if the selected letter is Telugu, Hindi, or English
+      if (setCurrentSectionLetter) setCurrentSectionLetter(selectedLetter);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("yw_selected_letter", selectedLetter);
+        } catch (e) {}
+      }
+      // Detect if the selected letter is Telugu, Hindi, Tamil, or English
       if (/[\u0C00-\u0C7F]/.test(selectedLetter)) {
         setScriptLang("telugu");
       } else if (/[\u0900-\u097F]/.test(selectedLetter)) {
         setScriptLang("hindi");
+      } else if (/[\u0B80-\u0BFF]/.test(selectedLetter)) {
+        setScriptLang("tamil");
       } else if (/[A-Z]/i.test(selectedLetter)) {
         setScriptLang("english");
       }
     }
-  }, [selectedLetter]);
+  }, [selectedLetter, setCurrentSectionLetter]);
 
   useEffect(() => {
     if (selectedLetter && sections[selectedLetter] && !sections[selectedLetter].showAll && !sections[selectedLetter].loading) {
@@ -312,8 +330,9 @@ export default function SongsSection({
   // Sections are already filtered by language in initializeAlphabeticalSections
   const getFilteredSongsForLetter = useCallback((letter) => {
     const letterSec = sections[letter];
-    if (!letterSec || !letterSec.songs) return [];
-    return letterSec.songs;
+    if (!letterSec) return [];
+    if (letterSec.allSongs && letterSec.allSongs.length > 0) return letterSec.allSongs;
+    return letterSec.songs || [];
   }, [sections]);
  
   const detailSongs = useMemo(() => {
@@ -323,8 +342,13 @@ export default function SongsSection({
   const availableLetters = useMemo(() => {
     return Object.keys(sections).filter((letter) => {
       return getFilteredSongsForLetter(letter).length > 0;
-    }).sort();
-  }, [sections, getFilteredSongsForLetter]);
+    }).sort((a, b) => {
+      if (scriptLang === "telugu") return teluguSort(a, b);
+      if (scriptLang === "hindi") return hindiSort(a, b);
+      if (scriptLang === "tamil") return tamilSort(a, b);
+      return a.localeCompare(b);
+    });
+  }, [sections, getFilteredSongsForLetter, scriptLang]);
  
   useEffect(() => {
     if (availableLetters.length > 0 && !selectedLetter) {
@@ -350,21 +374,8 @@ export default function SongsSection({
   };
  
   const handleLetterClick = (letter) => {
-    if (selectedLetter) {
-      setSelectedLetter(letter);
-    } else {
-      setActiveLetter(letter);
-      const targetIndex = availableLetters.indexOf(letter);
-      if (targetIndex !== -1 && targetIndex >= visibleCount) {
-        setVisibleCount(targetIndex + 1);
-        setPendingScrollToLetter(letter);
-      } else {
-        const el = sectionRefs.current[letter];
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-    }
+    setActiveLetter(letter);
+    setSelectedLetter(letter);
   };
 
   const handleShare = () => {
@@ -428,8 +439,9 @@ export default function SongsSection({
 
   return (
     <div className="space-y-4">
-      {!selectedLetter && (
-        <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
+      <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
+        {/* Top Header Row: Script Selector */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Immersive Script Selector */}
           <div className="flex bg-card-hover/60 p-0.5 rounded-xl border border-line self-start shadow-inner">
             <button
@@ -463,27 +475,27 @@ export default function SongsSection({
               Hindi (हिन्दी)
             </button>
           </div>
-
-          {/* Letters Scroll List */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {availableLetters.map((letter) => (
-              <button
-                key={letter}
-                onClick={() => handleLetterClick(letter)}
-                className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm md:text-base font-black transition-all shrink-0 cursor-pointer ${
-                  /[A-Z]/.test(letter) ? "font-sans" : (typeof letter === "string" && /[\u0C00-\u0C7F]/.test(letter) ? "font-telugu" : "")
-                } ${
-                  activeLetter === letter
-                    ? "bg-title text-canvas scale-105 shadow-sm"
-                    : "bg-card-hover text-title/90 hover:bg-line/60"
-                }`}
-              >
-                {letter}
-              </button>
-            ))}
-          </div>
         </div>
-      )}
+
+        {/* Letters Scroll List */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {availableLetters.map((letter) => (
+            <button
+              key={letter}
+              onClick={() => handleLetterClick(letter)}
+              className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm md:text-base font-black transition-all shrink-0 cursor-pointer ${
+                /[A-Z]/.test(letter) ? "font-sans" : (typeof letter === "string" && /[\u0C00-\u0C7F]/.test(letter) ? "font-telugu" : "")
+              } ${
+                activeLetter === letter || selectedLetter === letter
+                  ? "bg-title text-canvas scale-105 shadow-sm"
+                  : "bg-card-hover text-title/90 hover:bg-line/60"
+              }`}
+            >
+              {letter}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {sectionsLoading ? (
         <div className="flex flex-col items-center justify-center p-20 gap-3 text-muted">
@@ -501,7 +513,18 @@ export default function SongsSection({
         <div className="space-y-6">
           <div className="flex flex-col gap-4">
             <button
-              onClick={() => setSelectedLetter(null)}
+              onClick={() => {
+                setSelectedLetter(null);
+                if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                if (typeof window !== "undefined") {
+                  try {
+                    sessionStorage.removeItem("yw_selected_letter");
+                  } catch (e) {}
+                }
+                if (setShowFullHome) setShowFullHome(true);
+                if (setActiveTab) setActiveTab("discover");
+                router.push("/?tab=discover");
+              }}
               className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-title transition-all duration-150 cursor-pointer self-start"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -708,12 +731,38 @@ export default function SongsSection({
                   <>
                     {/* Original Simple Header */}
                     <div className="flex items-center justify-between mb-3 px-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span
                           className="text-2xl font-bold text-title font-sans"
                         >
                           {letter}
                         </span>
+                        {letter === availableLetters[0] && (
+                          <div
+                            className="flex items-center bg-card-hover border border-line/60 rounded-xl px-1 py-0.5 shadow-sm h-8 shrink-0 select-none ml-1"
+                            title="Adjust Letter Size"
+                          >
+                            <button
+                              type="button"
+                              onClick={decreaseSongFontSize}
+                              className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card rounded-lg transition-all active:scale-90 cursor-pointer"
+                              title="Decrease Letter Size"
+                              aria-label="Decrease Letter Size"
+                            >
+                              <span className="font-extrabold text-xs">a</span>
+                            </button>
+                            <div className="w-[1.5px] h-3.5 bg-amber-500/80 mx-0.5 rounded-full shrink-0" aria-hidden="true" />
+                            <button
+                              type="button"
+                              onClick={increaseSongFontSize}
+                              className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card rounded-lg transition-all active:scale-90 cursor-pointer"
+                              title="Increase Letter Size"
+                              aria-label="Increase Letter Size"
+                            >
+                              <span className="font-black text-sm">A</span>
+                            </button>
+                          </div>
+                        )}
                         <span className="text-xs text-muted/80 font-medium ml-1">
                           ({letterSongs.length})
                         </span>
@@ -778,10 +827,36 @@ export default function SongsSection({
                 ) : (
                   <>
                     {/* Linked Divider Header Row */}
-                    <div className="flex items-center gap-4 mb-4 select-none px-1">
+                    <div className="flex items-center gap-3 mb-4 select-none px-1">
                       <div className="w-10 h-10 rounded-xl bg-card-hover border border-line flex items-center justify-center text-lg font-black text-title shadow-sm shrink-0">
                         {letter}
                       </div>
+                      {letter === availableLetters[0] && (
+                        <div
+                          className="flex items-center bg-card-hover border border-line/60 rounded-xl px-1 py-0.5 shadow-sm h-9 shrink-0 select-none"
+                          title="Adjust Letter Size"
+                        >
+                          <button
+                            type="button"
+                            onClick={decreaseSongFontSize}
+                            className="px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card rounded-lg transition-all active:scale-90 cursor-pointer"
+                            title="Decrease Letter Size"
+                            aria-label="Decrease Letter Size"
+                          >
+                            <span className="font-extrabold text-xs">a</span>
+                          </button>
+                          <div className="w-[1.5px] h-4 bg-amber-500/80 mx-0.5 rounded-full shrink-0" aria-hidden="true" />
+                          <button
+                            type="button"
+                            onClick={increaseSongFontSize}
+                            className="px-2.5 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card rounded-lg transition-all active:scale-90 cursor-pointer"
+                            title="Increase Letter Size"
+                            aria-label="Increase Letter Size"
+                          >
+                            <span className="font-black text-sm">A</span>
+                          </button>
+                        </div>
+                      )}
                       <div className="flex-1 h-px bg-line/35" />
                       <button
                         onClick={() => setSelectedLetter(letter)}
@@ -813,7 +888,8 @@ export default function SongsSection({
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
+                                const letterKey = selectedLetter || letter || song.teluguFirstLetter || song.firstLetter;
+                                router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`);
                               }}
                               className="flex items-center gap-3 min-w-0 flex-1 pr-2 cursor-pointer"
                               title="View song lyrics & details"
@@ -829,7 +905,8 @@ export default function SongsSection({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <span
-                                    className={`font-bold text-sm block truncate leading-tight ${
+                                    style={{ fontSize: `${0.875 * fontSizeMultiplier}rem` }}
+                                    className={`font-bold block truncate leading-tight ${
                                       isCurrent ? "text-[#D4A32A]" : "text-title group-hover:text-[#D4A32A]"
                                     } ${
                                       scriptLang !== "english" && /[\u0C00-\u0C7F]/.test(song.teluguTitle || song.title) ? "font-telugu leading-snug" : ""
@@ -897,7 +974,8 @@ export default function SongsSection({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
+                                  const letterKey = selectedLetter || letter || song.teluguFirstLetter || song.firstLetter;
+                                  router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`);
                                 }}
                                 className="w-8 h-8 rounded-lg border border-line/60 hover:border-white hover:bg-white/10 text-muted hover:text-title flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                                 title="View song lyrics & details"

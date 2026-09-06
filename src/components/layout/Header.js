@@ -309,8 +309,8 @@ export default function Header({ setShowAuth, setAuthMode }) {
           <span className="text-base sm:text-lg md:text-[22px] font-black tracking-tight text-title whitespace-nowrap">
             YouWorship
           </span>
-          <span className="mt-0.5 sm:mt-1 text-[7.5px] sm:text-[9px] md:text-[10px] font-semibold tracking-[0.02em] sm:tracking-[0.05em] text-amber-400 whitespace-nowrap block">
-            All Your Worship Songs in One Place
+          <span className="mt-0.5 sm:mt-1 text-[7.5px] sm:text-[9px] md:text-[10px] font-semibold tracking-[0.02em] sm:tracking-[0.05em] text-title whitespace-nowrap block">
+            Lyrics & Music
           </span>
         </div>
       </Link>
@@ -335,7 +335,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
             onFocus={handleFocus}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full h-full pl-11 pr-16 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-white/35 focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
+            className="w-full h-full pl-11 pr-24 text-sm bg-input border border-line/50 rounded-full focus:outline-none focus:border-white/35 focus:bg-card-hover transition-all duration-200 text-copy placeholder-muted/70"
           />
 
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
@@ -348,6 +348,19 @@ export default function Header({ setShowAuth, setAuthMode }) {
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+            <div className="w-px h-4.5 bg-line mx-1 self-center shrink-0" aria-hidden="true" />
+            <button
+              id="tour-search-mic-btn"
+              onClick={handleVoiceSearch}
+              className={`p-1.5 rounded-full cursor-pointer transition-all duration-200 ${
+                voiceSearchState === "listening"
+                  ? "text-red-500 bg-red-500/15 animate-pulse"
+                  : "text-dim hover:text-amber-400 hover:bg-line/30 hover:scale-105 active:scale-95"
+              }`}
+              title="Voice Search (Speak Telugu or English)"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
             <button
               id="tour-search-categories-btn"
               onClick={() => {
@@ -359,14 +372,14 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   router.push("/");
                 }
               }}
-              className={`p-1 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 ${
+              className={`p-1.5 hover:bg-line/30 rounded-full cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 ${
                 activeTab === "categories"
                   ? "text-title bg-card-hover"
-                  : "text-dim hover:text-copy"
+                  : "text-dim hover:text-amber-400"
               }`}
               title="Browse Categories"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="w-5 h-5" />
             </button>
           </div>
 
@@ -513,24 +526,6 @@ export default function Header({ setShowAuth, setAuthMode }) {
             </div>
           )}
         </div>
-
-        {/* Circular Microphone Button for Voice Search (Beside Search Bar) */}
-        <button
-          onClick={handleVoiceSearch}
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border transition-all duration-200 cursor-pointer shadow-sm ${
-            voiceSearchState === "listening"
-              ? "bg-red-500 border-red-400 text-white animate-pulse shadow-[0_0_16px_rgba(239,68,68,0.4)] ring-2 ring-red-400/50 scale-105"
-              : "bg-amber-500/15 hover:bg-amber-500/30 border-amber-500/40 hover:border-amber-400 text-amber-400 hover:text-amber-300 shadow-amber-500/10 hover:shadow-amber-500/25 active:scale-95"
-          }`}
-          title="Voice Search (Speak Telugu or English)"
-          aria-label="Voice Search"
-        >
-          {voiceSearchState === "listening" ? (
-            <span className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
-          ) : (
-            <Mic className="w-5 h-5" />
-          )}
-        </button>
       </div>
 
       <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">

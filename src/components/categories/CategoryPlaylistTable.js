@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock, Plus } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
@@ -127,7 +128,8 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 if (isCurrent) {
                   togglePlay();
                 } else {
-                  playSong(song, songs);
+                  const letterKey = category?.id?.startsWith('letter-') ? category.id.replace('letter-', '') : null;
+                  playSong(song, letterKey, index, songs);
                 }
               }}
               variants={itemVariants}
@@ -175,11 +177,15 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`font-bold text-sm truncate transition-colors ${
-                      isCurrent ? "text-title font-extrabold" : "text-title"
-                    }`}>
+                    <Link
+                      href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${category?.id?.startsWith('letter-') ? `&letter=${encodeURIComponent(category.id.replace('letter-', ''))}` : ''}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className={`font-bold text-sm truncate transition-colors hover:underline ${
+                        isCurrent ? "text-title font-extrabold" : "text-title"
+                      }`}
+                    >
                       {displayTitle}
-                    </span>
+                    </Link>
                     {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
                       <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
                     )}

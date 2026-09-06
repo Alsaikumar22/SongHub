@@ -7,25 +7,6 @@ import SongsPrefetcher from "./SongsPrefetcher";
 export default function LandingHero({ onEnter, redirectTo }) {
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#0B0F18] flex flex-col items-center justify-center px-5 sm:px-6 select-none">
-      {/* Inline script: starts fetching songs BEFORE React hydrates */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              if (window.__SONGHUB_SONGS_PREFETCHED) return;
-              window.__SONGHUB_SONGS_PREFETCHED = true;
-              fetch('/api/songs?all=true', { cache: 'default' })
-                .then(function(r) { return r.ok ? r.json() : null; })
-                .then(function(d) {
-                  if (d && d.songs) {
-                    window.__SONGHUB_PREFETCHED_SONGS = d.songs;
-                  }
-                })
-                .catch(function() {});
-            })();
-          `,
-        }}
-      />
       {/* Prefetch API */}
       <link rel="prefetch" href="/api/songs?all=true" />
       <SongsPrefetcher />

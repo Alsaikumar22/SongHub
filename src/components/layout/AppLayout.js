@@ -125,6 +125,7 @@ function AppLayoutInner({
     collaboratingPlaylist,
     setCollaboratingPlaylist,
     hasEnteredApp,
+    setCurrentSectionLetter,
   } = useAudio();
 
   const pathname = usePathname();
@@ -359,6 +360,12 @@ function AppLayoutInner({
                   setActivePlaylistId(null);
                   setViewedSongId(null);
                   setShowFullHome(false);
+                  if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                  if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.removeItem("yw_selected_letter");
+                    } catch (e) {}
+                  }
                   router.push("/?tab=songs");
                 }}
               />
@@ -958,8 +965,8 @@ function AppLayoutInner({
                 />
                 <div>
                   <h2 className="text-xl font-black text-title">YouWorship</h2>
-                  <p className="text-[10px] text-amber-400 font-semibold mt-0.5">
-                    All Your Worship Songs in One Place
+                  <p className="text-[10px] text-title font-semibold mt-0.5">
+                    Lyrics & Music
                   </p>
                 </div>
               </div>

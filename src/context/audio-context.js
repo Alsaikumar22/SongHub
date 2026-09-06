@@ -207,7 +207,17 @@ export const AudioProvider = ({ children }) => {
     setSections(newSections);
     console.log('[Sections] Pre-built sections for', lang, ':', Object.keys(newSections).join(', '));
   }, []);
-  const [currentSectionLetter, setCurrentSectionLetter] = useState(null);
+  const [currentSectionLetter, setCurrentSectionLetter] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get("letter") || sessionStorage.getItem("yw_selected_letter") || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [currentIndexInSection, setCurrentIndexInSection] = useState(null);
   const [isLoadingMoreNext, setIsLoadingMoreNext] = useState(false);
 
@@ -237,6 +247,11 @@ export const AudioProvider = ({ children }) => {
 
   useEffect(() => {
     currentSectionLetterRef.current = currentSectionLetter;
+    if (currentSectionLetter && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("yw_selected_letter", currentSectionLetter);
+      } catch (e) {}
+    }
   }, [currentSectionLetter]);
 
   useEffect(() => {
@@ -1232,10 +1247,25 @@ export const AudioProvider = ({ children }) => {
   const playSong = (song, sectionLetter = null, indexInSection = null, customQueue = null) => {
     if (!song) return;
 
-    setCurrentSectionLetter(sectionLetter);
-    setCurrentIndexInSection(indexInSection);
-    currentSectionLetterRef.current = sectionLetter;
-    currentIndexInSectionRef.current = indexInSection;
+    const effectiveLetter =
+      sectionLetter ||
+      currentSectionLetterRef.current ||
+      (typeof window !== "undefined" ? sessionStorage.getItem("yw_selected_letter") : null) ||
+      getAlphabeticalKey(song, lyricsLanguage || "telugu");
+
+    if (effectiveLetter && effectiveLetter !== "#") {
+      setCurrentSectionLetter(effectiveLetter);
+      currentSectionLetterRef.current = effectiveLetter;
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("yw_selected_letter", effectiveLetter);
+        } catch (e) {}
+      }
+    }
+    if (indexInSection !== null) {
+      setCurrentIndexInSection(indexInSection);
+      currentIndexInSectionRef.current = indexInSection;
+    }
 
     if (currentSong && currentSong.id === song.id) {
       if (isPlaying) {
@@ -1737,6 +1767,8 @@ export const AudioProvider = ({ children }) => {
         sectionsLoading,
         initializeAlphabeticalSections,
         showAllSongsForLetter,
+        currentSectionLetter,
+        setCurrentSectionLetter,
         hasEnteredApp,
         setHasEnteredApp,
       }}

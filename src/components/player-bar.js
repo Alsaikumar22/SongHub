@@ -71,6 +71,33 @@ function PipIcon({ className }) {
   );
 }
 
+function getVideoEmbedUrl(song) {
+  if (!song) return "";
+  if (song.youtubeId) {
+    return `https://www.youtube.com/embed/${song.youtubeId}?autoplay=1&enablejsapi=1`;
+  }
+  const rawUrl = song.media?.video || song.videoUrl || song.youtubeUrl || "";
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (trimmed.includes("youtube.com/embed/")) {
+    return trimmed.includes("?") ? `${trimmed}&autoplay=1` : `${trimmed}?autoplay=1`;
+  }
+  if (trimmed.includes("youtube.com/watch")) {
+    const match = trimmed.match(/[?&]v=([^&]+)/);
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+    }
+  }
+  if (trimmed.includes("youtu.be/")) {
+    const parts = trimmed.split("youtu.be/");
+    if (parts[1]) {
+      const id = parts[1].split("?")[0];
+      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+    }
+  }
+  return trimmed;
+}
+
 export default function PlayerBar() {
   const {
     currentSong,
@@ -98,11 +125,16 @@ export default function PlayerBar() {
     queue,
     isQueueOpen,
     setIsQueueOpen,
+    currentSectionLetter,
   } = useAudio();
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const activeLetterVal = currentSectionLetter || currentSong?.teluguFirstLetter || currentSong?.firstLetter;
+  const songLetterQuery = activeLetterVal ? `&letter=${encodeURIComponent(activeLetterVal)}` : "";
+  const songLetterFirstQuery = activeLetterVal ? `?letter=${encodeURIComponent(activeLetterVal)}` : "";
 
   const [sliderVal, setSliderVal] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -299,7 +331,7 @@ export default function PlayerBar() {
                 onClick={(e) => {
                   e.stopPropagation();
                   if (currentSong?.id) {
-                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics${songLetterQuery}`);
                   }
                 }}
                 className="p-1.5 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-[#D4A32A] hover:text-amber-300"
@@ -347,7 +379,7 @@ export default function PlayerBar() {
             {currentSong ? (
               <>
                 <Link
-                  href={`/song/${currentSong.slug || currentSong.id}`}
+                  href={`/song/${currentSong.slug || currentSong.id}${songLetterFirstQuery}`}
                   className="group relative block overflow-hidden rounded-md border border-line flex-shrink-0 cursor-pointer"
                 >
                   <SongArtwork
@@ -361,7 +393,7 @@ export default function PlayerBar() {
                 </Link>
                 <div className="overflow-hidden min-w-0">
                   <Link
-                    href={`/song/${currentSong.slug || currentSong.id}`}
+                    href={`/song/${currentSong.slug || currentSong.id}${songLetterFirstQuery}`}
                     className="font-bold text-sm text-title hover:text-handle block truncate hover:underline text-left cursor-pointer font-song-title"
                   >
                     {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
@@ -517,7 +549,7 @@ export default function PlayerBar() {
           <div className="flex items-center gap-2 w-[30%] justify-end min-w-0">
             {hasVideo && (
               <button
-                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`)}
+                onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video${songLetterQuery}`)}
                 className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-title hover:bg-card-hover"
                 title="Watch Video"
               >
@@ -529,20 +561,16 @@ export default function PlayerBar() {
               {currentSong ? (
                 isLyricsPage ? (
                   <Link
-                    href={`/song/${currentSong.slug || currentSong.id}`}
-                    className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                      isLyricsPage
-                        ? "text-accent bg-card-hover font-semibold shadow-[0_0_15px_rgba(29,185,84,0.15)] scale-105"
-                        : "text-muted hover:text-copy hover:bg-card-hover"
-                    }`}
+                    href={`/song/${currentSong.slug || currentSong.id}${songLetterFirstQuery}`}
+                    className="p-1.5 rounded-full transition-all duration-200 cursor-pointer text-amber-400 bg-card-hover font-semibold shadow-[0_0_15px_rgba(212,163,42,0.2)] scale-105"
                     title="Close Lyrics"
                   >
                     <MicIcon className="w-4 h-4" />
                   </Link>
                 ) : (
                   <button
-                    onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`)}
-                    className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
+                    onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics${songLetterQuery}`)}
+                    className="p-1.5 rounded-full transition-all duration-200 cursor-pointer text-dim hover:text-amber-400 hover:bg-card-hover active:scale-95"
                     title="View Lyrics"
                   >
                     <MicIcon className="w-4 h-4" />
@@ -551,7 +579,7 @@ export default function PlayerBar() {
               ) : (
                 <button
                   onClick={() => router.push("/?tab=discover")}
-                  className="p-1.5 text-muted hover:text-copy rounded-full hover:bg-card-hover cursor-pointer"
+                  className="p-1.5 text-dim hover:text-amber-400 rounded-full hover:bg-card-hover cursor-pointer transition-all duration-200 active:scale-95"
                   title="Lyrics"
                 >
                   <MicIcon className="w-4 h-4" />
@@ -716,7 +744,7 @@ export default function PlayerBar() {
                 onClick={() => {
                   setIsExpanded(false);
                   if (currentSong) {
-                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics${songLetterQuery}`);
                   }
                 }}
                 className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
@@ -728,7 +756,7 @@ export default function PlayerBar() {
                 <button
                   onClick={() => {
                     setIsExpanded(false);
-                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video${songLetterQuery}`);
                   }}
                   className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"
                   title="Watch Video"
@@ -899,15 +927,72 @@ export default function PlayerBar() {
         </div>
       )}
 
-      {/* Floating close button for Mini Player */}
-      {isMiniPlayerActive && currentSong && (
-        <button
-          onClick={() => setIsMiniPlayerActive(false)}
-          className="fixed bottom-[245px] right-[30px] z-[10000] p-1 bg-black/80 hover:bg-black text-white hover:text-red-400 rounded-full border border-white/10 shadow-lg cursor-pointer transition-all hover:scale-105 active:scale-95"
-          title="Close Mini Player"
+      {/* ─── FLOATING MINI-PLAYER VIDEO WINDOW (PiP) ─── */}
+      {isMiniPlayerActive && currentSong && hasVideo && (
+        <div
+          className="fixed bottom-[96px] sm:bottom-[104px] right-3 sm:right-6 z-[9999] w-[290px] sm:w-[350px] md:w-[390px] bg-card/95 backdrop-blur-xl border border-line rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200"
         >
-          <X className="w-3.5 h-3.5" />
-        </button>
+          {/* Miniplayer Header Bar with Song Title & 'X' (into mark) close button */}
+          <div className="flex items-center justify-between px-3.5 py-2 bg-black/80 border-b border-white/10 select-none">
+            <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-xs font-bold text-title truncate font-song-title">
+                {lyricsLanguage === "english"
+                  ? (currentSong.titleEnglish || currentSong.title)
+                  : (currentSong.teluguTitle || currentSong.title)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() =>
+                  router.push(
+                    `/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=video${songLetterQuery}`
+                  )
+                }
+                className="p-1 hover:bg-white/10 rounded-full text-dim hover:text-white transition-colors cursor-pointer"
+                title="Full Video View"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+              {/* Into Mark / Close X button */}
+              <button
+                onClick={() => setIsMiniPlayerActive(false)}
+                className="p-1 hover:bg-white/20 rounded-full text-dim hover:text-red-400 transition-colors cursor-pointer active:scale-90"
+                title="Close Mini Player"
+                aria-label="Close Mini Player"
+              >
+                <X className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+          </div>
+
+          {/* Video Player Container */}
+          <div className="relative aspect-video w-full bg-black">
+            {getVideoEmbedUrl(currentSong) ? (
+              <iframe
+                src={getVideoEmbedUrl(currentSong)}
+                title={currentSong.title || "Song Video"}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted gap-2">
+                <Music className="w-8 h-8 text-dim" />
+                <span className="text-xs font-medium">Video not available</span>
+              </div>
+            )}
+            {/* Direct Close "X" Button overlay on top-right of the video */}
+            <button
+              onClick={() => setIsMiniPlayerActive(false)}
+              className="absolute top-2 right-2 z-30 p-1.5 bg-black/80 hover:bg-red-600/90 text-white rounded-full backdrop-blur-md border border-white/20 shadow-lg cursor-pointer transition-all hover:scale-110 active:scale-95"
+              title="Close Video"
+              aria-label="Close Video"
+            >
+              <X className="w-3.5 h-3.5 stroke-[3]" />
+            </button>
+          </div>
+        </div>
       )}
 
 

@@ -124,7 +124,7 @@ export const CATEGORIES_DATA = [
     nameEn: "Good Friday",
     nameTe: "గుడ్ ఫ్రైడే",
     motif: "Cross on Calvary",
-    bgImage: "https://media.istockphoto.com/id/2040755457/photo/crown-of-thorns.jpg?s=612x612&w=0&k=20&c=p4chDt90atN3IZz4P-UJhdM1U7diumOZPQDMeemjno=",
+    bgImage: "/images/good-friday.jpg",
     legacyNames: ["Good Friday Songs"],
     songIdsEn: ["4"],
     songIdsTe: ["9", "15"]

@@ -23,6 +23,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
     setViewedSongId,
     showFullHome,
     setShowFullHome,
+    setCurrentSectionLetter,
   } = useAudio();
 
   const { setSearchQuery, setShowFullResults } = useSearch();
@@ -94,6 +95,12 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActivePlaylistId(null);
         setViewedSongId(null);
         setShowFullHome(false);
+        if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("yw_selected_letter");
+          } catch (e) {}
+        }
         router.push("/?tab=songs");
       },
     },
