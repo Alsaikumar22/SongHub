@@ -9,13 +9,15 @@ import {
   Download,
   MoreVertical,
   Check,
+  Plus,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import { getShareableSongUrl } from "@/utils/share";
+import SongOptionsMenu from "@/components/song/SongOptionsMenu";
 
 export default function CategorySongCard({ song, language, onClick }) {
-  const { toggleFavorite, favorites, currentSong, isPlaying, playSong } =
+  const { toggleFavorite, favorites, currentSong, isPlaying, playSong, setAddToPlaylistSong } =
     useAudio();
   const [isShared, setIsShared] = useState(false);
 
@@ -31,14 +33,15 @@ export default function CategorySongCard({ song, language, onClick }) {
   const isSongPlaying = isCurrent && isPlaying;
   const isFav = favorites.includes(song.id);
 
+  const isNative = language === "telugu" || language === "tamil" || language === "hindi";
   const displayTitle =
-    language === "telugu" && song.teluguTitle
+    isNative && song.teluguTitle
       ? song.teluguTitle
       : song.titleEnglish || song.title;
   const subtitle =
-    language === "telugu"
-      ? song.titleEnglish || null
-      : song.teluguTitle || null;
+    isNative
+      ? (song.titleEnglish && song.titleEnglish !== song.teluguTitle ? song.titleEnglish : null)
+      : (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null);
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
@@ -88,7 +91,7 @@ export default function CategorySongCard({ song, language, onClick }) {
   return (
     <motion.div
       onClick={onClick}
-      className="relative rounded-2xl p-4 bg-card-hover/20 border border-line shadow-lg flex flex-col justify-between select-none cursor-pointer group transition-all duration-300"
+      className="relative isolate rounded-2xl p-4 bg-card-hover/20 border border-line shadow-lg flex flex-col justify-between select-none cursor-pointer group transition-all duration-300"
       whileHover={{
         scale: 1.04,
         borderColor: "rgba(255, 255, 255, 0.25)",
@@ -110,10 +113,24 @@ export default function CategorySongCard({ song, language, onClick }) {
           transition={{ duration: 0.4 }}
         />
 
+        {/* Top Right: Add to Playlist (+) button */}
+        <button
+          id="tour-song-card-playlist-btn"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAddToPlaylistSong(song);
+          }}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/50 text-white hover:text-[#D4A32A] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer z-10"
+          title="Add to Playlist"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+
         {/* Hover overlay with Play button — always visible on mobile, hover on desktop */}
         <div
           onClick={handlePlayClick}
-          className="absolute inset-0 bg-black/45 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer z-20"
+          className="absolute inset-0 bg-black/45 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer z-[5]"
         >
           <div className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_15px_rgba(255, 255, 255, 0.2)] scale-90 group-hover:scale-100 transition-all duration-300">
             <Play className="w-5 h-5 fill-current ml-0.5" />
@@ -150,6 +167,18 @@ export default function CategorySongCard({ song, language, onClick }) {
         </span>
 
         <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+          {/* Add to Playlist (+) button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setAddToPlaylistSong(song);
+            }}
+            className="p-1 rounded-full hover:bg-card-hover text-muted hover:text-[#D4A32A] transition-colors cursor-pointer"
+            title="Add to Playlist"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
           <button
             onClick={handleFavoriteClick}
             className={`p-1 rounded-full hover:bg-card-hover transition-colors cursor-pointer ${isFav ? "text-red-400" : "text-muted hover:text-title"}`}
@@ -175,12 +204,7 @@ export default function CategorySongCard({ song, language, onClick }) {
             <Download className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            onClick={handleMoreClick}
-            className="p-1 rounded-full hover:bg-card-hover text-muted hover:text-title transition-colors cursor-pointer"
-          >
-            <MoreVertical className="w-3.5 h-3.5" />
-          </button>
+          <SongOptionsMenu song={song} iconSize="w-3.5 h-3.5" />
         </div>
       </div>
     </motion.div>

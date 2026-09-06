@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdmin, verifyAdminAuth, COLLECTION_NAME, generateSongId, FieldValue } from "@/lib/admin-firebase";
+import { songService } from "@/services/songService";
 
 // firebase-admin requires Node.js APIs (crypto, net) and must NOT run on the
 // Edge runtime. Explicitly opt into the Node.js runtime.
@@ -128,6 +129,8 @@ export async function PUT(request, { params }) {
       await songRef.update(updateData);
     }
 
+    songService.invalidateCache();
+
     return NextResponse.json({
       success: true,
       id: newId,
@@ -182,6 +185,8 @@ export async function DELETE(request, { params }) {
     }
 
     await songRef.delete();
+
+    songService.invalidateCache();
 
     return NextResponse.json({
       success: true,

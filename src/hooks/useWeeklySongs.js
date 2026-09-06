@@ -19,7 +19,9 @@ function mulberry32(seed) {
  * Returns the current ISO week number using UTC so it's consistent worldwide.
  */
 function getISOWeekNumber(date = new Date()) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const d = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -43,17 +45,21 @@ function seededShuffle(array, rng) {
 /**
  * useWeeklySongs
  *
- * Deterministically picks `count` songs from the Firebase Youworship_songs array
+ * Deterministically picks `count` songs from the Firebase youworship_songs array
  * based on the current ISO week number. Selection changes every Monday
  * and is consistent for all users.
  *
  * @param {Object} options
- * @param {Array} options.songs - Full song list from Firebase Youworship_songs
+ * @param {Array} options.songs - Full song list from Firebase youworship_songs
  * @param {number} [options.count=5] - Number of songs for the carousel
  * @param {number} [options.weekOffset] - Override for testing
  * @returns {{ weeklySongs: Array, weekNumber: number }}
  */
-export default function useWeeklySongs({ songs = [], count = 5, weekOffset } = {}) {
+export default function useWeeklySongs({
+  songs = [],
+  count = 5,
+  weekOffset,
+} = {}) {
   const weekNumber = useMemo(() => {
     const base = getISOWeekNumber();
     return weekOffset !== undefined ? base + weekOffset : base;

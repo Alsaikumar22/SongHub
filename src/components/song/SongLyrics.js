@@ -1,24 +1,55 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { FileText } from "lucide-react";
+import { LyricsSkeleton } from "@/components/ui/SongSkeleton";
 
-export function LanguageSegmented({ selected, onChange }) {
+export function LanguageSegmented({ selected, onChange, songLanguage, hasChords }) {
   const langs = [];
-  langs.push({ id: "telugu", label: "తెలుగు" });
-  langs.push({ id: "english", label: "English" });
+  const isHi = songLanguage === "hi" || songLanguage === "hindi";
+  const isTa = songLanguage === "ta" || songLanguage === "tamil";
+  const isEn = songLanguage === "en" || songLanguage === "english";
+
+  if (isHi) {
+    langs.push({ id: "hindi", label: "हिन्दी" });
+    langs.push({ id: "english", label: "English" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
+  } else if (isTa) {
+    langs.push({ id: "tamil", label: "தமிழ்" });
+    langs.push({ id: "english", label: "English" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
+  } else if (isEn) {
+    langs.push({ id: "english", label: "English" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
+  } else {
+    langs.push({ id: "telugu", label: "తెలుగు" });
+    langs.push({ id: "english", label: "English" });
+    if (hasChords) langs.push({ id: "chords", label: "Chords" });
+  }
 
   return (
     <div className="flex h-9 md:h-11 bg-card-hover border border-line/60 rounded-full p-0.5 shadow-sm w-fit">
       {langs.map((lang) => {
         const isSelected = selected === lang.id;
+        const isChords = lang.id === "chords";
+        const isDisabled = isChords && !hasChords;
+
         return (
           <button
             key={lang.id}
-            onClick={() => onChange(lang.id)}
-            className={`h-full px-3.5 md:px-5 text-[10px] md:text-xs font-extrabold rounded-full transition-all duration-200 cursor-pointer ${
-              isSelected
-                ? "bg-title text-card shadow-sm"
-                : "bg-transparent text-muted hover:text-title"
+            onClick={() => {
+              if (!isDisabled) {
+                onChange(lang.id);
+              }
+            }}
+            disabled={isDisabled}
+            title={isDisabled ? "Chords not available" : ""}
+            className={`h-full px-3.5 md:px-5 text-[10px] md:text-xs font-extrabold rounded-full transition-all duration-200 ${
+              isDisabled
+                ? "opacity-35 cursor-not-allowed bg-transparent text-muted"
+                : isSelected
+                  ? "bg-title text-card shadow-sm cursor-pointer"
+                  : "bg-transparent text-muted hover:text-title cursor-pointer"
             }`}
           >
             <span>{lang.label}</span>
@@ -36,6 +67,7 @@ export default function SongLyrics({
   selectedLanguage: propLanguage,
   setSelectedLanguage: propSetLanguage,
   fontSizeMultiplier = 1.0,
+  loading = false,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
 
@@ -86,11 +118,22 @@ export default function SongLyrics({
 
   useEffect(() => {
     if (song) {
-      const hasTelugu = !!(
+      const songLanguage = (song.language || "").toLowerCase();
+      const isHi = songLanguage === "hi" || songLanguage === "hindi";
+      const isTa = songLanguage === "ta" || songLanguage === "tamil";
+
+      const hasNative = !!(
         song.lyricsTelugu ||
-        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te" || l.isDefault))
+        (Array.isArray(song.lyrics) && song.lyrics.some((l) => l.language === "te" || l.language === "hi" || l.language === "ta" || l.isDefault))
       );
-      setInternalLanguage(hasTelugu ? "telugu" : "english");
+
+      let defaultLang = "english";
+      if (hasNative) {
+        if (isHi) defaultLang = "hindi";
+        else if (isTa) defaultLang = "tamil";
+        else defaultLang = "telugu";
+      }
+      setInternalLanguage(defaultLang);
     }
   }, [song]);
 
@@ -98,7 +141,7 @@ export default function SongLyrics({
     if (selectedLanguage === "english") {
       return stanzasEnglish.length > 0 ? stanzasEnglish : stanzasTelugu;
     }
-    return stanzasTelugu;
+    return stanzasTelugu.length > 0 ? stanzasTelugu : stanzasEnglish;
   }, [selectedLanguage, stanzasTelugu, stanzasEnglish]);
 
   const dualStanzas = useMemo(() => {
@@ -157,7 +200,27 @@ export default function SongLyrics({
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center">
-          {selectedLanguage === "dual" ? (
+          {loading ? (
+            <LyricsSkeleton language={selectedLanguage} isImmersive={true} />
+          ) : selectedLanguage === "chords" ? (
+            <div className="max-w-3xl mx-auto w-full py-4 bg-card-hover/20 rounded-2xl p-6 md:p-10 border border-line/45 shadow-inner">
+              {song.chordCredits && (
+                <div className="text-xs uppercase tracking-widest font-black text-muted mb-6 border-b border-line pb-3 flex justify-between items-center select-none">
+                  <span>Chords</span>
+                  <span className="text-title font-bold">{song.chordCredits}</span>
+                </div>
+              )}
+              {Array.isArray(song.chords) && song.chords.length > 0 ? (
+                <pre className="font-mono text-left text-base sm:text-lg md:text-xl overflow-x-auto whitespace-pre leading-relaxed tracking-wide text-title p-2 scrollbar-thin select-text">
+                  {song.chords.join("\n")}
+                </pre>
+              ) : (
+                <div className="py-24 text-center">
+                  <p className="text-lg text-muted font-medium">Chords not available for this song.</p>
+                </div>
+              )}
+            </div>
+          ) : selectedLanguage === "dual" ? (
             /* Widescreen 2-Column Side-by-Side Grid, falling back to stack on Mobile */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
               {/* Left Column: Telugu */}
@@ -233,13 +296,13 @@ export default function SongLyrics({
             </div>
           )}
 
-          {selectedLanguage === "dual" && stanzasTelugu.length === 0 && stanzasEnglish.length === 0 && (
+          {!loading && selectedLanguage === "dual" && stanzasTelugu.length === 0 && stanzasEnglish.length === 0 && (
             <div className="py-24 text-center">
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
             </div>
           )}
 
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
+          {!loading && selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-24 text-center">
               <p className="text-lg text-muted font-medium">Lyrics not available for this track.</p>
             </div>
@@ -257,7 +320,27 @@ export default function SongLyrics({
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
         <div className="max-w-2xl mx-auto space-y-8">
-          {selectedLanguage === "dual" ? (
+          {loading ? (
+            <LyricsSkeleton language={selectedLanguage} isImmersive={false} />
+          ) : selectedLanguage === "chords" ? (
+            <div className="max-w-2xl mx-auto py-2 bg-card-hover/20 rounded-xl p-4 md:p-6 border border-line/45 shadow-inner">
+              {song.chordCredits && (
+                <div className="text-[10px] sm:text-xs uppercase tracking-widest font-black text-muted mb-4 border-b border-line pb-2 flex justify-between items-center select-none">
+                  <span>Chord Credits</span>
+                  <span className="text-title font-bold">{song.chordCredits}</span>
+                </div>
+              )}
+              {Array.isArray(song.chords) && song.chords.length > 0 ? (
+                <pre className="font-mono text-left text-sm md:text-base overflow-x-auto whitespace-pre leading-relaxed tracking-wide text-title p-2 scrollbar-thin select-text">
+                  {song.chords.join("\n")}
+                </pre>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-muted">Chords not available for this song.</p>
+                </div>
+              )}
+            </div>
+          ) : selectedLanguage === "dual" ? (
             dualStanzas.map((stanza, sIdx) => (
               <div key={`dual-stanza-${sIdx}`} className="space-y-4 py-3.5 border-b border-line/10 last:border-0">
                 <div className="space-y-2">
@@ -316,13 +399,13 @@ export default function SongLyrics({
             ))
           )}
 
-          {selectedLanguage === "dual" && dualStanzas.length === 0 && (
+          {!loading && selectedLanguage === "dual" && dualStanzas.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-sm text-muted">Lyrics not available for this track.</p>
             </div>
           )}
 
-          {selectedLanguage !== "dual" && flatLines.length === 0 && (
+          {!loading && selectedLanguage !== "dual" && flatLines.length === 0 && (
             <div className="py-16 text-center">
               <p className="text-sm text-muted">Lyrics not available for this track.</p>
             </div>
@@ -346,6 +429,8 @@ export default function SongLyrics({
         <LanguageSegmented
           selected={selectedLanguage}
           onChange={setSelectedLanguage}
+          songLanguage={(song?.language || "").toLowerCase()}
+          hasChords={Array.isArray(song?.chords) && song.chords.length > 0}
         />
       </div>
       {lyricsContent}

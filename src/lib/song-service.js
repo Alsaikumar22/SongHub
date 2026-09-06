@@ -1,17 +1,17 @@
 /**
- * Song Service — Fetch & transform songs from Firebase `Youworship_songs` collection
+ * Song Service — Fetch & transform songs from Firebase `youworship_songs` collection
  */
 import { songService, transformSongDoc } from "@/services/songService";
 
 /**
- * Legacy export wrapper pointing to the primary Youworship_songs service
+ * Legacy export wrapper pointing to the primary youworship_songs service
  */
 export async function getAllSongs() {
   return await songService.getAllSongs();
 }
 
 /**
- * Fetch a single song by document ID from Youworship_songs
+ * Fetch a single song by document ID from youworship_songs
  */
 export async function getSongById(songId) {
   return await songService.getSongById(songId);

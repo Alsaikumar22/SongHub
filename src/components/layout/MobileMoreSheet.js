@@ -8,8 +8,12 @@ import {
   MessageSquare,
   Info,
   X,
+  HelpCircle,
+  Clock,
+  ListMusic,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
+import { useTour } from "@/context/tour-context";
 import { useRouter } from "next/navigation";
 
 const moreItems = [
@@ -19,6 +23,20 @@ const moreItems = [
     label: "Now Playing",
     description: "View current song lyrics",
     accent: "text-sky-400",
+  },
+  {
+    id: "recently-played",
+    icon: <Clock className="w-5 h-5" />,
+    label: "Recently Played",
+    description: "Listening history & recent tracks",
+    accent: "text-[#D4A32A]",
+  },
+  {
+    id: "playlists",
+    icon: <ListMusic className="w-5 h-5" />,
+    label: "My Playlists",
+    description: "Custom worship playlists",
+    accent: "text-purple-400",
   },
   {
     id: "categories",
@@ -33,6 +51,13 @@ const moreItems = [
     label: "Contact Us",
     description: "Send feedback or request a song",
     accent: "text-emerald-400",
+  },
+  {
+    id: "replay-tour",
+    icon: <HelpCircle className="w-5 h-5" />,
+    label: "Replay Tour",
+    description: "Walk through app features again",
+    accent: "text-purple-400",
   },
   {
     id: "about",
@@ -50,6 +75,7 @@ export default function MobileMoreSheet({
   onOpenAbout,
 }) {
   const { currentSong, setActiveTab, setActivePlaylistId, setViewedSongId } = useAudio();
+  const { startTour } = useTour();
   const router = useRouter();
 
   const handleItemClick = (itemId) => {
@@ -57,6 +83,9 @@ export default function MobileMoreSheet({
     // Small delay so the sheet closes before navigation triggers
     setTimeout(() => {
       switch (itemId) {
+        case "replay-tour":
+          startTour();
+          break;
         case "now-playing":
           if (currentSong) {
             router.push(
@@ -64,14 +93,26 @@ export default function MobileMoreSheet({
             );
           } else {
             setActiveTab("discover");
-            router.push("/home");
+            router.push("/");
           }
+          break;
+        case "recently-played":
+          setActiveTab("recently-played");
+          setActivePlaylistId(null);
+          setViewedSongId(null);
+          router.push("/?tab=recently-played");
+          break;
+        case "playlists":
+          setActiveTab("playlists");
+          setActivePlaylistId(null);
+          setViewedSongId(null);
+          router.push("/?tab=playlists");
           break;
         case "categories":
           setActiveTab("categories");
           setActivePlaylistId(null);
           setViewedSongId(null);
-          router.push("/home");
+          router.push("/?tab=categories");
           break;
         case "contact":
           onOpenTalkToUs?.();

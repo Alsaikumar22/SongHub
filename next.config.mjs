@@ -68,6 +68,21 @@ const nextConfig = {
       },
     ];
   },
+  // ─── Permanent Redirects ───
+  async redirects() {
+    return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/home/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

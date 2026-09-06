@@ -1,7 +1,7 @@
 /**
- * Sync YouTube URLs from legacy 'songs' collection to active 'Youworship_songs'
+ * Sync YouTube URLs from legacy 'songs' collection to active 'youworship_songs'
  *
- * For each song in Youworship_songs missing a YouTube URL, looks up the
+ * For each song in youworship_songs missing a YouTube URL, looks up the
  * matching song in the legacy 'songs' collection and copies it over.
  *
  * Matching strategy:
@@ -25,7 +25,11 @@ import {
 } from "firebase/firestore";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -52,7 +56,9 @@ function getArtistName(data) {
 }
 
 async function syncYoutubeUrls() {
-  console.log("🎵 Syncing YouTube URLs from legacy 'songs' → 'Youworship_songs'\n");
+  console.log(
+    "🎵 Syncing YouTube URLs from legacy 'songs' → 'youworship_songs'\n",
+  );
 
   try {
     const app = initializeApp(firebaseConfig);
@@ -84,11 +90,13 @@ async function syncYoutubeUrls() {
       }
     }
 
-    console.log(`   Legacy lookup built: ${legacyById.size} by ID, ${legacyByTitleArtist.size} by title+artist\n`);
+    console.log(
+      `   Legacy lookup built: ${legacyById.size} by ID, ${legacyByTitleArtist.size} by title+artist\n`,
+    );
 
-    // ── 2. Read active 'Youworship_songs' collection ──────────────────
-    console.log("📥 Reading active 'Youworship_songs' collection...");
-    const activeSnap = await getDocs(collection(db, "Youworship_songs"));
+    // ── 2. Read active 'youworship_songs' collection ────────────
+    console.log("📥 Reading active 'youworship_songs' collection...");
+    const activeSnap = await getDocs(collection(db, "youworship_songs"));
     console.log(`   Found ${activeSnap.docs.length} active documents.\n`);
 
     // ── 3. Find songs that need a YouTube URL and have a legacy match ──
@@ -116,9 +124,16 @@ async function syncYoutubeUrls() {
       }
 
       if (matchUrl) {
-        needsSync.push({ id: activeId, url: matchUrl, data, method: matchMethod });
+        needsSync.push({
+          id: activeId,
+          url: matchUrl,
+          data,
+          method: matchMethod,
+        });
       } else {
-        console.log(`   ❌ No legacy match: "${data.title}" — ${getArtistName(data)}`);
+        console.log(
+          `   ❌ No legacy match: "${data.title}" — ${getArtistName(data)}`,
+        );
         noMatch++;
       }
     }
@@ -126,7 +141,9 @@ async function syncYoutubeUrls() {
     console.log(`\n📊 Summary:`);
     console.log(`   Total active songs:        ${activeSnap.docs.length}`);
     console.log(`   Already has YouTube:       ${alreadyHasYoutube}`);
-    console.log(`   Missing YouTube URL:       ${activeSnap.docs.length - alreadyHasYoutube}`);
+    console.log(
+      `   Missing YouTube URL:       ${activeSnap.docs.length - alreadyHasYoutube}`,
+    );
     console.log(`   Matched in legacy:         ${needsSync.length}`);
     console.log(`   No legacy match:           ${noMatch}\n`);
 
@@ -142,7 +159,7 @@ async function syncYoutubeUrls() {
 
     for (let i = 0; i < needsSync.length; i++) {
       const { id, url, data, method } = needsSync[i];
-      const ref = doc(db, "Youworship_songs", id);
+      const ref = doc(db, "youworship_songs", id);
 
       batch.update(ref, {
         "media.video": url,
@@ -150,7 +167,9 @@ async function syncYoutubeUrls() {
       });
 
       ops++;
-      console.log(`   [${i + 1}/${needsSync.length}] ✅ "${data.title}" ← ${url}  (via ${method})`);
+      console.log(
+        `   [${i + 1}/${needsSync.length}] ✅ "${data.title}" ← ${url}  (via ${method})`,
+      );
 
       if (ops >= BATCH_SIZE) {
         console.log(`\n💾 Committing batch of ${ops}...`);
@@ -170,7 +189,6 @@ async function syncYoutubeUrls() {
     console.log("======================================================");
     console.log(`🎉 Done! Synced ${needsSync.length} YouTube URL(s).`);
     console.log("======================================================");
-
   } catch (error) {
     console.error("\n❌ Sync failed:", error);
     process.exit(1);

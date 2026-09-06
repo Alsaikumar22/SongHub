@@ -7,16 +7,20 @@
  * Run: node scripts/seed-bible-chapters.mjs
  *
  * Prerequisites:
- *   1. Update SongHub/.env.local with real Firebase credentials
+ *   1. Update SongHub/.env.local or SongHub/.env with real Firebase credentials
  */
 
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path from "path";
 
-// Load .env.local
+// Load .env and .env.local
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const { initializeApp } = await import("firebase/app");
 const { getFirestore, doc, setDoc } = await import("firebase/firestore");
@@ -40,8 +44,8 @@ if (missing.length > 0) {
   console.error(
     "❌ Firebase credentials not configured or still using dummy values.\n" +
       `  Missing/Invalid: ${missing.join(", ")}\n\n` +
-      "👉 Update SongHub/.env.local with your real Firebase project credentials first.\n" +
-      "   Get them from: https://console.firebase.google.com → Project Settings → Web App"
+      "👉 Update SongHub/.env.local or SongHub/.env with your real Firebase project credentials first.\n" +
+      "   Get them from: https://console.firebase.google.com → Project Settings → Web App",
   );
   process.exit(1);
 }
@@ -85,16 +89,22 @@ async function seed() {
 
       successCount++;
     } catch (error) {
-      console.error(`  ❌ [${i + 1}/${VERSES.length}] ${verseId} — ${error.message}`);
+      console.error(
+        `  ❌ [${i + 1}/${VERSES.length}] ${verseId} — ${error.message}`,
+      );
       errorCount++;
     }
   }
 
   console.log("\n" + "─".repeat(50));
   if (errorCount === 0) {
-    console.log(`\n🎉 Success! ${successCount} verse(s) seeded into bible_chapters.\n`);
+    console.log(
+      `\n🎉 Success! ${successCount} verse(s) seeded into bible_chapters.\n`,
+    );
   } else {
-    console.log(`\n⚠️  ${successCount} verse(s) seeded, ${errorCount} error(s).\n`);
+    console.log(
+      `\n⚠️  ${successCount} verse(s) seeded, ${errorCount} error(s).\n`,
+    );
   }
 
   // Save a metadata document with total count
