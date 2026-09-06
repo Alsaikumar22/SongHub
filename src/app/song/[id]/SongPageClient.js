@@ -350,12 +350,6 @@ export default function SongPageClient({ params, initialSong = null }) {
   };
 
   useEffect(() => {
-    if (prevIdRef.current !== id) {
-      setLyricsLoading(true);
-      fetchingRef.current = false;
-      prevIdRef.current = id;
-    }
-
     let decodedId = id;
     try {
       decodedId = decodeURIComponent(id || "");
@@ -365,12 +359,36 @@ export default function SongPageClient({ params, initialSong = null }) {
 
     const targetNFC = (decodedId || "").normalize("NFC");
     const rawNFC = (id || "").normalize("NFC");
+    const targetLower = targetNFC.toLowerCase();
+    const rawLower = rawNFC.toLowerCase();
+
+    // Check if current song state already matches target
+    const currentSongMatches = song && (
+      (song.id || "").normalize("NFC") === targetNFC ||
+      (song.id || "").normalize("NFC") === rawNFC ||
+      (song.slug || "").normalize("NFC") === targetNFC ||
+      (song.slug || "").normalize("NFC") === rawNFC ||
+      (song.slugEnglish || "").normalize("NFC") === targetNFC ||
+      (song.slugEnglish || "").normalize("NFC") === rawNFC ||
+      (song.title || "").normalize("NFC").toLowerCase() === targetLower ||
+      (song.teluguTitle || "").normalize("NFC").toLowerCase() === targetLower ||
+      (song.titleEnglish || "").normalize("NFC").toLowerCase() === targetLower
+    );
 
     const foundSong =
+      (currentSongMatches ? song : null) ||
+      (initialSong && (
+        (initialSong.id || "").normalize("NFC") === targetNFC ||
+        (initialSong.slug || "").normalize("NFC") === targetNFC ||
+        (initialSong.slugEnglish || "").normalize("NFC") === targetNFC
+      ) ? initialSong : null) ||
       songs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
         const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
+        const sTitleNFC = (s.title || "").normalize("NFC");
+        const sTeluguTitleNFC = (s.teluguTitle || "").normalize("NFC");
+        const sTitleEngNFC = (s.titleEnglish || "").normalize("NFC");
         return (
           sIdNFC === targetNFC ||
           sIdNFC === rawNFC ||
@@ -378,6 +396,15 @@ export default function SongPageClient({ params, initialSong = null }) {
           sSlugNFC === rawNFC ||
           sSlugEnglishNFC === targetNFC ||
           sSlugEnglishNFC === rawNFC ||
+          sTitleNFC === targetNFC ||
+          sTitleNFC === rawNFC ||
+          sTeluguTitleNFC === targetNFC ||
+          sTeluguTitleNFC === rawNFC ||
+          sTitleEngNFC === targetNFC ||
+          sTitleEngNFC === rawNFC ||
+          sSlugNFC.toLowerCase() === targetLower ||
+          sSlugEnglishNFC.toLowerCase() === targetLower ||
+          sTitleNFC.toLowerCase() === targetLower ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
@@ -393,22 +420,25 @@ export default function SongPageClient({ params, initialSong = null }) {
         : null);
 
     if (foundSong) {
-      queueMicrotask(() => setSong(foundSong));
+      setSong(foundSong);
     }
 
-    if (foundSong && (foundSong.lyricsTelugu || foundSong.lyrics || (Array.isArray(foundSong.lyrics) && foundSong.lyrics.length > 0))) {
+    const hasFullLyrics = (s) => s && (
+      (typeof s.lyricsTelugu === "string" && s.lyricsTelugu.trim().length > 0) ||
+      (Array.isArray(s.lyricsTelugu) && s.lyricsTelugu.length > 0) ||
+      (typeof s.lyricsEnglish === "string" && s.lyricsEnglish.trim().length > 0) ||
+      (Array.isArray(s.lyricsEnglish) && s.lyricsEnglish.length > 0) ||
+      (typeof s.lyrics === "string" && s.lyrics.trim().length > 0) ||
+      (Array.isArray(s.lyrics) && s.lyrics.length > 0)
+    );
+
+    if (hasFullLyrics(foundSong)) {
       setLyricsLoading(false);
       return;
     }
 
-    if (initialSong && (initialSong.lyricsTelugu || initialSong.lyrics)) {
-      setLyricsLoading(false);
-      return;
-    }
-
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
     setLyricsLoading(true);
+    fetchingRef.current = true;
 
     songService
       .getSongById(decodedId)
@@ -421,7 +451,6 @@ export default function SongPageClient({ params, initialSong = null }) {
               prevSongs.map((s) => (s.id === fetchedSong.id ? { ...s, ...fetchedSong } : s))
             );
           }
-          fetchingRef.current = false;
         } else {
           fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
             cache: "no-store",
@@ -437,17 +466,14 @@ export default function SongPageClient({ params, initialSong = null }) {
                 }
               }
               setLyricsLoading(false);
-              fetchingRef.current = false;
             })
-            .catch((err) => {
-              console.error("API fallback fetch failed:", err);
+            .catch(() => {
               setLyricsLoading(false);
-              fetchingRef.current = false;
             });
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch song directly from Firestore:", err);
+        console.error("Failed to fetch song directly:", err);
         fetch(`/api/songs/${encodeURIComponent(decodedId)}`, {
           cache: "no-store",
         })
@@ -455,16 +481,13 @@ export default function SongPageClient({ params, initialSong = null }) {
           .then((data) => {
             if (data.song) setSong(data.song);
             setLyricsLoading(false);
-            fetchingRef.current = false;
           })
-          .catch((fetchErr) => {
-            console.error(
-              "API fallback fetch failed on direct error:",
-              fetchErr,
-            );
+          .catch(() => {
             setLyricsLoading(false);
-            fetchingRef.current = false;
           });
+      })
+      .finally(() => {
+        fetchingRef.current = false;
       });
   }, [id, songs, currentSong, initialSong]);
 
@@ -486,10 +509,10 @@ export default function SongPageClient({ params, initialSong = null }) {
   };
 
   if (!song) {
-    if (songsLoading) {
+    if (lyricsLoading || songsLoading || fetchingRef.current) {
       return (
-        <div className="flex-1 flex flex-col h-full bg-canvas p-6 md:p-12 items-center justify-center">
-          <LyricsSkeleton language={selectedLanguage || "telugu"} />
+        <div className="flex-1 flex flex-col h-full bg-canvas items-center justify-center p-6 md:p-12">
+          <LyricsSkeleton language={selectedLanguage || "telugu"} isImmersive={viewMode === "lyrics"} />
         </div>
       );
     }
@@ -592,6 +615,20 @@ export default function SongPageClient({ params, initialSong = null }) {
 
   // 2. FULL SCREEN IMMERSIVE LYRICS VIEW (?view=lyrics)
   if (viewMode === "lyrics") {
+    const artistDisplayName =
+      typeof song?.artist === "object"
+        ? song.artist?.name
+        : song?.artistName ||
+          (song?.artist === "Unknown Artist"
+            ? (selectedLanguage === "english" ? "Unknown Artist" : "తెలియని కళాకారుడు")
+            : song?.artist) ||
+          "";
+
+    const teluguTitle = song.teluguTitle || song.title;
+    const englishTitle = song.titleEnglish || song.title;
+    const primaryTitle =
+      selectedLanguage === "english" ? englishTitle : teluguTitle;
+
     return (
       <div
         className="relative flex-1 flex flex-col h-full overflow-hidden bg-canvas transition-all duration-500 ease-out"
@@ -599,16 +636,30 @@ export default function SongPageClient({ params, initialSong = null }) {
           background: `radial-gradient(120% 120% at 50% 0%, rgba(${r},${g},${b},0.2) 0%, rgba(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)},0.05) 45%, var(--canvas) 100%)`,
         }}
       >
-        <div className="p-6 flex items-center justify-between z-40">
-          <button
-            onClick={() => router.back()}
-            className="p-1.5 md:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
-            title="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        {/* Sticky Top Header Bar */}
+        <div className="px-4 sm:px-8 py-3.5 flex items-center justify-between gap-3 z-40 bg-canvas/95 backdrop-blur-xl border-b border-line shadow-sm shrink-0">
+          {/* Left Side: Back button + Song Name & Author Name */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+              title="Go back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col min-w-0 leading-tight">
+              <h1 className="text-base sm:text-lg font-bold text-title tracking-tight font-song-title truncate">
+                {primaryTitle}
+              </h1>
+              {artistDisplayName && (
+                <p className="text-xs text-muted font-medium truncate mt-0.5">
+                  {artistDisplayName}
+                </p>
+              )}
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap shrink-0 select-none">
             {/* Font Size Controls */}
             <div className="flex items-center bg-card-hover/80 backdrop-blur-sm border border-line/40 rounded-full p-0.5 shadow-sm h-8 md:h-9 overflow-hidden shrink-0">
               <button

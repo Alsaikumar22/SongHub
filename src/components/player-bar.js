@@ -227,17 +227,17 @@ export default function PlayerBar() {
 
   return (
     <>
-      {/* ─── MOBILE MINI PLAYER — fixed above MobileNav ─── */}
-      {!isExpanded && (
+      {/* ─── MOBILE MINI PLAYER — fixed firmly above MobileNav ─── */}
+      {!isExpanded && currentSong && (
         <div
           id="tour-player-bar-mobile"
-          className="lg:hidden fixed left-0 right-0 z-40 bg-card border-t border-line-muted select-none"
-          style={{ bottom: `calc(52px + env(safe-area-inset-bottom, 0px))` }}
+          className="lg:hidden fixed left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-line shadow-[0_-8px_30px_rgba(0,0,0,0.4)] select-none pointer-events-auto transform translate-z-0 transition-all duration-300 animate-in slide-in-from-bottom-2"
+          style={{ bottom: `calc(56px + env(safe-area-inset-bottom, 0px))` }}
         >
           {/* Seek Bar */}
           {hasAudio && (
             <div
-              className="shrink-0 h-2 group cursor-pointer touch-pan-y"
+              className="shrink-0 h-1.5 group cursor-pointer touch-pan-y"
               onClick={(e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -248,20 +248,20 @@ export default function PlayerBar() {
                 seekTo(targetTime);
               }}
             >
-              <div className="relative w-full h-full bg-line">
+              <div className="relative w-full h-full bg-line/80">
                 <div
-                  className="absolute inset-y-0 left-0 bg-title/70 group-active:bg-title transition-all duration-75"
+                  className="absolute inset-y-0 left-0 bg-[#D4A32A] group-active:bg-amber-400 transition-all duration-75"
                   style={{ width: `${(sliderVal / (duration || 100)) * 100}%` }}
                 />
                 {/* Moving cursor/thumb — follows the playhead position */}
                 <div
-                  className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-title rounded-full shadow-md transition-opacity duration-75 ${
+                  className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md transition-opacity duration-75 ${
                     sliderVal > 0 && duration > 0
-                      ? "opacity-50 group-active:opacity-100 group-hover:opacity-80"
+                      ? "opacity-80 group-active:opacity-100 group-hover:opacity-100"
                       : "opacity-0"
                   }`}
                   style={{
-                    left: `calc(${(sliderVal / (duration || 100)) * 100}% - 7px)`,
+                    left: `calc(${(sliderVal / (duration || 100)) * 100}% - 6px)`,
                   }}
                 />
               </div>
@@ -271,47 +271,29 @@ export default function PlayerBar() {
           {/* Content row */}
           <div
             onClick={handleContainerClick}
-            className="flex-1 flex items-center justify-between px-4 pt-3 min-h-[56px] cursor-pointer"
+            className="flex items-center justify-between px-3.5 py-2 min-h-[52px] cursor-pointer"
           >
             {/* Left: Artwork + Titles */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {currentSong ? (
-                <>
-                  <SongArtwork
-                    song={currentSong}
-                    className="w-9 h-9 object-cover rounded-md border border-line shrink-0"
-                    iconSize="w-4.5 h-4.5"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
-                      {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
-                    </span>
-                    <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
-                      {lyricsLanguage === "english"
-                        ? (currentSong.artistNameEnglish || currentSong.artist)
-                        : (currentSong.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (currentSong.artistName || currentSong.artist))}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-9 h-9 rounded-md bg-card-hover border border-line flex items-center justify-center text-dim shrink-0">
-                    <Music className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-title block truncate leading-tight">
-                      No Track Selected
-                    </span>
-                    <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
-                      Select a song to start
-                    </span>
-                  </div>
-                </>
-              )}
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <SongArtwork
+                song={currentSong}
+                className="w-10 h-10 object-cover rounded-lg border border-line/60 shrink-0"
+                iconSize="w-5 h-5"
+              />
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-title block truncate leading-tight font-song-title">
+                  {lyricsLanguage === "english" ? (currentSong.titleEnglish || currentSong.title) : (currentSong.teluguTitle || currentSong.title)}
+                </span>
+                <span className="text-[10px] text-muted block truncate leading-tight mt-0.5">
+                  {lyricsLanguage === "english"
+                    ? (currentSong.artistNameEnglish || currentSong.artist)
+                    : (currentSong.artist === "Unknown Artist" ? "తెలియని కళాకారుడు" : (currentSong.artistName || currentSong.artist))}
+                </span>
+              </div>
             </div>
 
             {/* Right: Controls */}
-            <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 id="tour-mobile-lyrics-btn"
                 onClick={(e) => {
@@ -320,38 +302,36 @@ export default function PlayerBar() {
                     router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                   }
                 }}
-                className="p-1 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-muted hover:text-title"
+                className="p-1.5 hover:bg-card-hover rounded-full active:scale-90 transition-transform cursor-pointer text-[#D4A32A] hover:text-amber-300"
                 aria-label="View Lyrics"
                 title="View Lyrics"
               >
                 <MicIcon className="w-4.5 h-4.5" />
               </button>
-              {currentSong && (
-                <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
-                  <button
-                    className="p-1 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
-                    aria-label="Add to favorites"
-                  >
-                    <Heart
-                      className={`w-4.5 h-4.5 ${
-                        isFavorited
-                          ? "fill-red-500 text-red-500"
-                          : "text-dim hover:text-title"
-                      }`}
-                    />
-                  </button>
-                </ProtectedAction>
-              )}
+              <ProtectedAction action={() => toggleFavorite(currentSong.id)}>
+                <button
+                  className="p-1.5 hover:bg-white/5 rounded-full active:scale-90 transition-transform cursor-pointer"
+                  aria-label="Add to favorites"
+                >
+                  <Heart
+                    className={`w-4.5 h-4.5 ${
+                      isFavorited
+                        ? "fill-red-500 text-red-500"
+                        : "text-dim hover:text-title"
+                    }`}
+                  />
+                </button>
+              </ProtectedAction>
 
               {hasAudio && (
                 <button
                   onClick={togglePlay}
-                  className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center active:scale-90 transition-transform shadow-md cursor-pointer shrink-0"
                 >
                   {isPlaying ? (
-                    <Pause className="w-3.5 h-3.5 fill-current" />
+                    <Pause className="w-4 h-4 fill-current" />
                   ) : (
-                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                    <Play className="w-4 h-4 fill-current ml-0.5" />
                   )}
                 </button>
               )}
@@ -561,7 +541,7 @@ export default function PlayerBar() {
                   </Link>
                 ) : (
                   <button
-                    onClick={() => router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`)}
+                    onClick={() => router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`)}
                     className="p-1.5 rounded-full transition-all cursor-pointer text-muted hover:text-copy hover:bg-card-hover"
                     title="View Lyrics"
                   >
@@ -736,7 +716,7 @@ export default function PlayerBar() {
                 onClick={() => {
                   setIsExpanded(false);
                   if (currentSong) {
-                    router.push(`/song/${currentSong.slug || currentSong.id}?view=lyrics`);
+                    router.push(`/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`);
                   }
                 }}
                 className="p-2 -mr-2 text-white/70 hover:text-white active:scale-90 transition-transform cursor-pointer"

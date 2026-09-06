@@ -127,9 +127,9 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-line z-50 shadow-[0_-4px_16px_rgba(0,0,0,0.3)] select-none pointer-events-auto">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[56px] bg-card/95 backdrop-blur-xl border-t border-line z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] select-none pointer-events-auto transform translate-z-0">
         {/* ─── Tab Buttons ─── */}
-        <div className="flex items-center justify-around px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex items-center justify-around px-2 h-full pb-[env(safe-area-inset-bottom,0px)]">
           {tabs.map((tab) => {
             const isActive = !isOnSongPage && (
               activeTab === tab.id ||

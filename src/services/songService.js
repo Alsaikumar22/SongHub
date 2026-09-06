@@ -607,11 +607,17 @@ export const songService = {
       const allSongs = await this.getAllSongs();
       const targetNFC = (targetId || "").normalize("NFC");
       const songNFC = (songId || "").normalize("NFC");
+      const targetLower = targetNFC.toLowerCase();
+      const songLower = songNFC.toLowerCase();
 
       const match = allSongs.find((s) => {
         const sIdNFC = (s.id || "").normalize("NFC");
         const sSlugNFC = (s.slug || "").normalize("NFC");
         const sSlugEnglishNFC = (s.slugEnglish || "").normalize("NFC");
+        const sTitleNFC = (s.title || "").normalize("NFC");
+        const sTeluguTitleNFC = (s.teluguTitle || "").normalize("NFC");
+        const sTitleEngNFC = (s.titleEnglish || "").normalize("NFC");
+
         return (
           sIdNFC === targetNFC ||
           sIdNFC === songNFC ||
@@ -619,6 +625,16 @@ export const songService = {
           sSlugNFC === songNFC ||
           sSlugEnglishNFC === targetNFC ||
           sSlugEnglishNFC === songNFC ||
+          sTitleNFC === targetNFC ||
+          sTitleNFC === songNFC ||
+          sTeluguTitleNFC === targetNFC ||
+          sTeluguTitleNFC === songNFC ||
+          sTitleEngNFC === targetNFC ||
+          sTitleEngNFC === songNFC ||
+          sSlugNFC.toLowerCase() === targetLower ||
+          sSlugEnglishNFC.toLowerCase() === targetLower ||
+          sTitleNFC.toLowerCase() === targetLower ||
+          sTitleEngNFC.toLowerCase() === targetLower ||
           decodeURIComponent(sIdNFC) === targetNFC ||
           decodeURIComponent(sSlugNFC) === targetNFC
         );
@@ -642,6 +658,22 @@ export const songService = {
           const song = transformSongDoc(rawSnap);
           return song && !isTamilSong(song) ? song : null;
         }
+      }
+
+      // 4. Firestore Query Fallback: Search by 'slug' or 'slugEnglish' or 'title'
+      try {
+        const slugQuery = query(
+          collection(db, COLLECTIONS.YOUWORSHIP_SONGS),
+          where("slug", "==", targetId),
+          limit(1)
+        );
+        const slugSnap = await getDocs(slugQuery);
+        if (!slugSnap.empty) {
+          const song = transformSongDoc(slugSnap.docs[0]);
+          return song && !isTamilSong(song) ? song : null;
+        }
+      } catch (queryErr) {
+        console.warn("⚠️ Slug query fallback notice:", queryErr?.message);
       }
 
       console.warn(`⚠️ Song document with ID/Slug '${songId}' not found.`);

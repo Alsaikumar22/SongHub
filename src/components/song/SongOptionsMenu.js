@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MoreVertical,
@@ -10,6 +11,7 @@ import {
   Plus,
   Heart,
   Check,
+  FileText,
 } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
@@ -20,6 +22,7 @@ export default function SongOptionsMenu({
   iconSize = "w-4 h-4",
   align = "right",
 }) {
+  const router = useRouter();
   const {
     currentSong,
     isPlaying,
@@ -137,16 +140,32 @@ export default function SongOptionsMenu({
               </div>
             ) : (
               <div className="space-y-0.5">
-                {/* 1. Play Now */}
+                {/* 1. View Lyrics */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (song) {
+                      router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics`);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-title hover:bg-card-hover transition-colors text-left cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#D4A32A]" />
+                  <span>View Lyrics</span>
+                </button>
+
+                {/* 2. Play Now */}
                 <button
                   onClick={handlePlayNow}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-title hover:bg-card-hover transition-colors text-left cursor-pointer"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current text-[#D4A32A]" />
+                  <Play className="w-3.5 h-3.5 fill-current text-muted" />
                   <span>Play Now</span>
                 </button>
 
-                {/* 2. Play Next */}
+                {/* 3. Play Next */}
                 <button
                   onClick={handlePlayNext}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-title hover:bg-card-hover transition-colors text-left cursor-pointer"
@@ -155,7 +174,7 @@ export default function SongOptionsMenu({
                   <span>Play Next</span>
                 </button>
 
-                {/* 3. Add to Queue */}
+                {/* 4. Add to Queue */}
                 <button
                   onClick={handleAddToQueue}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-title hover:bg-card-hover transition-colors text-left cursor-pointer"
@@ -164,7 +183,7 @@ export default function SongOptionsMenu({
                   <span>Add to Queue</span>
                 </button>
 
-                {/* 4. Add to Playlist */}
+                {/* 5. Add to Playlist */}
                 <button
                   onClick={handleAddToPlaylist}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-title hover:bg-card-hover transition-colors text-left cursor-pointer"
@@ -173,7 +192,7 @@ export default function SongOptionsMenu({
                   <span>Add to Playlist</span>
                 </button>
 
-                {/* 5. Favorite */}
+                {/* 6. Favorite */}
                 <ProtectedAction action={`favorite_${song.id}`}>
                   <button
                     onClick={handleToggleFav}
