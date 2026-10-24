@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -26,11 +26,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageWithFallback from "@/components/ui/ImageWithFallback";
+// Import normalized ranking utility for instant real-time song title search
+import { filterAndRankSongs, getSongArtistName } from "@/utils/songSearch";
 
 function SearchResultImage({ song }) {
   const [hasError, setHasError] = useState(false);
+  // Support all Firestore/Summary image field variants (coverUrl, imageUrl, media.image)
+  const imgUrl = song?.coverUrl || song?.imageUrl || song?.media?.image;
 
-  if (hasError || !song.coverUrl) {
+  if (hasError || !imgUrl) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-neutral-700 to-neutral-900 flex items-center justify-center">
         <Music className="w-3.5 h-3.5 text-white/30" />
@@ -40,8 +44,8 @@ function SearchResultImage({ song }) {
 
   return (
     <ImageWithFallback
-      src={song.coverUrl}
-      alt={song.title}
+      src={imgUrl}
+      alt={song?.title || "Song artwork"}
       width={32}
       height={32}
       className="w-full h-full object-cover"
@@ -214,46 +218,24 @@ export default function Header({ setShowAuth, setAuthMode }) {
     setIsFocused(true);
   };
 
-  useEffect(() => {
-    return () => {
-      if (blurTimeout.current) clearTimeout(blurTimeout.current);
-    };
-  }, []);
+  // Clear both local input and context queries immediately
+  const handleClear = () => {
+    clearSearch();
+    clearLyricsSearch();
+    setShowFullResults(false);
+  };
 
-  const trimmedQuery = searchQuery.trim().toLowerCase().normalize("NFC");
+  // Live query reflects immediate user keystroke (inputValue) with fallback to context (searchQuery)
+  const activeSearchQuery = (inputValue !== undefined ? inputValue : searchQuery).trim();
 
-  const normalizeText = (value) =>
-    (value || "").toString().toLowerCase().normalize("NFC");
+  // Instant real-time matching with ranked prefix and word boundary scoring
+  const totalMatches = useMemo(() => {
+    if (!activeSearchQuery) return [];
+    return filterAndRankSongs(songs, activeSearchQuery, 100);
+  }, [songs, activeSearchQuery]);
 
-  const totalMatches = songs.filter((song) => {
-    if (!trimmedQuery) return false;
-    const titleMatch = normalizeText(song.title).includes(trimmedQuery);
-    const telTitleMatch = normalizeText(song.teluguTitle).includes(
-      trimmedQuery,
-    );
-    const titleEnglishMatch = normalizeText(song.titleEnglish).includes(
-      trimmedQuery,
-    );
-    const artistMatch = normalizeText(song.artist).includes(trimmedQuery);
-
-    // Check all possible lyrics fields to match Telugu and English lyrics
-    const lyricsSources = [song.lyrics, song.lyricsTelugu, song.lyricsEnglish];
-    const lyricsMatch = lyricsSources.some((source) => {
-      if (!source) return false;
-      const text = Array.isArray(source) ? source.join(" ") : source;
-      return text.toLowerCase().normalize("NFC").includes(trimmedQuery);
-    });
-
-    return (
-      titleMatch ||
-      telTitleMatch ||
-      titleEnglishMatch ||
-      artistMatch ||
-      lyricsMatch
-    );
-  });
-
-  const matchingSongs = totalMatches.slice(0, 5);
+  // Display top 6 prioritized matching songs in the header quick dropdown
+  const matchingSongs = useMemo(() => totalMatches.slice(0, 6), [totalMatches]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -270,7 +252,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
     setActiveTab("discover");
     setActivePlaylistId(null);
     setViewedSongId(null);
-    clearSearch();
+    handleClear();
     setShowFullHome(true);
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
@@ -339,9 +321,9 @@ export default function Header({ setShowAuth, setAuthMode }) {
           />
 
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
-            {searchQuery && (
+            {(inputValue || searchQuery) && (
               <button
-                onClick={clearSearch}
+                onClick={handleClear}
                 className="p-1 hover:bg-line/30 rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-150"
                 title="Clear Search"
               >
@@ -368,7 +350,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   activeTab === "categories" ? "discover" : "categories",
                 );
                 if (activeTab !== "categories") {
-                  clearSearch();
+                  handleClear();
                   router.push("/");
                 }
               }}
@@ -383,8 +365,8 @@ export default function Header({ setShowAuth, setAuthMode }) {
             </button>
           </div>
 
-          {/* Unified Quick Search Dropdown */}
-          {isFocused && searchQuery && !showFullResults && (
+          {/* Unified Quick Search Dropdown - updates instantly on every keystroke */}
+          {isFocused && activeSearchQuery && !showFullResults && (
             <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-card border border-line rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.03)_inset] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
               {/* Results Container */}
               <div className="max-h-[360px] overflow-y-auto no-scrollbar py-1">
@@ -393,7 +375,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                   <>
                     <div className="px-4 py-2 border-b border-line/35">
                       <span className="text-[10px] font-bold text-muted uppercase tracking-[0.18em]">
-                        Songs
+                        Songs ({totalMatches.length})
                       </span>
                     </div>
                     {matchingSongs.map((song) => (
@@ -421,7 +403,7 @@ export default function Header({ setShowAuth, setAuthMode }) {
                               (song.teluguTitle || song.title)
                               ? `${song.titleEnglish} • `
                               : ""}
-                            {song.artist}
+                            {getSongArtistName(song) || "Unknown Artist"}
                           </span>
                         </div>
                         <div className="w-7 h-7 rounded-full bg-card-hover group-hover:bg-white flex items-center justify-center text-title group-hover:text-black opacity-0 group-hover:opacity-100 transition-all shrink-0">
@@ -513,13 +495,14 @@ export default function Header({ setShowAuth, setAuthMode }) {
               {(totalMatches.length > 0 || lyricsTotal > 0) && (
                 <button
                   onMouseDown={() => {
+                    flushSearch(); // commit immediately to context before showing full page
                     setShowFullResults(true);
                     setIsFocused(false);
                     router.push("/");
                   }}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-card-hover/20 hover:bg-card-hover/50 text-[10px] font-semibold text-muted hover:text-title uppercase tracking-widest border-t border-line transition-all cursor-pointer"
                 >
-                  <span>See all results</span>
+                  <span>See all {totalMatches.length > 0 ? `${totalMatches.length} matching songs` : "results"}</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               )}

@@ -140,6 +140,13 @@ function tamilSort(a, b) {
   return a.localeCompare(b);
 }
 
+const ALPHABETS_MAP = {
+  telugu: TELUGU_ALPHABET_ORDER,
+  hindi: HINDI_ALPHABET_ORDER,
+  tamil: TAMIL_ALPHABET_ORDER,
+  english: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+};
+
 const letterGradients = {
   A: "from-red-600 to-red-900",
   B: "from-orange-600 to-orange-900",
@@ -221,7 +228,6 @@ export default function SongsSection({
   const router = useRouter();
   const sectionRefs = useRef({});
   const scrollRefs = useRef({});
-  const [activeLetter, setActiveLetter] = useState(selectedLetter || null);
   const [scriptLang, setScriptLang] = useState(() => {
     // Auto-detect script from initial selectedLetter
     if (selectedLetter) {
@@ -250,6 +256,10 @@ export default function SongsSection({
     showAllSongsForLetter,
     currentSectionLetter,
     setCurrentSectionLetter,
+    lastViewedSongId,
+    lastListScrollPos,
+    setLastListScrollPos,
+    recordSongNavigation,
   } = useAudio();
  
   const [viewMode, setViewMode] = useState("playlist"); // "playlist" | "cards"
@@ -257,6 +267,7 @@ export default function SongsSection({
   const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
   const [scrollStates, setScrollStates] = useState({});
   const [pendingScrollToLetter, setPendingScrollToLetter] = useState(null);
+  const [activeLetter, setActiveLetter] = useState(null);
   const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1);
 
   const increaseSongFontSize = () => setFontSizeMultiplier((prev) => Math.min(prev + 0.15, 1.4));
@@ -296,14 +307,31 @@ export default function SongsSection({
     }
   }, [selectedLetter, sections, showAllSongsForLetter]);
  
+  const hasRestoredScrollRef = useRef(false);
+  const prevSelectedLetterRef = useRef(selectedLetter);
+
   // Sync scroll position & default views on selectedLetter change
   useEffect(() => {
     setViewMode("playlist");
-    const scrollable = document.querySelector(".overflow-y-auto");
-    if (scrollable) {
-      scrollable.scrollTop = 0;
+    if (prevSelectedLetterRef.current !== selectedLetter) {
+      prevSelectedLetterRef.current = selectedLetter;
+      hasRestoredScrollRef.current = false;
+      let hasSavedPos = false;
+      try {
+        hasSavedPos = Boolean(
+          lastListScrollPos ||
+          (typeof window !== "undefined" && sessionStorage.getItem("yw_last_scroll_pos"))
+        );
+      } catch (e) {}
+
+      if (!hasSavedPos) {
+        const scrollable = document.querySelector(".overflow-y-auto");
+        if (scrollable) {
+          scrollable.scrollTop = 0;
+        }
+      }
     }
-  }, [selectedLetter]);
+  }, [selectedLetter, lastListScrollPos]);
  
   // Click-outside dropdown closer
   useEffect(() => {
@@ -340,21 +368,18 @@ export default function SongsSection({
   }, [selectedLetter, getFilteredSongsForLetter]);
  
   const availableLetters = useMemo(() => {
-    return Object.keys(sections).filter((letter) => {
-      return getFilteredSongsForLetter(letter).length > 0;
-    }).sort((a, b) => {
-      if (scriptLang === "telugu") return teluguSort(a, b);
-      if (scriptLang === "hindi") return hindiSort(a, b);
-      if (scriptLang === "tamil") return tamilSort(a, b);
-      return a.localeCompare(b);
-    });
+    const validLetters = new Set(ALPHABETS_MAP[scriptLang] || TELUGU_ALPHABET_ORDER);
+    return Object.keys(sections)
+      .filter((letter) => {
+        return validLetters.has(letter) && getFilteredSongsForLetter(letter).length > 0;
+      })
+      .sort((a, b) => {
+        if (scriptLang === "telugu") return teluguSort(a, b);
+        if (scriptLang === "hindi") return hindiSort(a, b);
+        if (scriptLang === "tamil") return tamilSort(a, b);
+        return a.localeCompare(b);
+      });
   }, [sections, getFilteredSongsForLetter, scriptLang]);
- 
-  useEffect(() => {
-    if (availableLetters.length > 0 && !selectedLetter) {
-      setActiveLetter(availableLetters[0]);
-    }
-  }, [availableLetters, selectedLetter]);
  
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -365,6 +390,70 @@ export default function SongsSection({
     return () => clearTimeout(timer);
   }, [availableLetters]);
  
+  // Restore scroll position when detailSongs load for selected letter
+  useEffect(() => {
+    if (!selectedLetter || detailSongs.length === 0) return;
+    if (hasRestoredScrollRef.current) return;
+
+    let targetScroll = lastListScrollPos;
+    if (!targetScroll && typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("yw_last_scroll_pos");
+        if (stored) targetScroll = parseInt(stored, 10);
+      } catch (e) {}
+    }
+
+    const timer = setTimeout(() => {
+      const scrollable = document.querySelector(".overflow-y-auto");
+      if (scrollable && targetScroll && targetScroll > 0) {
+        scrollable.scrollTop = targetScroll;
+        hasRestoredScrollRef.current = true;
+      }
+
+      if (lastViewedSongId) {
+        const el = document.querySelector('[data-last-viewed="true"]');
+        if (el) {
+          el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          hasRestoredScrollRef.current = true;
+        }
+      }
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [selectedLetter, detailSongs, lastListScrollPos, lastViewedSongId]);
+
+  // Restore scroll position when browsing full home list
+  useEffect(() => {
+    if (selectedLetter) return;
+    if (songsLoading || songs.length === 0) return;
+    if (hasRestoredScrollRef.current) return;
+
+    let targetScroll = lastListScrollPos;
+    if (!targetScroll && typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("yw_last_scroll_pos");
+        if (stored) targetScroll = parseInt(stored, 10);
+      } catch (e) {}
+    }
+
+    if (targetScroll && targetScroll > 0) {
+      const timer = setTimeout(() => {
+        const scrollable = document.querySelector(".overflow-y-auto");
+        if (scrollable) {
+          scrollable.scrollTop = targetScroll;
+          hasRestoredScrollRef.current = true;
+        }
+        if (lastViewedSongId) {
+          const el = document.querySelector('[data-last-viewed="true"]');
+          if (el) {
+            el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          }
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedLetter, songsLoading, songs, lastListScrollPos, lastViewedSongId]);
+
   const scrollRow = (letter, direction) => {
     const el = scrollRefs.current[letter];
     if (el) {
@@ -373,9 +462,59 @@ export default function SongsSection({
     }
   };
  
-  const handleLetterClick = (letter) => {
-    setActiveLetter(letter);
+  const openLetterDetail = (letter) => {
     setSelectedLetter(letter);
+    if (setCurrentSectionLetter) setCurrentSectionLetter(letter);
+    if (setLastListScrollPos) setLastListScrollPos(0);
+    try {
+      sessionStorage.setItem("yw_selected_letter", letter);
+      sessionStorage.removeItem("yw_last_scroll_pos");
+    } catch (e) {}
+    router.push(`/?tab=songs&letter=${encodeURIComponent(letter)}`, { scroll: false });
+  };
+
+  const handleLetterClick = (letter) => {
+    if (showFullHome) {
+      if (activeLetter === letter) {
+        setActiveLetter(null);
+      } else {
+        setActiveLetter(letter);
+      }
+
+      const letterIdx = availableLetters.indexOf(letter);
+      if (letterIdx >= 0) {
+        if (letterIdx >= visibleCount) {
+          setVisibleCount(letterIdx + 1 + BATCH_SIZE);
+        }
+        setPendingScrollToLetter(letter);
+
+        const el = sectionRefs.current[letter];
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+      return;
+    }
+
+    if (selectedLetter === letter) {
+      setSelectedLetter(null);
+      if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+      if (setLastListScrollPos) setLastListScrollPos(0);
+      try {
+        sessionStorage.removeItem("yw_selected_letter");
+        sessionStorage.removeItem("yw_last_scroll_pos");
+      } catch (e) {}
+      router.push("/?tab=songs", { scroll: false });
+      return;
+    }
+    setSelectedLetter(letter);
+    if (setCurrentSectionLetter) setCurrentSectionLetter(letter);
+    if (setLastListScrollPos) setLastListScrollPos(0);
+    try {
+      sessionStorage.setItem("yw_selected_letter", letter);
+      sessionStorage.removeItem("yw_last_scroll_pos");
+    } catch (e) {}
+    router.push(`/?tab=songs&letter=${encodeURIComponent(letter)}`, { scroll: false });
   };
 
   const handleShare = () => {
@@ -422,11 +561,14 @@ export default function SongsSection({
   // Scroll to pending letter once rendered
   useEffect(() => {
     if (pendingScrollToLetter) {
-      const el = sectionRefs.current[pendingScrollToLetter];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        setPendingScrollToLetter(null);
-      }
+      const timer = setTimeout(() => {
+        const el = sectionRefs.current[pendingScrollToLetter];
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          setPendingScrollToLetter(null);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [pendingScrollToLetter, visibleCount]);
 
@@ -439,13 +581,19 @@ export default function SongsSection({
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
+      <div className="relative bg-card/95 backdrop-blur-md -mt-4 pt-3.5 md:pt-4 -mx-4 px-3 md:px-4 pb-2.5 md:pb-3.5 border-b border-line/35 shadow-md mb-3 flex flex-col gap-3">
         {/* Top Header Row: Script Selector */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Immersive Script Selector */}
           <div className="flex bg-card-hover/60 p-0.5 rounded-xl border border-line self-start shadow-inner">
             <button
-              onClick={() => setScriptLang("telugu")}
+              onClick={() => {
+                setScriptLang("telugu");
+                setSelectedLetter(null);
+                setActiveLetter(null);
+                if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                initializeAlphabeticalSections("telugu");
+              }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 scriptLang === "telugu"
                   ? "bg-white text-black shadow-sm font-black"
@@ -455,7 +603,13 @@ export default function SongsSection({
               Telugu (తెలుగు)
             </button>
             <button
-              onClick={() => setScriptLang("english")}
+              onClick={() => {
+                setScriptLang("english");
+                setSelectedLetter(null);
+                setActiveLetter(null);
+                if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                initializeAlphabeticalSections("english");
+              }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 scriptLang === "english"
                   ? "bg-white text-black shadow-sm font-black"
@@ -465,7 +619,13 @@ export default function SongsSection({
               English (A-Z)
             </button>
             <button
-              onClick={() => setScriptLang("hindi")}
+              onClick={() => {
+                setScriptLang("hindi");
+                setSelectedLetter(null);
+                setActiveLetter(null);
+                if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                initializeAlphabeticalSections("hindi");
+              }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                 scriptLang === "hindi"
                   ? "bg-white text-black shadow-sm font-black"
@@ -486,7 +646,7 @@ export default function SongsSection({
               className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm md:text-base font-black transition-all shrink-0 cursor-pointer ${
                 /[A-Z]/.test(letter) ? "font-sans" : (typeof letter === "string" && /[\u0C00-\u0C7F]/.test(letter) ? "font-telugu" : "")
               } ${
-                activeLetter === letter || selectedLetter === letter
+                (showFullHome ? activeLetter === letter : selectedLetter === letter)
                   ? "bg-title text-canvas scale-105 shadow-sm"
                   : "bg-card-hover text-title/90 hover:bg-line/60"
               }`}
@@ -515,6 +675,7 @@ export default function SongsSection({
             <button
               onClick={() => {
                 setSelectedLetter(null);
+                setActiveLetter(null);
                 if (setCurrentSectionLetter) setCurrentSectionLetter(null);
                 if (typeof window !== "undefined") {
                   try {
@@ -768,7 +929,7 @@ export default function SongsSection({
                         </span>
                       </div>
                       <button
-                        onClick={() => setSelectedLetter(letter)}
+                        onClick={() => openLetterDetail(letter)}
                         className="text-xs font-bold text-handle hover:text-title transition-colors cursor-pointer"
                       >
                         Show all
@@ -859,7 +1020,7 @@ export default function SongsSection({
                       )}
                       <div className="flex-1 h-px bg-line/35" />
                       <button
-                        onClick={() => setSelectedLetter(letter)}
+                        onClick={() => openLetterDetail(letter)}
                         className="px-3.5 py-1.5 rounded-xl bg-card-hover border border-line text-xs font-black text-dim hover:text-title hover:border-line-muted transition-all shadow-sm shrink-0 select-none cursor-pointer"
                       >
                         {letterSongs.length}
@@ -871,15 +1032,32 @@ export default function SongsSection({
                       {letterSongs.map((song, index) => {
                         const isCurrent = currentSong?.id === song.id;
                         const isThisPlaying = isCurrent && isPlaying;
+                        const isLastViewed = Boolean(
+                          lastViewedSongId && (lastViewedSongId === song.id || lastViewedSongId === song.slug)
+                        );
+
+                        const handleLyricsNavigation = () => {
+                          const scrollEl = document.querySelector(".overflow-y-auto");
+                          const currentScrollPos = scrollEl ? scrollEl.scrollTop : 0;
+                          const letterKey = selectedLetter || letter || song.teluguFirstLetter || song.firstLetter;
+                          if (recordSongNavigation) {
+                            recordSongNavigation(song.id, letterKey, currentScrollPos, scriptLang, 'browse');
+                          }
+                          router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`);
+                        };
+
+                        const rowClass = isLastViewed
+                          ? `border-l-4 border-l-[#D4A32A] ${isCurrent ? "bg-amber-500/20 text-white" : "bg-amber-500/10 dark:bg-amber-500/15 text-title"} shadow-xs`
+                          : isCurrent
+                          ? "border-[#D4A32A]/50 bg-card-hover shadow-[0_0_15px_rgba(212,163,42,0.12)]"
+                          : "border-line/50 hover:border-line bg-card/85 hover:bg-card-hover";
 
                         return (
                           <div
                             key={song.id}
-                            className={`group flex items-center justify-between p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer select-none bg-card/85 hover:bg-card-hover ${
-                              isCurrent
-                                ? "border-[#D4A32A]/50 bg-card-hover shadow-[0_0_15px_rgba(212,163,42,0.12)]"
-                                : "border-line/50 hover:border-line"
-                            }`}
+                            aria-current={isLastViewed ? "true" : undefined}
+                            data-last-viewed={isLastViewed ? "true" : undefined}
+                            className={`group flex items-center justify-between p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer select-none ${rowClass}`}
                             onClick={() => {
                               playSong(song, letter, index, letterSongs);
                             }}
@@ -888,13 +1066,14 @@ export default function SongsSection({
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const letterKey = selectedLetter || letter || song.teluguFirstLetter || song.firstLetter;
-                                router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`);
+                                handleLyricsNavigation();
                               }}
                               className="flex items-center gap-3 min-w-0 flex-1 pr-2 cursor-pointer"
                               title="View song lyrics & details"
                             >
-                              <div className="w-11 h-11 rounded-xl bg-[#161616] border border-[#282828] overflow-hidden flex items-center justify-center shrink-0 shadow-inner text-muted group-hover:text-title">
+                              <div className={`w-11 h-11 rounded-xl bg-[#161616] border overflow-hidden flex items-center justify-center shrink-0 shadow-inner text-muted group-hover:text-title ${
+                                isLastViewed ? "border-[#D4A32A]" : "border-[#282828]"
+                              }`}>
                                 <SongArtwork
                                   song={song}
                                   className="w-full h-full object-cover"
@@ -903,7 +1082,7 @@ export default function SongsSection({
                               </div>
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                                   <span
                                     style={{ fontSize: `${0.875 * fontSizeMultiplier}rem` }}
                                     className={`font-bold block truncate leading-tight ${
@@ -914,6 +1093,11 @@ export default function SongsSection({
                                   >
                                     {scriptLang === "english" ? (song.titleEnglish || song.title) : (song.teluguTitle || song.title)}
                                   </span>
+                                  {isLastViewed && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 select-none shrink-0 shadow-xs">
+                                      Last viewed
+                                    </span>
+                                  )}
                                   {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
                                     <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
                                   )}
@@ -974,8 +1158,7 @@ export default function SongsSection({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const letterKey = selectedLetter || letter || song.teluguFirstLetter || song.firstLetter;
-                                  router.push(`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`);
+                                  handleLyricsNavigation();
                                 }}
                                 className="w-8 h-8 rounded-lg border border-line/60 hover:border-white hover:bg-white/10 text-muted hover:text-title flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                                 title="View song lyrics & details"

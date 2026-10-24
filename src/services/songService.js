@@ -11,6 +11,8 @@ import {
   startAfter,
 } from "firebase/firestore";
 import { getEnglishSlug } from "@/utils/songSlug";
+// Import normalized song ranking utility
+import { filterAndRankSongs } from "@/utils/songSearch";
 
 const TAMIL_CHAR_REGEXP = /[\u0B80-\u0BFF]/;
 
@@ -744,20 +746,9 @@ export const songService = {
    */
   async searchSongs(searchQuery) {
     if (!searchQuery || !searchQuery.trim()) return this.getAllSongs();
-    const q = searchQuery.trim().toLowerCase();
     const allSongs = await this.getAllSongs();
-    return allSongs.filter((s) => {
-      const lyricsStr = Array.isArray(s.lyrics)
-        ? s.lyrics.join(" ")
-        : s.lyrics || "";
-      return (
-        s.title.toLowerCase().includes(q) ||
-        s.titleEnglish.toLowerCase().includes(q) ||
-        s.artist.toLowerCase().includes(q) ||
-        s.category.toLowerCase().includes(q) ||
-        lyricsStr.toLowerCase().includes(q)
-      );
-    });
+    // Use unified ranking and normalization
+    return filterAndRankSongs(allSongs, searchQuery, 200);
   },
 
   /**

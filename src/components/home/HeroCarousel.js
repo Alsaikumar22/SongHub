@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useAudio } from "@/context/audio-context";
 import {
@@ -27,7 +27,17 @@ const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 export default function HeroCarousel() {
   const router = useRouter();
   const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading, setAddToPlaylistSong } = useAudio();
-  const { weeklySongs } = useWeeklySongs({ songs, count: 7 });
+
+  const teluguSongs = useMemo(() => {
+    return (songs || []).filter((s) => {
+      const l = (s.language || "").toLowerCase();
+      if (l === "te" || l === "telugu") return true;
+      if (l === "en" || l === "english" || l === "ta" || l === "tamil" || l === "hi" || l === "hindi") return false;
+      return Boolean(s.teluguTitle) || /[\u0C00-\u0C7F]/.test(s.title || "");
+    });
+  }, [songs]);
+
+  const { weeklySongs } = useWeeklySongs({ songs: teluguSongs, count: 7 });
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);

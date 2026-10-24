@@ -183,6 +183,7 @@ export default function SongPageClient({ params, initialSong = null }) {
     setLyricsLanguage,
     currentSectionLetter,
     setCurrentSectionLetter,
+    setLastViewedSongId,
   } = useAudio();
 
   useEffect(() => {
@@ -199,9 +200,11 @@ export default function SongPageClient({ params, initialSong = null }) {
 
   const handleBack = () => {
     let storedLetter = null;
+    let fromList = false;
     try {
       if (typeof window !== "undefined") {
         storedLetter = sessionStorage.getItem("yw_selected_letter");
+        fromList = sessionStorage.getItem("yw_navigated_from_list") === "1";
       }
     } catch (e) {}
 
@@ -213,15 +216,38 @@ export default function SongPageClient({ params, initialSong = null }) {
       getSongLetter(song, lyricsLanguage || "telugu");
 
     if (targetLetter && targetLetter !== "#") {
-      router.push(`/?tab=songs&letter=${encodeURIComponent(targetLetter)}`);
+      try {
+        sessionStorage.setItem("yw_selected_letter", targetLetter);
+      } catch (e) {}
+    }
+
+    // Preserve browser stack: use router.back() if navigated from within the app, otherwise fallback to alphabet section
+    if (fromList && typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else if (targetLetter && targetLetter !== "#") {
+      router.push(`/?tab=discover&letter=${encodeURIComponent(targetLetter)}`);
     } else {
-      router.push("/?tab=songs");
+      router.push("/?tab=discover");
     }
   };
 
   const { setSearchQuery, setShowFullResults } = useSearch();
 
   const [song, setSong] = useState(initialSong);
+
+  // Keep track of the currently viewed song ID so returning to list highlights it
+  useEffect(() => {
+    if (song?.id) {
+      if (setLastViewedSongId) {
+        setLastViewedSongId(song.id);
+      }
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("yw_last_viewed_song_id", song.id);
+        } catch (e) {}
+      }
+    }
+  }, [song?.id, setLastViewedSongId]);
   const [lyricsLoading, setLyricsLoading] = useState(!initialSong || !(initialSong.lyricsTelugu || initialSong.lyrics));
   const selectedLanguage = lyricsLanguage;
   const setSelectedLanguage = setLyricsLanguage;
@@ -575,7 +601,7 @@ export default function SongPageClient({ params, initialSong = null }) {
   };
 
   if (!song) {
-    if (lyricsLoading || songsLoading || fetchingRef.current) {
+    if (lyricsLoading || songsLoading) {
       return (
         <div className="flex-1 flex flex-col h-full bg-canvas items-center justify-center p-6 md:p-12">
           <LyricsSkeleton language={selectedLanguage || "telugu"} isImmersive={viewMode === "lyrics"} />
@@ -703,12 +729,12 @@ export default function SongPageClient({ params, initialSong = null }) {
         }}
       >
         {/* Sticky Top Header Bar */}
-        <div className="px-4 sm:px-8 py-3.5 flex items-center justify-between gap-3 z-40 bg-canvas/95 backdrop-blur-xl border-b border-line shadow-sm shrink-0">
-          {/* Left Side: Back button + Song Name & Author Name */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="px-3.5 sm:px-8 py-2.5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 z-40 bg-canvas/95 backdrop-blur-xl border-b border-line shadow-sm shrink-0">
+          {/* Top Row on Mobile: Back button + Song Name & Author Name */}
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto flex-1">
             <button
               onClick={handleBack}
-              className="p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
+              className="p-1.5 sm:p-2 hover:bg-card-hover rounded-full text-dim hover:text-copy cursor-pointer transition-all duration-200 active:scale-95 flex-shrink-0"
               title="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -725,60 +751,65 @@ export default function SongPageClient({ params, initialSong = null }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap shrink-0 select-none">
-            {/* Font Size Controls — Custom a | A Pill Design */}
-            <div
-              className="flex items-center bg-card border border-line/60 rounded-xl px-1 py-0.5 shadow-sm h-8 md:h-9 shrink-0 select-none backdrop-blur-md"
-              title="Adjust Font Size"
-            >
-              <button
-                type="button"
-                onClick={decreaseFontSize}
-                className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
-                title="Decrease Font Size"
-                aria-label="Decrease Font Size"
+          {/* Bottom Row on Mobile (down of song & author name), Right side on Desktop */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 select-none w-full sm:w-auto">
+            {/* Action Tools: Font size, Share, Add, Copy */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Font Size Controls — Custom a | A Pill Design */}
+              <div
+                className="flex items-center bg-card border border-line/60 rounded-xl px-1 py-0.5 shadow-sm h-8 md:h-9 shrink-0 select-none backdrop-blur-md"
+                title="Adjust Font Size"
               >
-                <span className="font-extrabold text-xs">a</span>
+                <button
+                  type="button"
+                  onClick={decreaseFontSize}
+                  className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
+                  title="Decrease Font Size"
+                  aria-label="Decrease Font Size"
+                >
+                  <span className="font-extrabold text-xs">a</span>
+                </button>
+                <div className="w-[1.5px] h-4 bg-amber-500/80 mx-0.5 rounded-full shrink-0" aria-hidden="true" />
+                <button
+                  type="button"
+                  onClick={increaseFontSize}
+                  className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
+                  title="Increase Font Size"
+                  aria-label="Increase Font Size"
+                >
+                  <span className="font-black text-sm">A</span>
+                </button>
+              </div>
+
+              {/* Share Button */}
+              <button
+                onClick={handleShare}
+                className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+                title="Share song"
+              >
+                <Share2 className="w-4 h-4" />
               </button>
-              <div className="w-[1.5px] h-4 bg-amber-500/80 mx-0.5 rounded-full shrink-0" aria-hidden="true" />
+
+              {/* Add to Playlist Button */}
               <button
-                type="button"
-                onClick={increaseFontSize}
-                className="px-2 h-full flex items-center justify-center text-muted hover:text-title hover:bg-card-hover rounded-lg transition-all active:scale-90 cursor-pointer"
-                title="Increase Font Size"
-                aria-label="Increase Font Size"
+                onClick={() => setAddToPlaylistSong(song)}
+                className="p-1.5 md:p-2 rounded-full text-muted hover:text-[#D4A32A] hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+                title="Add to playlist"
               >
-                <span className="font-black text-sm">A</span>
+                <Plus className="w-4 h-4" />
+              </button>
+
+              {/* Copy Lyrics Button */}
+              <button
+                onClick={handleCopyLyrics}
+                className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
+                title="Copy lyrics to clipboard"
+              >
+                <Copy className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Share Button */}
-            <button
-              onClick={handleShare}
-              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
-              title="Share song"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-
-            {/* Add to Playlist Button */}
-            <button
-              onClick={() => setAddToPlaylistSong(song)}
-              className="p-1.5 md:p-2 rounded-full text-muted hover:text-[#D4A32A] hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
-              title="Add to playlist"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-
-            {/* Copy Lyrics Button */}
-            <button
-              onClick={handleCopyLyrics}
-              className="p-1.5 md:p-2 rounded-full text-muted hover:text-title hover:bg-card-hover/60 transition-all cursor-pointer active:scale-90 shrink-0"
-              title="Copy lyrics to clipboard"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-
+            {/* Language Segmented Toggle */}
             <LanguageSegmented
               selected={selectedLanguage}
               onChange={setSelectedLanguage}
@@ -788,16 +819,15 @@ export default function SongPageClient({ params, initialSong = null }) {
           </div>
         </div>
 
-        <div className="flex-1 w-full max-w-4xl mx-auto px-6 md:px-16 lg:px-24 flex flex-col justify-center overflow-hidden">
-          <SongLyrics
-            song={song}
-            isImmersive={true}
-            selectedLanguage={selectedLanguage}
-            setSelectedLanguage={setSelectedLanguage}
-            fontSizeMultiplier={fontSizeMultiplier}
-            loading={lyricsLoading}
-          />
-        </div>
+        <SongLyrics
+          song={song}
+          isImmersive={true}
+          isLyricsPage={true}
+          selectedLanguage={selectedLanguage}
+          setSelectedLanguage={setSelectedLanguage}
+          fontSizeMultiplier={fontSizeMultiplier}
+          loading={lyricsLoading}
+        />
 
         {/* Share/Copy Toast Notification */}
         {toastMessage && (
@@ -823,7 +853,7 @@ export default function SongPageClient({ params, initialSong = null }) {
       {/* Sticky Action Header Bar */}
       <div className="sticky top-0 z-30 flex flex-col bg-canvas/95 backdrop-blur-md border-b border-line/35 shadow-sm">
         {/* Main Header Row */}
-        <div className="flex items-center justify-between px-6 md:px-8 py-3">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 md:px-8 py-2.5 sm:py-3">
           {/* Left Side: Back button + Titles */}
           <div className="flex items-center gap-3.5 min-w-0">
             <button

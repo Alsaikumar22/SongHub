@@ -39,7 +39,6 @@ import {
   MessageCircle,
   Shield,
   Sparkles,
-  Bot,
   HelpCircle,
   ChevronDown,
   Compass,
@@ -52,7 +51,6 @@ import AddToPlaylistModal from "@/components/playlist/AddToPlaylistModal";
 import CreatePlaylistModal from "@/components/playlist/CreatePlaylistModal";
 import CollaboratorsModal from "@/components/playlist/CollaboratorsModal";
 import QueuePanel from "@/components/player/QueuePanel";
-import YouWorshipAiDrawer from "@/components/ai/YouWorshipAiDrawer";
 
 export default function AppLayout({ children }) {
   const [showAuth, setShowAuth] = useState(false);
@@ -233,7 +231,6 @@ function AppLayoutInner({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [showTalkToUs, setShowTalkToUs] = useState(false);
-  const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [talkToUsTab, setTalkToUsTab] = useState("request");
   const [talkToUsCategory, setTalkToUsCategory] = useState("Contact Us");
   const [queriesExpanded, setQueriesExpanded] = useState(false);
@@ -277,14 +274,11 @@ function AppLayoutInner({
   useEffect(() => {
     const openTalkToUs = () => setShowTalkToUs(true);
     const openAbout = () => setShowAboutModal(true);
-    const openAi = () => setShowAiDrawer(true);
     window.addEventListener("youworship:open-talk-to-us", openTalkToUs);
     window.addEventListener("youworship:open-about", openAbout);
-    window.addEventListener("youworship:open-ai", openAi);
     return () => {
       window.removeEventListener("youworship:open-talk-to-us", openTalkToUs);
       window.removeEventListener("youworship:open-about", openAbout);
-      window.removeEventListener("youworship:open-ai", openAi);
     };
   }, []);
 
@@ -1033,10 +1027,9 @@ function AppLayoutInner({
         </div>
       )}
 
-      {/* Floating Action Column: Scroll To Top + AI Assistant */}
-      <div className="fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 flex flex-col items-center gap-2 select-none">
-        {/* Scroll To Top (Up Arrow) button with circular scroll filling progress */}
-        {showScrollTop && (
+      {/* Floating Action: Scroll To Top */}
+      {showScrollTop && (
+        <div className="fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 flex flex-col items-center gap-2 select-none">
           <button
             onClick={handleScrollToTop}
             className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-card/95 hover:bg-card-hover text-dim hover:text-title border border-line shadow-xl backdrop-blur-md flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 animate-in fade-in zoom-in-75 duration-200 group relative"
@@ -1080,32 +1073,8 @@ function AppLayoutInner({
               Top
             </span>
           </button>
-        )}
-
-        {/* Floating "YouWorship AI" circular button — decreased size */}
-        <button
-          onClick={() => setShowAiDrawer(true)}
-          className="w-10.5 h-10.5 lg:w-11.5 lg:h-11.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-black shadow-[0_6px_24px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-[0_10px_32px_rgba(212,163,42,0.55)] active:scale-95 shrink-0 animate-in fade-in slide-in-from-right-4 duration-300 group border border-white/20 relative"
-          title="YouWorship AI Assistant"
-          aria-label="Open YouWorship AI Assistant"
-        >
-          <div className="relative flex items-center justify-center">
-            <Bot className="w-5 h-5 lg:w-5.5 lg:h-5.5 text-black fill-black/15 transition-transform duration-300 group-hover:scale-110" />
-            <Sparkles className="w-2.5 h-2.5 text-black absolute -top-0.5 -right-0.5 animate-pulse" />
-          </div>
-          {/* Tooltip on hover */}
-          <span className="absolute right-full mr-2.5 px-2.5 py-1.5 bg-card/95 backdrop-blur-md text-title text-xs font-bold rounded-xl shadow-xl border border-line opacity-0 scale-95 origin-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none whitespace-nowrap flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#D4A32A]" />
-            <span>YouWorship AI</span>
-          </span>
-        </button>
-      </div>
-
-      {/* YOUWORSHIP AI ASSISTANT DRAWER */}
-      <YouWorshipAiDrawer
-        isOpen={showAiDrawer}
-        onClose={() => setShowAiDrawer(false)}
-      />
+        </div>
+      )}
 
       {/* TALK TO US DRAWER (Fallback for footer contact links) */}
       <TalkToUsDrawer

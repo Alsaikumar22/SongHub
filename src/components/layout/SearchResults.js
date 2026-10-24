@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Play, Pause, Search, Music, Clock, VolumeX } from "lucide-react";
 import SongArtwork from "../ui/SongArtwork";
 import ProtectedAction from "@/components/auth/ProtectedAction";
+// Import safe artist name extractor
+import { getSongArtistName } from "@/utils/songSearch";
 
 export default function SearchResults({
   results,
@@ -121,7 +123,7 @@ export default function SearchResults({
                         )}
                       </span>
                       <span className="text-[10px] text-dim truncate block leading-tight mt-0.5">
-                        <span className="font-bold font-song-title">{song.titleEnglish}</span> &middot; {song.artist?.name || "Unknown Artist"}
+                        <span className="font-bold font-song-title">{song.titleEnglish}</span> &middot; {getSongArtistName(song) || "Unknown Artist"}
                       </span>
                     </div>
                   </div>

@@ -195,7 +195,8 @@ function transformToNewStructuredSchema(docId, oldData) {
 
 async function updateCollectionToNewSchema() {
   console.log(
-      "🚀 Updating 'youworship_songs' to the NEW Structured Schema...\n",
+    "🚀 Updating 'youworship_songs' to the NEW Structured Schema...\n"
+  );
 
   try {
     const app = initializeApp(firebaseConfig);
