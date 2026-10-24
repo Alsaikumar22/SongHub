@@ -23,6 +23,8 @@ import PlaylistDetailView from "@/components/playlist/PlaylistDetailView";
 import CreatePlaylistModal from "@/components/playlist/CreatePlaylistModal";
 import AddToPlaylistModal from "@/components/playlist/AddToPlaylistModal";
 import LandingHero from "@/components/landing/LandingHero";
+// Import normalized song search utilities for real-time ranking
+import { filterAndRankSongs, getSongArtistName } from "@/utils/songSearch";
 
 import {
   FolderHeart,
@@ -139,17 +141,7 @@ function HomeContent() {
     setLyricsQuery(e.target.value || "");
   }, [handleMobileSearchChange, setLyricsQuery]);
 
-  const [selectedLetter, setSelectedLetter] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        return params.get("letter") || null;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [selectedLetter, setSelectedLetter] = useState(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -325,15 +317,8 @@ function HomeContent() {
     }
     const trimmedQuery = (searchQuery || "").toString().trim();
     if (trimmedQuery && showFullResults) {
-      const q = trimmedQuery.toLowerCase();
-      list = list.filter(
-        (s) =>
-          searchableText(s.teluguTitle || s.title).includes(q) ||
-          searchableText(s.titleEnglish).includes(q) ||
-          searchableText(s.title).includes(q) ||
-          searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
-          searchableText(s.album).includes(q),
-      );
+      // Use ranked real-time search matching with prefix & word-boundary scoring
+      list = filterAndRankSongs(list, trimmedQuery, 300);
     }
     return list;
   };
@@ -341,19 +326,14 @@ function HomeContent() {
   const filteredSongs = getFilteredSongs();
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId);
 
-  // Mobile specific search results
+  // Mobile active query updates on every keystroke
+  const activeMobileQuery = (mobileInputValue !== undefined ? mobileInputValue : searchQuery).trim();
+
+  // Mobile specific search results dynamically updating with ranked scores on every keystroke
   const mobileSearchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
-    return songs.filter(
-      (s) =>
-        searchableText(s.teluguTitle || s.title).includes(q) ||
-        searchableText(s.titleEnglish).includes(q) ||
-        searchableText(s.title).includes(q) ||
-        searchableText(s.artist || s.artistName || s.artistObj).includes(q) ||
-        searchableText(s.album).includes(q)
-    );
-  }, [songs, searchQuery]);
+    if (!activeMobileQuery) return [];
+    return filterAndRankSongs(songs, activeMobileQuery, 100);
+  }, [songs, activeMobileQuery]);
 
   const handleCreatePlaylistMobile = (e) => {
     e.preventDefault();
@@ -750,7 +730,10 @@ function HomeContent() {
                                 {song.teluguTitle || song.title}
                               </span>
                               <span className="text-xs text-muted block truncate mt-0.5">
-                                {song.titleEnglish}
+                                {song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title)
+                                  ? `${song.titleEnglish} • `
+                                  : ""}
+                                {getSongArtistName(song) || "Unknown Artist"}
                               </span>
                             </div>
                             <div className="shrink-0 flex items-center gap-1 text-xs text-dim pr-1">

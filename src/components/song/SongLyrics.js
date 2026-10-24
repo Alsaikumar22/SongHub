@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { FileText } from "lucide-react";
 import { LyricsSkeleton } from "@/components/ui/SongSkeleton";
+import { useTheme } from "@/context/theme-context";
 
 export function LanguageSegmented({ selected, onChange, songLanguage, hasChords }) {
   const langs = [];
@@ -64,12 +65,28 @@ export default function SongLyrics({
   song,
   isUnified = false,
   isImmersive = false,
+  isLyricsPage = false,
   selectedLanguage: propLanguage,
   setSelectedLanguage: propSetLanguage,
   fontSizeMultiplier = 1.0,
   loading = false,
 }) {
   const [internalLanguage, setInternalLanguage] = useState("telugu");
+
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
+  const activeLyricClass = isLight
+    ? "text-[#D4A32A] font-bold scale-[1.03] opacity-100 drop-shadow-[0_0_14px_rgba(212,163,42,0.35)]"
+    : "text-[#FACC15] font-bold scale-[1.03] opacity-100 drop-shadow-[0_0_18px_rgba(250,204,21,0.45)]";
+
+  const inactiveLyricClass = isLight
+    ? "text-[#111827] font-normal opacity-100 hover:text-[#D4A32A] cursor-pointer"
+    : "text-[#f9fafb] font-normal opacity-95 hover:text-[#FACC15] cursor-pointer";
+
+  const inactiveEnglishClass = isLight
+    ? "text-[#374151] font-normal opacity-100 hover:text-[#D4A32A] cursor-pointer"
+    : "text-[#e5e7eb] font-normal opacity-95 hover:text-[#FACC15] cursor-pointer";
 
   const selectedLanguage = propLanguage !== undefined ? propLanguage : internalLanguage;
   const setSelectedLanguage = propSetLanguage !== undefined ? propSetLanguage : setInternalLanguage;
@@ -159,47 +176,138 @@ export default function SongLyrics({
 
   const flatLines = useMemo(() => stanzas.flat(), [stanzas]);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setActiveLineIndex(-1);
-    }, 0);
-  }, [selectedLanguage]);
+  const stanzaOffsets = useMemo(() => {
+    const offsets = [];
+    let count = 0;
+    for (const stanza of stanzas) {
+      offsets.push(count);
+      count += stanza.length;
+    }
+    return offsets;
+  }, [stanzas]);
 
+  const isTeluguText = (text) => /[\u0C00-\u0C7F]/.test(text || "");
+
+  useEffect(() => {
+    setActiveLineIndex(-1);
+    lineRefs.current = {};
+  }, [selectedLanguage, song]);
+
+  // Accurate, smooth scroll-focal line detection
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const idx = parseInt(entry.target.getAttribute("data-line-index"), 10);
-            if (!isNaN(idx)) {
-              setActiveLineIndex(idx);
-            }
-          }
-        }
-      },
-      { root: container, rootMargin: "-35% 0px -35% 0px", threshold: 0 }
-    );
+    let ticking = false;
+    const updateActiveLine = () => {
+      ticking = false;
+      const totalLines = flatLines.length;
+      if (totalLines === 0) return;
 
-    const elements = Object.values(lineRefs.current).filter(Boolean);
-    elements.forEach((el) => observer.observe(el));
+      const cRect = container.getBoundingClientRect();
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+
+      // When at the very top, activate first line (line 0)
+      if (scrollTop <= 15) {
+        setActiveLineIndex(0);
+        return;
+      }
+
+      // When at the very bottom, activate last line
+      if (scrollTop + clientHeight >= scrollHeight - 25) {
+        setActiveLineIndex(totalLines - 1);
+        return;
+      }
+
+      // Focal reading line is positioned at 42% from top of container
+      const focalY = cRect.top + cRect.height * 0.42;
+
+      let closestIdx = -1;
+      let minDistance = Infinity;
+
+      for (const [idxStr, el] of Object.entries(lineRefs.current)) {
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const lineCenter = rect.top + rect.height / 2;
+        const dist = Math.abs(lineCenter - focalY);
+
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIdx = parseInt(idxStr, 10);
+        }
+      }
+
+      if (closestIdx !== -1) {
+        setActiveLineIndex(closestIdx);
+      }
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateActiveLine);
+        ticking = true;
+      }
+    };
+
+    // Initial check on mount/update
+    updateActiveLine();
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
 
     return () => {
-      elements.forEach((el) => observer.unobserve(el));
+      container.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
-  }, [selectedLanguage, stanzas, dualStanzas]);
-  let currentFlatIndex = 0;
+  }, [selectedLanguage, stanzas, dualStanzas, flatLines.length]);
+
+  const handleLineClick = (idx) => {
+    setActiveLineIndex(idx);
+    const el = lineRefs.current[idx];
+    const container = containerRef.current;
+    if (el && container) {
+      const elRect = el.getBoundingClientRect();
+      const cRect = container.getBoundingClientRect();
+      const targetScrollTop =
+        container.scrollTop +
+        (elRect.top - cRect.top) -
+        (cRect.height * 0.42 - elRect.height / 2);
+      container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+    }
+  };
+
+  const renderLyricText = (line) => line;
 
   if (isImmersive) {
     return (
       <div
         ref={containerRef}
-        className="w-full flex-1 overflow-y-auto px-6 sm:px-12 md:px-16 py-12 select-text bg-card font-lyrics"
-        style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
+        className={
+          isLyricsPage
+            ? "w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-card select-text font-lyrics px-3 sm:px-6 py-6 sm:py-8 scrollbar-thin"
+            : "w-full flex-1 overflow-y-auto px-4 sm:px-12 md:px-16 py-8 sm:py-12 select-text bg-card font-lyrics scrollbar-thin"
+        }
+        style={
+          isLyricsPage
+            ? {
+                fontSize: `${(fontSizeMultiplier / 0.6) * 100}%`,
+                maskImage:
+                  "linear-gradient(transparent, #000 8%, #000 92%, transparent)",
+                WebkitMaskImage:
+                  "linear-gradient(transparent, #000 8%, #000 92%, transparent)",
+              }
+            : { fontSize: `${fontSizeMultiplier * 100}%` }
+        }
       >
-        <div className="max-w-5xl mx-auto pb-32 min-h-full flex flex-col justify-center">
+        <div
+          className={
+            isLyricsPage
+              ? "w-full min-h-full flex flex-col justify-center py-6 pb-40"
+              : "max-w-4xl mx-auto pb-48 min-h-full flex flex-col justify-center"
+          }
+        >
           {loading ? (
             <LyricsSkeleton language={selectedLanguage} isImmersive={true} />
           ) : selectedLanguage === "chords" ? (
@@ -230,14 +338,28 @@ export default function SongLyrics({
                 </h4>
                 {stanzasTelugu.map((stanzaLines, sIdx) => (
                   <div key={`te-stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                    {stanzaLines.map((line, lIdx) => (
-                      <p
-                        key={`te-line-${sIdx}-${lIdx}`}
-                        className="text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] font-normal tracking-tight leading-relaxed text-title font-telugu select-text"
-                      >
-                        {line}
-                      </p>
-                    ))}
+                    {stanzaLines.map((line, lIdx) => {
+                      const lineIdx = (stanzaOffsets[sIdx] || 0) + lIdx;
+                      const isActive = activeLineIndex === lineIdx;
+                      return (
+                        <div
+                          key={`te-line-${sIdx}-${lIdx}`}
+                          ref={(el) => {
+                            lineRefs.current[lineIdx] = el;
+                          }}
+                          onClick={() => handleLineClick(lineIdx)}
+                          className="py-1 transition-all duration-300"
+                        >
+                          <p
+                            className={`text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] tracking-tight leading-relaxed font-telugu select-text transition-all duration-300 ${
+                              isActive ? activeLyricClass : inactiveLyricClass
+                            }`}
+                          >
+                            {line}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -249,26 +371,50 @@ export default function SongLyrics({
                 </h4>
                 {stanzasEnglish.map((stanzaLines, sIdx) => (
                   <div key={`en-stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                    {stanzaLines.map((line, lIdx) => (
-                      <p
-                        key={`en-line-${sIdx}-${lIdx}`}
-                        className="text-center text-[1.125em] sm:text-[1.25em] md:text-[1.5em] font-normal tracking-wide leading-relaxed text-muted select-text"
-                      >
-                        {line}
-                      </p>
-                    ))}
+                    {stanzaLines.map((line, lIdx) => {
+                      const lineIdx = (stanzaOffsets[sIdx] || 0) + lIdx;
+                      const isActive = activeLineIndex === lineIdx;
+                      return (
+                        <div
+                          key={`en-line-${sIdx}-${lIdx}`}
+                          onClick={() => handleLineClick(lineIdx)}
+                          className="py-1 transition-all duration-300"
+                        >
+                          <p
+                            className={`text-center text-[1.125em] sm:text-[1.25em] md:text-[1.5em] tracking-wide leading-relaxed font-lyrics select-text transition-all duration-300 ${
+                              isActive ? activeLyricClass : inactiveEnglishClass
+                            }`}
+                          >
+                            {line}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
             </div>
           ) : (
             /* Single Language Mode */
-            <div className="max-w-2xl mx-auto text-center space-y-10">
+            <div
+              className={
+                isLyricsPage
+                  ? "w-full text-center space-y-8"
+                  : "max-w-2xl mx-auto text-center space-y-8 sm:space-y-10"
+              }
+            >
               {stanzas.map((stanzaLines, sIdx) => (
-                <div key={`stanza-${sIdx}`} className="space-y-3 sm:space-y-4">
-                  {stanzaLines.map((line) => {
-                    const lineIdx = currentFlatIndex++;
+                <div
+                  key={`stanza-${sIdx}`}
+                  className="space-y-3 sm:space-y-4"
+                >
+                  {stanzaLines.map((line, lIdx) => {
+                    const lineIdx = (stanzaOffsets[sIdx] || 0) + lIdx;
                     const isActive = activeLineIndex === lineIdx;
+                    const isTelugu =
+                      selectedLanguage === "telugu" ||
+                      isTeluguText(line) ||
+                      (song?.language || "").toLowerCase().includes("te");
 
                     return (
                       <div
@@ -277,16 +423,21 @@ export default function SongLyrics({
                           lineRefs.current[lineIdx] = el;
                         }}
                         data-line-index={lineIdx}
-                        className="py-1 transition-all duration-300"
+                        onClick={() => handleLineClick(lineIdx)}
+                        className="py-1 sm:py-1.5 transition-all duration-300"
                       >
                         <p
-                          className={`text-center text-[1.25em] sm:text-[1.5em] md:text-[1.875em] lg:text-[2.25em] tracking-tight leading-relaxed transition-all duration-300 ${
-                            isActive
-                              ? "text-title scale-[1.02] font-bold"
-                              : "text-copy font-normal hover:text-title cursor-pointer"
-                          } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
+                          className={`text-center transition-all duration-300 select-text ${
+                            isTelugu ? "font-telugu" : "font-lyrics"
+                          } ${
+                            isLyricsPage
+                              ? "text-[1.25em] sm:text-[1.6em] leading-[1.95] tracking-tight"
+                              : "text-[1.125em] sm:text-[1.375em] md:text-[1.625em] lg:text-[1.875em] tracking-tight leading-relaxed"
+                          } ${
+                            isActive ? activeLyricClass : inactiveLyricClass
+                          }`}
                         >
-                          {line}
+                          {renderLyricText(line)}
                         </p>
                       </div>
                     );
@@ -316,10 +467,10 @@ export default function SongLyrics({
     <div className="relative font-lyrics">
       <div
         ref={containerRef}
-        className="relative px-4 sm:px-8 py-6 space-y-8"
+        className="relative px-4 sm:px-8 py-6 space-y-8 max-h-[75vh] overflow-y-auto scrollbar-thin"
         style={{ fontSize: `${fontSizeMultiplier * 100}%` }}
       >
-        <div className="max-w-2xl mx-auto space-y-8">
+        <div className="max-w-2xl mx-auto space-y-8 pb-32">
           {loading ? (
             <LyricsSkeleton language={selectedLanguage} isImmersive={false} />
           ) : selectedLanguage === "chords" ? (
@@ -370,9 +521,13 @@ export default function SongLyrics({
           ) : (
             stanzas.map((stanzaLines, sIdx) => (
               <div key={`stanza-${sIdx}`} className="space-y-2.5 sm:space-y-3">
-                {stanzaLines.map((line) => {
-                  const lineIdx = currentFlatIndex++;
+                {stanzaLines.map((line, lIdx) => {
+                  const lineIdx = (stanzaOffsets[sIdx] || 0) + lIdx;
                   const isActive = activeLineIndex === lineIdx;
+                  const isTelugu =
+                    selectedLanguage === "telugu" ||
+                    isTeluguText(line) ||
+                    (song?.language || "").toLowerCase().includes("te");
 
                   return (
                     <div
@@ -381,16 +536,17 @@ export default function SongLyrics({
                         lineRefs.current[lineIdx] = el;
                       }}
                       data-line-index={lineIdx}
-                      className="py-0.5 transition-all duration-300"
+                      onClick={() => handleLineClick(lineIdx)}
+                      className="py-1 transition-all duration-300"
                     >
                       <p
                         className={`text-center text-[1em] sm:text-[1.125em] md:text-[1.25em] leading-relaxed transition-all duration-300 ${
-                          isActive
-                            ? "text-title scale-[1.01] font-bold"
-                            : "text-copy font-normal hover:text-title cursor-pointer"
-                        } ${selectedLanguage === "telugu" ? "font-telugu" : ""}`}
+                          isTelugu ? "font-telugu" : "font-lyrics"
+                        } ${
+                          isActive ? activeLyricClass : inactiveLyricClass
+                        }`}
                       >
-                        {line}
+                        {renderLyricText(line)}
                       </p>
                     </div>
                   );

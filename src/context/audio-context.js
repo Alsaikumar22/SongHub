@@ -74,6 +74,46 @@ function normalizeSongForUi(song) {
   };
 }
 
+const TELUGU_ENGLISH_MAP = {
+  A: 'అ', B: 'బ', C: 'చ', D: 'ద', E: 'ఎ', F: 'ఫ', G: 'గ',
+  H: 'హ', I: 'ఇ', J: 'జ', K: 'క', L: 'ల', M: 'మ', N: 'న',
+  O: 'ఒ', P: 'ప', Q: 'క', R: 'ర', S: 'స', T: 'త', U: 'ఉ',
+  V: 'వ', W: 'వ', X: 'క్ష', Y: 'య', Z: 'జ',
+};
+
+function isSongInLanguage(song, lang) {
+  if (!song) return false;
+  const songLang = (song.language || "").trim().toLowerCase();
+
+  if (lang === "telugu") {
+    if (songLang === "te" || songLang === "telugu") return true;
+    if (songLang === "en" || songLang === "english" || songLang === "hi" || songLang === "hindi" || songLang === "ta" || songLang === "tamil") {
+      return false;
+    }
+    const textToCheck = `${song.teluguTitle || ""} ${song.title || ""} ${song.lyrics || ""}`;
+    return /[\u0C00-\u0C7F]/.test(textToCheck);
+  }
+
+  if (lang === "english") {
+    if (songLang === "en" || songLang === "english") return true;
+    if (songLang === "te" || songLang === "telugu" || songLang === "hi" || songLang === "hindi" || songLang === "ta" || songLang === "tamil") {
+      return false;
+    }
+    const textToCheck = `${song.title || ""} ${song.teluguTitle || ""}`;
+    return /[A-Za-z]/.test(song.title || "") && !/[\u0C00-\u0C7F\u0900-\u097F\u0B80-\u0BFF]/.test(textToCheck);
+  }
+
+  if (lang === "hindi") {
+    if (songLang === "hi" || songLang === "hindi") return true;
+    if (songLang === "te" || songLang === "telugu" || songLang === "en" || songLang === "english" || songLang === "ta" || songLang === "tamil") {
+      return false;
+    }
+    return /[\u0900-\u097F]/.test(`${song.title || ""} ${song.lyrics || ""}`);
+  }
+
+  return true;
+}
+
 function getAlphabeticalKey(song, language) {
   if (language === "english") {
     const engTitle = song?.titleEnglish || song?.title || "";
@@ -82,8 +122,6 @@ function getAlphabeticalKey(song, language) {
     return "#";
   }
 
-  const title = song?.title || song?.teluguTitle || "";
-  const storedLetter = song?.firstLetter || "";
   const nativePattern =
     language === "telugu"
       ? /[\u0C00-\u0C7F]/
@@ -94,12 +132,24 @@ function getAlphabeticalKey(song, language) {
           : null;
 
   if (nativePattern) {
-    if (nativePattern.test(storedLetter)) return storedLetter;
-    const firstChar = title.trim().charAt(0);
+    const storedLetter = song?.teluguFirstLetter || song?.firstLetter || "";
+    if (storedLetter && nativePattern.test(storedLetter.charAt(0))) {
+      return storedLetter.charAt(0);
+    }
+
+    const nativeTitle = (language === "telugu" ? (song?.teluguTitle || song?.title) : (song?.title || song?.teluguTitle)) || "";
+    const firstChar = nativeTitle.trim().charAt(0);
     if (nativePattern.test(firstChar)) return firstChar;
+
+    if (language === "telugu") {
+      const engFirst = (song?.title || song?.titleEnglish || "").trim().charAt(0).toUpperCase();
+      if (TELUGU_ENGLISH_MAP[engFirst]) {
+        return TELUGU_ENGLISH_MAP[engFirst];
+      }
+    }
   }
 
-  const fallbackChar = storedLetter || title.trim().charAt(0).toUpperCase();
+  const fallbackChar = song?.firstLetter || (song?.title || "").trim().charAt(0).toUpperCase();
   return fallbackChar || "#";
 }
 
@@ -129,6 +179,70 @@ export const AudioProvider = ({ children }) => {
   const [playlists, setPlaylists] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [viewedSongId, setViewedSongId] = useState(null);
+  // Persisted last viewed song ID to maintain visual highlight on return
+  const [lastViewedSongId, setLastViewedSongId] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return sessionStorage.getItem("yw_last_viewed_song_id") || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  // Persisted list scroll offset to restore exact position when returning from lyrics
+  const [lastListScrollPos, setLastListScrollPos] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const val = sessionStorage.getItem("yw_last_scroll_pos");
+        return val ? parseInt(val, 10) : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  });
+
+  // Saves navigation context before opening song lyrics so Back returns seamlessly
+  const recordSongNavigation = useCallback((songId, letter, scrollPos, lang, view) => {
+    if (!songId) return;
+    setLastViewedSongId(songId);
+    setViewedSongId(songId);
+    if (scrollPos !== undefined && scrollPos !== null) {
+      setLastListScrollPos(scrollPos);
+    }
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("yw_last_viewed_song_id", songId);
+        if (scrollPos !== undefined && scrollPos !== null) {
+          sessionStorage.setItem("yw_last_scroll_pos", String(scrollPos));
+        }
+        if (letter) {
+          sessionStorage.setItem("yw_selected_letter", letter);
+        }
+        if (lang) {
+          sessionStorage.setItem("yw_script_lang", lang);
+        }
+        if (view) {
+          sessionStorage.setItem("yw_view_mode", view);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  // Clears navigation state when user explicitly returns to root browse
+  const clearSongNavigationState = useCallback(() => {
+    setLastViewedSongId(null);
+    setViewedSongId(null);
+    setLastListScrollPos(0);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("yw_last_viewed_song_id");
+        sessionStorage.removeItem("yw_last_scroll_pos");
+      } catch (e) {}
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState("discover");
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [showFullHome, setShowFullHome] = useState(true);
@@ -181,15 +295,16 @@ export const AudioProvider = ({ children }) => {
     };
     const allowedLangs = languageMap[lang] || languageMap.english;
     const letters = ALPHABETS[lang] || ALPHABETS.english;
+    const validLetters = new Set(letters);
     const BATCH_SIZE = 20;
     const grouped = {};
     songList.forEach(song => {
-      const songLang = (song.language || '').toLowerCase();
-      // Include songs with no language field (treat untagged as matching the selected language)
-      if (songLang && !allowedLangs.includes(songLang)) return;
+      if (!isSongInLanguage(song, lang)) return;
       const firstLetter = getAlphabeticalKey(song, lang);
-      if (!grouped[firstLetter]) grouped[firstLetter] = [];
-      grouped[firstLetter].push(song);
+      if (validLetters.has(firstLetter)) {
+        if (!grouped[firstLetter]) grouped[firstLetter] = [];
+        grouped[firstLetter].push(song);
+      }
     });
     const newSections = {};
     letters.forEach(letter => {
@@ -207,17 +322,18 @@ export const AudioProvider = ({ children }) => {
     setSections(newSections);
     console.log('[Sections] Pre-built sections for', lang, ':', Object.keys(newSections).join(', '));
   }, []);
-  const [currentSectionLetter, setCurrentSectionLetter] = useState(() => {
+
+  const [currentSectionLetter, setCurrentSectionLetter] = useState(null);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get("letter") || sessionStorage.getItem("yw_selected_letter") || null;
-      } catch (e) {
-        return null;
-      }
+        const letter = urlParams.get("letter") || sessionStorage.getItem("yw_selected_letter") || null;
+        if (letter) setCurrentSectionLetter(letter);
+      } catch (e) {}
     }
-    return null;
-  });
+  }, []);
   const [currentIndexInSection, setCurrentIndexInSection] = useState(null);
   const [isLoadingMoreNext, setIsLoadingMoreNext] = useState(false);
 
@@ -1168,44 +1284,27 @@ export const AudioProvider = ({ children }) => {
 
     try {
       const BATCH_SIZE = 20;
+      const validLetters = new Set(letters);
 
-      // Group all songs by their first letter
+      // Group all songs by their first letter strictly for this language
       const grouped = {};
       currentSongs.forEach(song => {
-        const songLang = (song.language || "").toLowerCase();
-        // Include songs with no language field (treat untagged as matching the selected language)
-        if (songLang && !allowedLangs.includes(songLang)) return;
+        if (!isSongInLanguage(song, lang)) return;
 
         const firstLetter = getAlphabeticalKey(song, lang);
-        if (!grouped[firstLetter]) grouped[firstLetter] = [];
-        grouped[firstLetter].push(song);
+        if (validLetters.has(firstLetter)) {
+          if (!grouped[firstLetter]) grouped[firstLetter] = [];
+          grouped[firstLetter].push(song);
+        }
       });
 
       console.log("[Sections] Grouped letters:", Object.keys(grouped).join(", "));
 
-      // Build sections: predefined letters first (in order), then any extra grouped letters
-      const processedLetters = new Set();
+      // Build sections: only predefined letters of this language in order
       letters.forEach(letter => {
         const allLetterSongs = grouped[letter] || [];
         if (allLetterSongs.length === 0) return;
-        processedLetters.add(letter);
 
-        const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
-        newSections[letter] = {
-          songs: initialSongs,
-          lastDoc: null,
-          hasMore: allLetterSongs.length > BATCH_SIZE,
-          allSongs: allLetterSongs,
-          showAll: false,
-          loading: false,
-        };
-      });
-
-      // Also include any songs grouped under letters not in the predefined list
-      Object.keys(grouped).forEach(letter => {
-        if (processedLetters.has(letter)) return;
-        const allLetterSongs = grouped[letter] || [];
-        if (allLetterSongs.length === 0) return;
         const initialSongs = allLetterSongs.slice(0, BATCH_SIZE);
         newSections[letter] = {
           songs: initialSongs,
@@ -1753,6 +1852,12 @@ export const AudioProvider = ({ children }) => {
         clearQueue,
         viewedSongId,
         setViewedSongId,
+        lastViewedSongId,
+        setLastViewedSongId,
+        lastListScrollPos,
+        setLastListScrollPos,
+        recordSongNavigation,
+        clearSongNavigationState,
         activeTab,
         setActiveTab,
         activePlaylistId,

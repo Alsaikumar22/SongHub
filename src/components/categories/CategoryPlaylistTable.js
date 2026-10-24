@@ -3,14 +3,24 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock, Plus } from "lucide-react";
+import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock, Plus, FileText } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
-  const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites, setAddToPlaylistSong } = useAudio();
+  const {
+    currentSong,
+    isPlaying,
+    playSong,
+    togglePlay,
+    toggleFavorite,
+    favorites,
+    setAddToPlaylistSong,
+    lastViewedSongId,
+    recordSongNavigation,
+  } = useAudio();
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [sharedSongId, setSharedSongId] = useState(null);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
@@ -110,6 +120,9 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const isSongPlaying = isCurrent && isPlaying;
           const isFav = favorites.includes(song.id);
           const isHovered = hoveredRowId === song.id;
+          const isLastViewed = Boolean(
+            lastViewedSongId && (lastViewedSongId === song.id || lastViewedSongId === song.slug)
+          );
 
           const displayTitle = language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
           const subtitle =
@@ -121,9 +134,26 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const year = song.releaseYear || 2024;
           const dateAdded = `Jan 15, ${year}`;
 
+          const handleNavigateLyrics = () => {
+            const scrollEl = document.querySelector(".overflow-y-auto");
+            const currentScrollPos = scrollEl ? scrollEl.scrollTop : 0;
+            const letterKey = category?.id?.startsWith('letter-') ? category.id.replace('letter-', '') : null;
+            if (recordSongNavigation) {
+              recordSongNavigation(song.id, letterKey, currentScrollPos, language, 'playlist');
+            }
+          };
+
+          const rowBgClass = isLastViewed
+            ? `border-l-4 border-l-[#D4A32A] ${isCurrent ? "bg-amber-500/20 text-white" : "bg-amber-500/10 dark:bg-amber-500/15 text-title"} shadow-xs`
+            : isCurrent
+            ? "bg-card-hover/60 text-white"
+            : "bg-transparent hover:bg-card-hover/40";
+
           return (
             <motion.div
               key={song.id}
+              aria-current={isLastViewed ? "true" : undefined}
+              data-last-viewed={isLastViewed ? "true" : undefined}
               onClick={() => {
                 if (isCurrent) {
                   togglePlay();
@@ -135,11 +165,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
               variants={itemVariants}
               onMouseEnter={() => setHoveredRowId(song.id)}
               onMouseLeave={() => setHoveredRowId(null)}
-              className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-3 rounded-lg cursor-pointer transition-colors duration-150 select-none ${
-                isCurrent
-                  ? "bg-card-hover/60 text-white"
-                  : "bg-transparent hover:bg-card-hover/40"
-              }`}
+              className={`grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 items-center px-4 py-3 rounded-lg cursor-pointer transition-colors duration-150 select-none ${rowBgClass}`}
             >
               {/* Index / Play Button */}
               <div className="w-10 flex items-center justify-center">
@@ -167,25 +193,44 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
               {/* Title, Artist and Transliteration */}
               <div className="flex items-center gap-3 min-w-0">
-                <ImageWithFallback
-                  src={song.coverUrl}
-                  alt={song.title}
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 object-cover rounded-lg border border-line shrink-0"
-                  sizes="40px"
-                />
+                <Link
+                  href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${category?.id?.startsWith('letter-') ? `&letter=${encodeURIComponent(category.id.replace('letter-', ''))}` : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigateLyrics();
+                  }}
+                  className="shrink-0"
+                >
+                  <ImageWithFallback
+                    src={song.coverUrl}
+                    alt={song.title}
+                    width={40}
+                    height={40}
+                    className={`w-10 h-10 object-cover rounded-lg border transition-transform hover:scale-105 shrink-0 ${
+                      isLastViewed ? "border-[#D4A32A]" : "border-line"
+                    }`}
+                    sizes="40px"
+                  />
+                </Link>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                     <Link
                       href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${category?.id?.startsWith('letter-') ? `&letter=${encodeURIComponent(category.id.replace('letter-', ''))}` : ''}`}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNavigateLyrics();
+                      }}
                       className={`font-bold text-sm truncate transition-colors hover:underline ${
                         isCurrent ? "text-title font-extrabold" : "text-title"
                       }`}
                     >
                       {displayTitle}
                     </Link>
+                    {isLastViewed && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 select-none shrink-0 shadow-xs">
+                        Last viewed
+                      </span>
+                    )}
                     {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
                       <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
                     )}
@@ -252,6 +297,18 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
                     {activeMenuSongId === song.id && (
                       <div className="absolute right-0 top-[110%] bg-dropdown border border-line rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                        <Link
+                          href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${category?.id?.startsWith('letter-') ? `&letter=${encodeURIComponent(category.id.replace('letter-', ''))}` : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuSongId(null);
+                            handleNavigateLyrics();
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-title hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-[#D4A32A]" />
+                          <span>View Lyrics</span>
+                        </Link>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

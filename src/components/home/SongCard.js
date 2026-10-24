@@ -42,22 +42,39 @@ function getLetterGradient(song) {
 }
 
 export default function SongCard({ song, currentSong, isPlaying, playSong, size = "md", language }) {
-  const { setAddToPlaylistSong, currentSectionLetter } = useAudio();
+  const { setAddToPlaylistSong, currentSectionLetter, lastViewedSongId, recordSongNavigation } = useAudio();
   const isCurrent = currentSong?.id === song.id;
   const isThisPlaying = isCurrent && isPlaying;
+  const isLastViewed = Boolean(
+    lastViewedSongId && (lastViewedSongId === song.id || lastViewedSongId === song.slug)
+  );
 
   const isSmall = size === "sm";
   const letterKey = currentSectionLetter || song.teluguFirstLetter || song.firstLetter;
 
+  const handleNavigateLyrics = () => {
+    const scrollEl = document.querySelector(".overflow-y-auto");
+    const currentScrollPos = scrollEl ? scrollEl.scrollTop : 0;
+    if (recordSongNavigation) {
+      recordSongNavigation(song.id, letterKey, currentScrollPos, language, 'cards');
+    }
+  };
+
   return (
     <div
       onClick={() => playSong(song)}
-      className={`relative isolate flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer`}
+      aria-current={isLastViewed ? "true" : undefined}
+      data-last-viewed={isLastViewed ? "true" : undefined}
+      className={`relative isolate flex-shrink-0 ${isSmall ? "w-36" : "w-48"} transition-all duration-300 group cursor-pointer ${
+        isLastViewed
+          ? "ring-2 ring-[#D4A32A] bg-amber-500/10 rounded-xl p-1.5 shadow-sm"
+          : ""
+      }`}
     >
       <div
-        className={`relative aspect-square w-full rounded-md overflow-hidden border border-line/50 shadow-md bg-card ${
-          isSmall ? "mb-2" : "mb-3"
-        }`}
+        className={`relative aspect-square w-full rounded-md overflow-hidden border shadow-md bg-card ${
+          isLastViewed ? "border-[#D4A32A]" : "border-line/50"
+        } ${isSmall ? "mb-2" : "mb-3"}`}
       >
         {song.imageUrl || song.coverUrl ? (
           <Image
@@ -112,9 +129,20 @@ export default function SongCard({ song, currentSong, isPlaying, playSong, size 
         </div>
       </div>
 
+      {isLastViewed && (
+        <div className="mb-1">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 shadow-xs">
+            Last viewed
+          </span>
+        </div>
+      )}
+
       <Link
         href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${letterKey ? `&letter=${encodeURIComponent(letterKey)}` : ""}`}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleNavigateLyrics();
+        }}
         className={`font-bold text-title block truncate group-hover:text-handle hover:underline transition-colors ${
           isSmall ? "text-sm" : "text-base"
         } font-song-title`}
