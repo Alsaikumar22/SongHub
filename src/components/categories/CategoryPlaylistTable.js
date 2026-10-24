@@ -2,19 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock } from "lucide-react";
+import Link from "next/link";
+import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Check, Clock, Plus } from "lucide-react";
 import { useAudio } from "@/context/audio-context";
 import ProtectedAction from "@/components/auth/ProtectedAction";
 import ImageWithFallback from "@/components/ui/ImageWithFallback";
 import { getShareableSongUrl } from "@/utils/share";
 
 export default function CategoryPlaylistTable({ category, songs, language }) {
-  const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites } = useAudio();
+  const { currentSong, isPlaying, playSong, togglePlay, toggleFavorite, favorites, setAddToPlaylistSong } = useAudio();
   const [hoveredRowId, setHoveredRowId] = useState(null);
   const [sharedSongId, setSharedSongId] = useState(null);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
 
-  const categoryName = language === "telugu" ? category.nameTe : category.nameEn;
+  const categoryName = category.nameEn;
 
   // Auto-close options dropdown on outside clicks
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
   return (
     <div className="w-full flex flex-col select-none">
       {/* Sticky Table Header */}
-      <div className="sticky top-0 z-20 bg-canvas py-3 border-b border-line grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
+      <div className="sticky top-0 z-30 bg-canvas/95 backdrop-blur-md py-3 border-b border-line grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_2.5fr_1.5fr_120px] lg:grid-cols-[40px_2.5fr_1.5fr_1.2fr_120px] gap-4 px-4 text-[11px] font-bold text-muted uppercase tracking-wider items-center select-none mb-3">
         <div className="text-center">#</div>
         <div>Title</div>
         <div className="hidden md:block">Album</div>
@@ -110,8 +111,11 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
           const isFav = favorites.includes(song.id);
           const isHovered = hoveredRowId === song.id;
 
-          const displayTitle = language === "telugu" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
-          const subtitle = language === "telugu" ? (song.titleEnglish || null) : (song.teluguTitle || null);
+          const displayTitle = language !== "english" && song.teluguTitle ? song.teluguTitle : (song.titleEnglish || song.title);
+          const subtitle =
+            language !== "english"
+              ? (song.titleEnglish && song.titleEnglish !== song.teluguTitle ? song.titleEnglish : null)
+              : (song.teluguTitle && song.teluguTitle !== (song.titleEnglish || song.title) ? song.teluguTitle : null);
 
           // Mock date added based on releaseYear or ID
           const year = song.releaseYear || 2024;
@@ -124,7 +128,8 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                 if (isCurrent) {
                   togglePlay();
                 } else {
-                  playSong(song);
+                  const letterKey = category?.id?.startsWith('letter-') ? category.id.replace('letter-', '') : null;
+                  playSong(song, letterKey, index, songs);
                 }
               }}
               variants={itemVariants}
@@ -171,11 +176,23 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
                   sizes="40px"
                 />
                 <div className="min-w-0 flex-1">
-                  <span className={`font-bold text-sm block truncate transition-colors ${
-                    isCurrent ? "text-title font-extrabold" : "text-title"
-                  }`}>
-                    {displayTitle}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Link
+                      href={`/song/${encodeURIComponent(song.slug || song.id)}?view=lyrics${category?.id?.startsWith('letter-') ? `&letter=${encodeURIComponent(category.id.replace('letter-', ''))}` : ''}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className={`font-bold text-sm truncate transition-colors hover:underline ${
+                        isCurrent ? "text-title font-extrabold" : "text-title"
+                      }`}
+                    >
+                      {displayTitle}
+                    </Link>
+                    {!(song.audioUrl || song.media?.audio || song.youtubeId) && (
+                      <span title="Audio not available" className="text-xs select-none shrink-0">🔇</span>
+                    )}
+                    {!(song.youtubeId || song.media?.video) && (
+                      <span title="Video not available" className="text-xs select-none shrink-0">🚫🎥</span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs text-muted truncate">
                       {song.artist}
@@ -235,6 +252,17 @@ export default function CategoryPlaylistTable({ category, songs, language }) {
 
                     {activeMenuSongId === song.id && (
                       <div className="absolute right-0 top-[110%] bg-dropdown border border-line rounded-xl shadow-2xl z-50 py-1 w-40 select-none animate-in fade-in slide-in-from-top-1 duration-150">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddToPlaylistSong(song);
+                            setActiveMenuSongId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-title hover:bg-card-hover transition-colors cursor-pointer flex items-center gap-2"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add to Playlist</span>
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

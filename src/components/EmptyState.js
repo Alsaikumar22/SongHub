@@ -8,8 +8,8 @@ import { Music, RefreshCw } from "lucide-react";
  */
 export default function EmptyState({
   title = "No songs found",
-  message = "There are no documents matching your criteria in the Youworship_songs collection.",
-  onRetry
+  message = "There are no documents matching your criteria in the youworship_songs collection.",
+  onRetry,
 }) {
   return (
     <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-card border border-line/40 max-w-lg mx-auto my-8">

@@ -21,7 +21,10 @@ const {
 const ytdl = require("@distube/ytdl-core");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -57,25 +60,30 @@ function getYoutubeUrl(data) {
 }
 
 async function fetchDuration(youtubeId) {
-  const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${youtubeId}`);
+  const info = await ytdl.getInfo(
+    `https://www.youtube.com/watch?v=${youtubeId}`,
+  );
   const seconds = Number(info.videoDetails.lengthSeconds);
   return seconds && seconds > 0 ? seconds : null;
 }
 
 async function fetchDurations() {
-  console.log("⏱️  Fetching YouTube durations for Youworship_songs...\n");
+  console.log("⏱️  Fetching YouTube durations for youworship_songs...\n");
 
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const snap = await getDocs(collection(db, "Youworship_songs"));
+    const snap = await getDocs(collection(db, "youworship_songs"));
     console.log(`📦 Found ${snap.docs.length} documents.`);
 
     const needsDuration = [];
     for (const docSnap of snap.docs) {
       const data = docSnap.data();
-      const hasDuration = data.duration !== undefined && data.duration !== null && Number(data.duration) > 0;
+      const hasDuration =
+        data.duration !== undefined &&
+        data.duration !== null &&
+        Number(data.duration) > 0;
       if (hasDuration) continue;
 
       const youtubeUrl = getYoutubeUrl(data);
@@ -106,13 +114,17 @@ async function fetchDurations() {
       const start = b * CONCURRENT_BATCH;
       const chunk = needsDuration.slice(start, start + CONCURRENT_BATCH);
 
-      console.log(`─── Batch ${b + 1}/${batchCount} (${chunk.length} songs) ───`);
+      console.log(
+        `─── Batch ${b + 1}/${batchCount} (${chunk.length} songs) ───`,
+      );
 
       const results = await Promise.allSettled(
         chunk.map((song) =>
-          fetchDuration(song.youtubeId)
-            .then((seconds) => ({ ...song, seconds }))
-        )
+          fetchDuration(song.youtubeId).then((seconds) => ({
+            ...song,
+            seconds,
+          })),
+        ),
       );
 
       const fbBatch = writeBatch(db);
@@ -121,7 +133,7 @@ async function fetchDurations() {
       for (const result of results) {
         if (result.status === "fulfilled" && result.value.seconds) {
           const { id, title, seconds } = result.value;
-          const ref = doc(db, "Youworship_songs", id);
+          const ref = doc(db, "youworship_songs", id);
           fbBatch.update(ref, {
             duration: seconds,
             updatedAt: new Date().toISOString(),

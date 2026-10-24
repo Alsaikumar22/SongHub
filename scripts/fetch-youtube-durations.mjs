@@ -25,7 +25,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const ytdl = require("@distube/ytdl-core");
 
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({
+  path: path.resolve(__dirname, "../.env.local"),
+  override: true,
+});
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -61,7 +65,9 @@ function getYoutubeUrl(data) {
 async function fetchDuration(youtubeId, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${youtubeId}`);
+      const info = await ytdl.getInfo(
+        `https://www.youtube.com/watch?v=${youtubeId}`,
+      );
       const seconds = Number(info.videoDetails.lengthSeconds);
       if (seconds && seconds > 0) return seconds;
     } catch (err) {
@@ -77,20 +83,23 @@ async function fetchDuration(youtubeId, retries = 2) {
 }
 
 async function fetchDurations() {
-  console.log("⏱️  Fetching YouTube durations for Youworship_songs...\n");
+  console.log("⏱️  Fetching YouTube durations for youworship_songs...\n");
 
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const snap = await getDocs(collection(db, "Youworship_songs"));
+    const snap = await getDocs(collection(db, "youworship_songs"));
     console.log(`📦 Found ${snap.docs.length} documents.\n`);
 
     const needsDuration = [];
 
     for (const docSnap of snap.docs) {
       const data = docSnap.data();
-      const hasDuration = data.duration !== undefined && data.duration !== null && Number(data.duration) > 0;
+      const hasDuration =
+        data.duration !== undefined &&
+        data.duration !== null &&
+        Number(data.duration) > 0;
       if (hasDuration) continue;
 
       const youtubeUrl = getYoutubeUrl(data);
@@ -100,7 +109,9 @@ async function fetchDurations() {
       needsDuration.push({ id: docSnap.id, title: data.title, youtubeId });
     }
 
-    console.log(`🎯 Songs missing duration with YouTube ID: ${needsDuration.length}\n`);
+    console.log(
+      `🎯 Songs missing duration with YouTube ID: ${needsDuration.length}\n`,
+    );
 
     if (needsDuration.length === 0) {
       console.log("✅ All songs already have durations.");
@@ -120,17 +131,21 @@ async function fetchDurations() {
       try {
         const seconds = await fetchDuration(youtubeId);
         if (seconds) {
-          const ref = doc(db, "Youworship_songs", id);
+          const ref = doc(db, "youworship_songs", id);
           batch.update(ref, {
             duration: seconds,
             updatedAt: new Date().toISOString(),
           });
           ops++;
           successCount++;
-          console.log(`   [${i + 1}/${total}] ✅ "${title}" → ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")} (${seconds}s)`);
+          console.log(
+            `   [${i + 1}/${total}] ✅ "${title}" → ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")} (${seconds}s)`,
+          );
         } else {
           failCount++;
-          console.log(`   [${i + 1}/${total}] ⚠️ "${title}" → could not get duration`);
+          console.log(
+            `   [${i + 1}/${total}] ⚠️ "${title}" → could not get duration`,
+          );
         }
       } catch (err) {
         failCount++;
@@ -158,7 +173,6 @@ async function fetchDurations() {
     console.log(`   Success: ${successCount}`);
     console.log(`   Failed:  ${failCount}`);
     console.log("======================================================");
-
   } catch (error) {
     console.error("\n❌ Script failed:", error);
     process.exit(1);

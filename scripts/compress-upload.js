@@ -13,7 +13,8 @@
  *   node scripts/compress-upload.js
  */
 
-require("dotenv").config({ path: ".env.local" });
+require("dotenv").config({ path: ".env" });
+require("dotenv").config({ path: ".env.local", override: true });
 
 const fs = require("fs");
 const path = require("path");
@@ -173,7 +174,7 @@ async function compressToBuffer(inputPath) {
 // ─── Step 3: Upload Buffer Directly to Supabase Storage ──────────────────────
 async function uploadBufferToSupabase(buffer, storagePath) {
   if (!supabase) {
-    throw new Error("Supabase client is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local");
+    throw new Error("Supabase client is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in your env files");
   }
 
   const safeKey = getSafeStorageKey(storagePath);
@@ -237,7 +238,7 @@ async function processImages() {
   }
 
   if (!supabase) {
-    console.warn("⚠️  Supabase credentials missing in .env.local. Uploads will be simulated.");
+    console.warn("⚠️  Supabase credentials missing in env files. Uploads will be simulated.");
   }
 
   const relativeFilePaths = getFilesRecursively(inputFolder);

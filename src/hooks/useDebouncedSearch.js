@@ -19,10 +19,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 export function useDebouncedSearch({ initialValue, onCommit, debounceMs = 250 }) {
   const [inputValue, setInputValue] = useState(initialValue || "");
   const debounceTimer = useRef(null);
+  const onCommitRef = useRef(onCommit);
+  const lastInitialRef = useRef(initialValue);
 
-  // Sync local value when the external context value changes
   useEffect(() => {
-    setInputValue(initialValue || "");
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+
+  // Sync local value when the external context value changes from outside
+  useEffect(() => {
+    if (initialValue !== lastInitialRef.current) {
+      lastInitialRef.current = initialValue;
+      setInputValue(initialValue || "");
+    }
   }, [initialValue]);
 
   // Cleanup on unmount
@@ -39,12 +48,15 @@ export function useDebouncedSearch({ initialValue, onCommit, debounceMs = 250 })
   const handleChange = useCallback((e) => {
     const value = e.target.value;
     setInputValue(value);
+    lastInitialRef.current = value;
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      onCommit(value);
+      if (onCommitRef.current) {
+        onCommitRef.current(value);
+      }
     }, debounceMs);
-  }, [onCommit, debounceMs]);
+  }, [debounceMs]);
 
   /** Flush pending debounce immediately — good for Enter key or navigation */
   const flush = useCallback(() => {
@@ -52,8 +64,10 @@ export function useDebouncedSearch({ initialValue, onCommit, debounceMs = 250 })
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
-    onCommit(inputValue);
-  }, [inputValue, onCommit]);
+    if (onCommitRef.current) {
+      onCommitRef.current(inputValue);
+    }
+  }, [inputValue]);
 
   /** Clear input and commit immediately */
   const clear = useCallback(() => {
@@ -61,9 +75,12 @@ export function useDebouncedSearch({ initialValue, onCommit, debounceMs = 250 })
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
+    lastInitialRef.current = "";
     setInputValue("");
-    onCommit("");
-  }, [onCommit]);
+    if (onCommitRef.current) {
+      onCommitRef.current("");
+    }
+  }, []);
 
   return {
     inputValue,

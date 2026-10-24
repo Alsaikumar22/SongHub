@@ -88,10 +88,21 @@
   --font-serif: var(--font-merriweather), var(--font-noto-serif-telugu), serif;
 }
 
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   background: var(--canvas);
   color: var(--title);
   font-family: var(--font-inter), var(--font-noto-sans-telugu), sans-serif;
+  overflow: hidden;
 }
 
 /* Controlled smooth transitions during user-initiated theme toggles */
@@ -364,4 +375,47 @@ input:-webkit-autofill:focus {
 
 .landing-cta:active {
   transform: translateY(0) scale(0.98);
+}
+
+/* Voice Search Wave Animations */
+@keyframes voice-wave-grow {
+  0%, 100% { height: 8px; }
+  50% { height: 28px; }
+}
+
+.animate-voice-wave-1 {
+  animation: voice-wave-grow 0.8s ease-in-out infinite;
+  animation-delay: 0.1s;
+}
+.animate-voice-wave-2 {
+  animation: voice-wave-grow 0.8s ease-in-out infinite;
+  animation-delay: 0.25s;
+}
+.animate-voice-wave-3 {
+  animation: voice-wave-grow 0.8s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+.animate-voice-wave-4 {
+  animation: voice-wave-grow 0.8s ease-in-out infinite;
+  animation-delay: 0.15s;
+}
+.animate-voice-wave-5 {
+  animation: voice-wave-grow 0.8s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+/* Spiral Loading Spinner Animation */
+@keyframes spiral-dot {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-spiral-dot {
+  animation: spiral-dot 1.5s ease-in-out infinite;
 }

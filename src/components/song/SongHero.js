@@ -38,15 +38,19 @@ export default function SongHero({ song }) {
 
             <h1
               className={`text-title text-2xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight select-all drop-shadow-sm ${
-                song.teluguTitle ? "font-telugu" : ""
+                song.language === "ta" || song.language === "tamil"
+                  ? ""
+                  : song.teluguTitle
+                    ? "font-telugu"
+                    : ""
               }`}
             >
               {song.teluguTitle || song.title}
             </h1>
 
-            {song.teluguTitle && song.title !== song.teluguTitle && (
+            {song.titleEnglish && song.titleEnglish !== (song.teluguTitle || song.title) && (
               <p className="text-lg md:text-xl text-muted font-semibold tracking-wide">
-                {song.title}
+                {song.titleEnglish}
               </p>
             )}
 

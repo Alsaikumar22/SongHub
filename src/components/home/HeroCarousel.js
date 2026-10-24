@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAudio } from "@/context/audio-context";
 import {
   Play,
@@ -11,7 +12,8 @@ import {
   Heart,
   Music,
   Clock,
-  Volume2
+  Volume2,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -24,7 +26,7 @@ const AUTO_PLAY_DURATION = 6000; // 6 seconds per slide
 
 export default function HeroCarousel() {
   const router = useRouter();
-  const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading } = useAudio();
+  const { songs, playSong, currentSong, isPlaying, toggleFavorite, favorites, songsLoading, setAddToPlaylistSong } = useAudio();
   const { weeklySongs } = useWeeklySongs({ songs, count: 7 });
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -123,7 +125,7 @@ export default function HeroCarousel() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full min-h-[380px] sm:min-h-[420px] md:h-[450px] rounded-2xl sm:rounded-3xl overflow-hidden bg-card border border-line shadow-2xl flex flex-col justify-between p-4 sm:p-6 md:p-10 group select-none transition-all duration-500"
+      className="relative w-full min-h-[340px] sm:min-h-[400px] md:h-[450px] rounded-2xl sm:rounded-3xl overflow-hidden bg-card border border-line shadow-2xl flex flex-col justify-between p-4 sm:p-6 md:p-10 group select-none transition-all duration-500"
     >
       {/* 1. ATMOSPHERIC AMBIENT BLUR BACKDROP */}
       <AnimatePresence mode="wait">
@@ -140,15 +142,25 @@ export default function HeroCarousel() {
 
       {/* 2. HIGH DEFINITION COVER ARTWORK — contained as a right-side banner within the card */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={`bg-cover-${current.id}`}
-          initial={{ opacity: 0, scale: 1.06 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="absolute inset-0 w-full bg-cover bg-center pointer-events-none"
-          style={current.bgUrl ? { backgroundImage: `url(${current.bgUrl})` } : undefined}
-        />
+        {current.bgUrl && (
+          <motion.div
+            key={`bg-cover-${current.id}`}
+            initial={{ opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+          >
+            <Image
+              src={current.bgUrl}
+              alt={current.title}
+              fill
+              priority
+              className="object-cover object-center"
+              sizes="(max-width: 768px) 100vw, 1200px"
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* 3. GRADIENT OVERLAYS — strong left-side opacity so text stays readable */}
@@ -265,7 +277,8 @@ export default function HeroCarousel() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Play / Pause Button */}
           <button
-            onClick={() => playSong(current.originalSong)}
+            id="tour-hero-play"
+            onClick={() => playSong(current.originalSong, weeklySongs)}
             className="px-4 sm:px-7 h-10 sm:h-12 bg-title text-card font-black text-[11px] sm:text-sm rounded-full shadow-xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             {isCurrentPlaying ? (
@@ -309,6 +322,15 @@ export default function HeroCarousel() {
             />
           </button>
           </ProtectedAction>
+
+          {/* Add to Playlist (+) Button */}
+          <button
+            onClick={() => setAddToPlaylistSong(current.originalSong)}
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-card/85 hover:bg-card border border-line text-muted hover:text-[#D4A32A] flex items-center justify-center backdrop-blur-xl transition-all hover:scale-105 active:scale-90 cursor-pointer shadow-sm"
+            title="Add to Playlist"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
 
         {/* Right: Up Next thumbnails (hidden on mobile) + Nav Arrows */}

@@ -23,9 +23,10 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
     setViewedSongId,
     showFullHome,
     setShowFullHome,
+    setCurrentSectionLetter,
   } = useAudio();
 
-  const { setShowFullResults } = useSearch();
+  const { setSearchQuery, setShowFullResults } = useSearch();
   const router = useRouter();
   const pathname = usePathname();
   const [showMoreSheet, setShowMoreSheet] = useState(false);
@@ -37,6 +38,14 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
   const scrollToTop = () => {
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const scrollContainers = document.querySelectorAll(
+        ".overflow-y-auto, [class*='overflow-y-auto']",
+      );
+      scrollContainers.forEach((el) => {
+        el.scrollTop = 0;
+      });
       const mainEl = document.querySelector("main");
       if (mainEl) {
         mainEl.scrollTo(0, 0);
@@ -48,15 +57,16 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
     {
       id: "home",
       label: "Home",
-      icon: <Home className="w-5 h-5" />,
+      icon: <Home className="w-6 h-6 stroke-[2.2]" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
         setShowFullHome(true);
-        if (isOnSongPage) router.push("/home");
+        router.push("/?tab=discover");
       },
     },
     {
@@ -65,11 +75,12 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Folder className="w-5 h-5" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("categories");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
-        if (isOnSongPage) router.push("/home");
+        router.push("/?tab=categories");
       },
     },
     {
@@ -78,12 +89,19 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Music2 className="w-5 h-5" />,
       onClick: () => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("discover");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
         setShowFullHome(false);
-        if (isOnSongPage) router.push("/home");
+        if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("yw_selected_letter");
+          } catch (e) {}
+        }
+        router.push("/?tab=songs");
       },
     },
     {
@@ -95,8 +113,7 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
         setActiveTab("search");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        setShowFullResults(false);
-        if (isOnSongPage) router.push("/home");
+        router.push("/?tab=search");
       },
     },
     {
@@ -105,19 +122,21 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
       icon: <Heart className="w-5 h-5" />,
       onClick: () => triggerWelcomeNudge(() => {
         scrollToTop();
+        setSearchQuery("");
+        setShowFullResults(false);
         setActiveTab("favorites");
         setActivePlaylistId(null);
         setViewedSongId(null);
-        if (isOnSongPage) router.push("/home");
+        router.push("/?tab=favorites");
       }),
     },
   ];
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-line z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[56px] bg-card/95 backdrop-blur-xl border-t border-line z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] select-none pointer-events-auto transform translate-z-0">
         {/* ─── Tab Buttons ─── */}
-        <div className="flex items-center justify-around px-2 pt-0 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex items-center justify-around px-2 h-full pb-[env(safe-area-inset-bottom,0px)]">
           {tabs.map((tab) => {
             const isActive = !isOnSongPage && (
               activeTab === tab.id ||
@@ -127,16 +146,29 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
             return (
               <button
                 key={tab.id}
+                id={
+                  tab.id === "home"
+                    ? "tour-mobile-home"
+                    : tab.id === "categories"
+                    ? "tour-mobile-categories"
+                    : tab.id === "songs"
+                    ? "tour-mobile-songs"
+                    : tab.id === "search"
+                    ? "tour-mobile-search"
+                    : tab.id === "favorites"
+                    ? "tour-mobile-favorites"
+                    : undefined
+                }
                 onClick={tab.onClick}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "text-title"
+                    ? "text-title font-bold"
                     : "text-dim hover:text-copy"
                 }`}
               >
-                <span className={isActive ? "scale-105" : ""}>{tab.icon}</span>
-                <span className={`text-[9px] font-semibold tracking-tight ${
-                  isActive ? "opacity-100" : "opacity-70"
+                <span className={isActive ? "scale-105 text-white" : "text-dim"}>{tab.icon}</span>
+                <span className={`text-[10px] font-semibold tracking-tight ${
+                  isActive ? "opacity-100 text-white" : "opacity-70 text-dim"
                 }`}>
                   {tab.label}
                 </span>
@@ -147,11 +179,11 @@ export default function MobileNav({ isAuthenticated, setShowAuth, setAuthMode, s
           {/* ─── More Tab ─── */}
           <button
             onClick={() => setShowMoreSheet(true)}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
+            className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 cursor-pointer text-dim hover:text-copy"
             title="More"
           >
-            <Ellipsis className="w-5 h-5" />
-            <span className="text-[9px] font-semibold tracking-tight opacity-70">
+            <Ellipsis className="w-5 h-5 text-dim" />
+            <span className="text-[10px] font-semibold tracking-tight opacity-70 text-dim">
               More
             </span>
           </button>

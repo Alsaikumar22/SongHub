@@ -2,26 +2,34 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useAudio } from "@/context/audio-context";
-import { usePathname, useRouter } from "next/navigation";
+import { useSearch } from "@/context/search-context";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
 import PlayerBar from "@/components/player-bar";
 import AuthModal from "@/components/auth/AuthModal";
 import TalkToUsDrawer from "./TalkToUsDrawer";
 import { useAuth } from "@/context/auth-context";
-import { WelcomeModalProvider, useWelcomeModal } from "@/context/welcome-modal-context";
+import {
+  WelcomeModalProvider,
+  useWelcomeModal,
+} from "@/context/welcome-modal-context";
 import WelcomeModal from "@/components/auth/WelcomeModal";
 import SignInNudge from "@/components/auth/SignInNudge";
 import Image from "next/image";
 import SongArtwork from "@/components/ui/SongArtwork";
 import {
+  Home,
   Music,
+  Music2,
   PlayCircle,
+  Play,
   LayoutGrid,
   Plus,
   ListMusic,
   SquareChevronLeft,
   SquareChevronRight,
+  ChevronRight,
   X,
   Library,
   Heart,
@@ -31,24 +39,42 @@ import {
   MessageCircle,
   Shield,
   Sparkles,
+  Bot,
   HelpCircle,
   ChevronDown,
+  Compass,
+  Clock,
+  ArrowUp,
 } from "lucide-react";
+import FeatureTour from "./FeatureTour";
+import { useTour } from "@/context/tour-context";
+import AddToPlaylistModal from "@/components/playlist/AddToPlaylistModal";
+import CreatePlaylistModal from "@/components/playlist/CreatePlaylistModal";
+import CollaboratorsModal from "@/components/playlist/CollaboratorsModal";
+import QueuePanel from "@/components/player/QueuePanel";
+import YouWorshipAiDrawer from "@/components/ai/YouWorshipAiDrawer";
 
 export default function AppLayout({ children }) {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState("signup");
 
   return (
-    <WelcomeModalProvider showAuthModal={() => { setShowAuth(true); setAuthMode("signup"); }}>
-      <AppLayoutInner
-        showAuth={showAuth}
-        setShowAuth={setShowAuth}
-        authMode={authMode}
-        setAuthMode={setAuthMode}
-      >
-        {children}
-      </AppLayoutInner>
+    <WelcomeModalProvider
+      showAuthModal={() => {
+        setShowAuth(true);
+        setAuthMode("signup");
+      }}
+    >
+      <Suspense fallback={<>{children}</>}>
+        <AppLayoutInner
+          showAuth={showAuth}
+          setShowAuth={setShowAuth}
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+        >
+          {children}
+        </AppLayoutInner>
+      </Suspense>
     </WelcomeModalProvider>
   );
 }
@@ -69,6 +95,8 @@ function AppLayoutInner({
     requireAuth,
   } = useWelcomeModal();
 
+  const { startTour } = useTour();
+
   const {
     songs,
     currentSong,
@@ -85,11 +113,24 @@ function AppLayoutInner({
     activePlaylistId,
     setActivePlaylistId,
     setViewedSongId,
+    showFullHome,
     setShowFullHome,
+    recentlyPlayed,
+    addToPlaylistSong,
+    setAddToPlaylistSong,
+    isCreatePlaylistOpen,
+    setIsCreatePlaylistOpen,
+    editingPlaylist,
+    setEditingPlaylist,
+    collaboratingPlaylist,
+    setCollaboratingPlaylist,
+    hasEnteredApp,
+    setCurrentSectionLetter,
   } = useAudio();
 
   const pathname = usePathname();
   const router = useRouter();
+  const { setSearchQuery, setShowFullResults } = useSearch();
   const {
     isAuthenticated,
     loading: authLoading,
@@ -122,11 +163,77 @@ function AppLayoutInner({
       // Clean URL without triggering a re-render loop
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [pathname]);
+  }, [isAuthenticated, setReturnPath]);
+
+  // Scroll to top button & circular filling progress
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const winScroll =
+        window.scrollY || document.documentElement.scrollTop || 0;
+      const winHeight =
+        (document.documentElement.scrollHeight || document.body.scrollHeight) -
+        window.innerHeight;
+
+      const scrollContainers = document.querySelectorAll(".overflow-y-auto");
+      let maxInternalScroll = 0;
+      let maxInternalHeight = 0;
+
+      scrollContainers.forEach((el) => {
+        if (el.scrollTop > maxInternalScroll) {
+          maxInternalScroll = el.scrollTop;
+          maxInternalHeight = el.scrollHeight - el.clientHeight;
+        }
+      });
+
+      const activeScroll = Math.max(winScroll, maxInternalScroll);
+      const activeHeight = Math.max(winHeight, maxInternalHeight);
+
+      if (activeHeight > 0) {
+        const progress = Math.min(
+          100,
+          Math.max(0, (activeScroll / activeHeight) * 100),
+        );
+        setScrollProgress(progress);
+      }
+
+      setShowScrollTop(activeScroll > 120);
+    };
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+      capture: true,
+    });
+    document.addEventListener("scroll", handleScroll, {
+      passive: true,
+      capture: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll, { capture: true });
+      document.removeEventListener("scroll", handleScroll, { capture: true });
+    };
+  }, []);
+
+  const handleScrollToTop = () => {
+    // Instant jump to top directly without smooth scroll delay
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const scrollContainers = document.querySelectorAll(".overflow-y-auto");
+    scrollContainers.forEach((el) => {
+      el.scrollTop = 0;
+    });
+    setScrollProgress(0);
+    setShowScrollTop(false);
+  };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [showTalkToUs, setShowTalkToUs] = useState(false);
+  const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [talkToUsTab, setTalkToUsTab] = useState("request");
   const [talkToUsCategory, setTalkToUsCategory] = useState("Contact Us");
   const [queriesExpanded, setQueriesExpanded] = useState(false);
@@ -153,16 +260,38 @@ function AppLayoutInner({
     }
   };
 
-  const isLanding = pathname === "/";
-  const isDiscover = pathname === "/home";
+  const searchParams = useSearchParams();
+  const isLanding =
+    pathname === "/" &&
+    !searchParams?.get("tab") &&
+    !searchParams?.get("q") &&
+    !searchParams?.get("category") &&
+    !searchParams?.get("playlistId") &&
+    !searchParams?.get("view") &&
+    !searchParams?.get("letter") &&
+    !searchParams?.get("app") &&
+    !searchParams?.get("auth");
+  const isDiscover = pathname === "/" || pathname === "/home";
+
+  // Footer / header links open drawers via custom events
+  useEffect(() => {
+    const openTalkToUs = () => setShowTalkToUs(true);
+    const openAbout = () => setShowAboutModal(true);
+    const openAi = () => setShowAiDrawer(true);
+    window.addEventListener("youworship:open-talk-to-us", openTalkToUs);
+    window.addEventListener("youworship:open-about", openAbout);
+    window.addEventListener("youworship:open-ai", openAi);
+    return () => {
+      window.removeEventListener("youworship:open-talk-to-us", openTalkToUs);
+      window.removeEventListener("youworship:open-about", openAbout);
+      window.removeEventListener("youworship:open-ai", openAi);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Disable the hotkey on the landing page (no player chrome there).
-      // Read the live pathname so the deps array stays constant-sized
-      // (prevents a React Compiler size-mismatch error).
-      if (typeof window !== "undefined" && window.location.pathname === "/")
-        return;
+      // Disable hotkey when on the Explore Songs landing screen
+      if (isLanding) return;
 
       if (e.code === "Space" || e.key === " ") {
         // Skip hotkey when typing in input, textarea, select, button, or contenteditable
@@ -192,67 +321,55 @@ function AppLayoutInner({
     };
   }, [togglePlay, isAuthenticated]);
 
-  // ─── LANDING PAGE (root URL): render children without app chrome ───
-  if (isLanding) {
-    return <>{children}</>;
-  }
-
-  // ─── SPLASH SCREEN: shown while Firebase auth state is loading ───
-  if (authLoading) {
-    return (
-      <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans items-center justify-center">
-        <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500">
-          {/* Logo */}
-          <Image
-            src="/youworship-logo.png"
-            alt="YouWorship"
-            width={80}
-            height={80}
-            className="w-20 h-20 object-contain"
-            priority
-          />
-          {/* App Name */}
-          <h1 className="text-2xl font-black text-title tracking-tight">
-            YouWorship
-          </h1>
-          {/* Loading Spinner */}
-          <div className="w-6 h-6 border-2 border-[#D4A32A]/30 border-t-[#D4A32A] rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  // ─── AUTH LOADING: no splash screen ──────────────────────────────────────
+  // The app renders immediately while Firebase resolves the auth state in the
+  // background (isAuthenticated flips a moment later). Removing the branded
+  // splash avoids the jarring logo + spinner flash after "Explore Songs".
 
   // ─── AUTH GATE: for non-authenticated users, show content but block interaction ───
   // The home page content is fully visible. An invisible overlay catches all clicks
   // and triggers the auth modal. This prevents ProtectedAction double-modals and
   // gives the user a clean "browse first, then authenticate" experience.
 
+  // ─── LANDING SCREEN (Explore Songs): render children without app chrome ───
+  if (isLanding) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="h-screen h-dvh flex flex-col bg-canvas text-copy font-sans">
+    <div className="fixed inset-0 w-full h-full flex flex-col bg-canvas text-copy font-sans overflow-hidden select-none">
       <Header setShowAuth={setShowAuth} setAuthMode={setAuthMode} />
-      <div
-        className="flex flex-1 min-h-0 min-w-0 lg:p-2 p-0 lg:gap-2 gap-0"
-      >
+      <div className="flex flex-1 min-h-0 min-w-0 lg:pt-2 lg:px-2 lg:pb-[88px] lg:gap-2 gap-0 p-0 overflow-hidden">
         {/* SIDEBAR — production-grade navigation */}
         <aside
           className={`${sidebarCollapsed ? "w-20" : "w-72"} bg-card rounded-xl hidden lg:flex flex-col shrink-0 transition-all duration-300 ease-in-out`}
         >
           {/* ─── Main Navigation ─── */}
-          <div className="px-3 pt-3 pb-2 space-y-0.5">
-            <SidebarNavItem
-              icon={<Music className="w-5 h-5" />}
-              label="Songs"
-              collapsed={sidebarCollapsed}
-              active={isDiscover && activeTab === "discover"}
-              onClick={() => {
-                scrollToTop();
-                setActiveTab("discover");
-                setActivePlaylistId(null);
-                setViewedSongId(null);
-                setShowFullHome(false);
-                router.push("/home?tab=discover");
-              }}
-            />
+          <div className="px-3 pt-3 pb-2 space-y-0.5 shrink-0">
+            <div id="tour-nav-songs">
+              <SidebarNavItem
+                icon={<Music className="w-5 h-5" />}
+                label="Songs"
+                collapsed={sidebarCollapsed}
+                active={isDiscover && activeTab === "discover" && !showFullHome}
+                onClick={() => {
+                  scrollToTop();
+                  setSearchQuery("");
+                  setShowFullResults(false);
+                  setActiveTab("discover");
+                  setActivePlaylistId(null);
+                  setViewedSongId(null);
+                  setShowFullHome(false);
+                  if (setCurrentSectionLetter) setCurrentSectionLetter(null);
+                  if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.removeItem("yw_selected_letter");
+                    } catch (e) {}
+                  }
+                  router.push("/?tab=songs");
+                }}
+              />
+            </div>
             <SidebarNavItem
               icon={<PlayCircle className="w-5 h-5" />}
               label="Now Playing"
@@ -265,34 +382,41 @@ function AppLayoutInner({
                     `/song/${encodeURIComponent(currentSong.slug || currentSong.id)}?view=lyrics`,
                   );
                 } else {
+                  setSearchQuery("");
+                  setShowFullResults(false);
                   setActivePlaylistId(null);
                   setViewedSongId(null);
-                  router.push("/home");
+                  router.push("/");
                 }
               }}
             />
-            <SidebarNavItem
-              icon={<LayoutGrid className="w-5 h-5" />}
-              label="Categories"
-              collapsed={sidebarCollapsed}
-              active={isDiscover && activeTab === "categories"}
-              onClick={() => {
-                scrollToTop();
-                setActivePlaylistId(null);
-                setViewedSongId(null);
-                router.push("/home?tab=categories");
-              }}
-            />
+            <div id="tour-nav-categories">
+              <SidebarNavItem
+                icon={<LayoutGrid className="w-5 h-5" />}
+                label="Categories"
+                collapsed={sidebarCollapsed}
+                active={isDiscover && activeTab === "categories"}
+                onClick={() => {
+                  scrollToTop();
+                  setSearchQuery("");
+                  setShowFullResults(false);
+                  setActiveTab("categories");
+                  setActivePlaylistId(null);
+                  setViewedSongId(null);
+                  router.push("/?tab=categories");
+                }}
+              />
+            </div>
           </div>
 
           {/* ─── Divider ─── */}
-          <div className="mx-3 border-t border-line/10" />
+          <div className="mx-3 border-t border-line/10 shrink-0" />
 
           {/* ─── Your Library Section ─── */}
-          <div className="flex-1 flex flex-col overflow-hidden px-3 pt-2 pb-1">
+          <div className="min-h-0 flex-1 flex flex-col px-3 pt-2 pb-1 overflow-hidden">
             {/* Library Header */}
             <div
-              className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2`}
+              className={`flex items-center ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-1"} py-2 shrink-0`}
             >
               {!sidebarCollapsed && (
                 <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
@@ -305,7 +429,7 @@ function AppLayoutInner({
                 <button
                   onClick={() => {
                     requireAuth(() => {
-                      setShowCreateModal(true);
+                      setIsCreatePlaylistOpen(true);
                     });
                   }}
                   className="p-1 hover:bg-card-hover rounded-md text-dim hover:text-copy transition-colors cursor-pointer"
@@ -316,17 +440,67 @@ function AppLayoutInner({
               )}
             </div>
 
+            {/* Recently Played */}
+            {!sidebarCollapsed && (
+              <div className="px-1 mb-1 shrink-0">
+                <button
+                  onClick={() => {
+                    scrollToTop();
+                    setSearchQuery("");
+                    setShowFullResults(false);
+                    setActivePlaylistId(null);
+                    setViewedSongId(null);
+                    setActiveTab("recently-played");
+                    router.push("/?tab=recently-played");
+                  }}
+                  className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
+                    isDiscover && activeTab === "recently-played"
+                      ? "bg-card-hover"
+                      : "hover:bg-card-hover"
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-lg bg-card-hover border border-line flex items-center justify-center shrink-0 shadow-sm text-dim">
+                    <Clock className="w-4.5 h-4.5 text-[#D4A32A]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-copy block truncate">
+                      Recently Played
+                    </span>
+                    <span className="text-xs text-muted block truncate">
+                      {
+                        (Array.isArray(recentlyPlayed)
+                          ? recentlyPlayed
+                          : []
+                        ).filter((id) => songs.some((s) => s.id === id)).length
+                      }{" "}
+                      song
+                      {(Array.isArray(recentlyPlayed)
+                        ? recentlyPlayed
+                        : []
+                      ).filter((id) => songs.some((s) => s.id === id))
+                        .length !== 1
+                        ? "s"
+                        : ""}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
+
             {/* Collection (Favorites) */}
             {!sidebarCollapsed && (
-              <div className="px-1 mb-1">
-                <div className="group relative">
+              <div className="px-1 mb-1 shrink-0">
+                <div id="tour-nav-favorites" className="group relative">
                   <button
                     onClick={() => {
                       requireAuth(() => {
                         scrollToTop();
+                        setSearchQuery("");
+                        setShowFullResults(false);
                         setActivePlaylistId(null);
                         setViewedSongId(null);
-                        router.push("/home?tab=favorites");
+                        setActiveTab("favorites");
+                        router.push("/?tab=favorites");
                       });
                     }}
                     className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left cursor-pointer ${
@@ -340,10 +514,20 @@ function AppLayoutInner({
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-copy block truncate">
-                        Collection
+                        Liked Songs
                       </span>
                       <span className="text-xs text-muted block truncate">
-                        {favorites.length} songs
+                        {
+                          (Array.isArray(favorites) ? favorites : []).filter(
+                            (id) => songs.some((s) => s.id === id),
+                          ).length
+                        }{" "}
+                        liked song
+                        {(Array.isArray(favorites) ? favorites : []).filter(
+                          (id) => songs.some((s) => s.id === id),
+                        ).length !== 1
+                          ? "s"
+                          : ""}
                       </span>
                     </div>
                   </button>
@@ -364,16 +548,27 @@ function AppLayoutInner({
 
             {/* Playlists label */}
             {!sidebarCollapsed && (
-              <div className="px-1 pt-2 pb-1">
-                <span className="text-[10px] font-bold text-dim uppercase tracking-wider">
+              <div className="px-1 pt-2 pb-1 flex items-center justify-between shrink-0">
+                <button
+                  onClick={() => {
+                    scrollToTop();
+                    setSearchQuery("");
+                    setShowFullResults(false);
+                    setActivePlaylistId(null);
+                    setViewedSongId(null);
+                    setActiveTab("playlists");
+                    router.push("/?tab=playlists");
+                  }}
+                  className="text-[10px] font-bold text-dim hover:text-title uppercase tracking-wider transition-colors cursor-pointer"
+                >
                   Playlists
-                </span>
+                </button>
               </div>
             )}
 
-            {/* Playlist items */}
+            {/* Playlist items — Expanded vertical scroll height */}
             <div
-              className={`flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-0.5 px-1 py-0.5`}
+              className={`min-h-0 flex-1 ${sidebarCollapsed ? "" : "overflow-y-auto"} space-y-1 px-1 py-1`}
             >
               {playlists.length === 0 && !sidebarCollapsed && (
                 <div className="px-2 py-6 text-center">
@@ -402,7 +597,7 @@ function AppLayoutInner({
                         setActiveTab("playlist");
                         setActivePlaylistId(list.id);
                         setViewedSongId(null);
-                        router.push(`/home?tab=playlist&playlistId=${list.id}`);
+                        router.push(`/?tab=playlist&playlistId=${list.id}`);
                       });
                     }}
                   />
@@ -421,10 +616,10 @@ function AppLayoutInner({
           </div>
 
           {/* ─── Divider ─── */}
-          <div className="mx-3 border-t border-line/10" />
+          <div className="mx-3 border-t border-line/10 shrink-0" />
 
           {/* ─── Queries Dropdown Section ─── */}
-          <div className="px-3 pt-1.5 pb-2 space-y-0.5">
+          <div className="px-3 pt-1.5 pb-2 space-y-0.5 shrink-0">
             <button
               onClick={() => {
                 if (sidebarCollapsed) {
@@ -509,6 +704,16 @@ function AppLayoutInner({
                   }}
                   isSubItem={true}
                 />
+                <SidebarNavItem
+                  icon={
+                    <HelpCircle className="w-4 h-4 text-purple-400 shrink-0" />
+                  }
+                  label="Replay Tour"
+                  collapsed={false}
+                  active={false}
+                  onClick={startTour}
+                  isSubItem={true}
+                />
               </div>
             )}
 
@@ -542,7 +747,7 @@ function AppLayoutInner({
         {/* MAIN PANEL CONTENT */}
         <main
           className={`flex-1 flex flex-col min-w-0 bg-card lg:rounded-xl lg:border lg:border-line/30 overflow-hidden relative ${
-            isAuthenticated ? "pb-[116px]" : "pb-[64px]"
+            currentSong ? "pb-[120px]" : "pb-[60px]"
           } lg:pb-0`}
         >
           {children}
@@ -759,8 +964,10 @@ function AppLayoutInner({
                   className="w-14 h-14 object-contain shrink-0"
                 />
                 <div>
-                  <h2 className="text-lg font-bold text-title">YouWorship</h2>
-                  <p className="text-xs text-muted">Anywhere</p>
+                  <h2 className="text-xl font-black text-title">YouWorship</h2>
+                  <p className="text-[10px] text-title font-semibold mt-0.5">
+                    Lyrics & Music
+                  </p>
                 </div>
               </div>
 
@@ -826,21 +1033,81 @@ function AppLayoutInner({
         </div>
       )}
 
-      {/* Floating "Talk to us" circular button — hidden on mobile */}
-      <button
-        onClick={() => setShowTalkToUs(true)}
-        className="hidden lg:flex fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 w-12.5 h-12.5 lg:w-14 lg:h-14 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-black shadow-[0_8px_32px_rgba(212,163,42,0.35)] rounded-full items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-[0_12px_40px_rgba(212,163,42,0.5)] active:scale-95 shrink-0 select-none animate-in fade-in slide-in-from-right-4 duration-300 group border border-white/20"
-        title="Talk to us"
-        aria-label="Open Talk to us drawer"
-      >
-        <MessageCircle className="w-6 h-6 lg:w-7 lg:h-7 text-black fill-black/15 transition-transform duration-300 group-hover:rotate-12" />
-        {/* Tooltip on hover */}
-        <span className="absolute right-full mr-3 px-2.5 py-1.5 bg-card/95 backdrop-blur-md text-title text-xs font-bold rounded-lg shadow-xl border border-line opacity-0 scale-95 origin-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none whitespace-nowrap">
-          Talk to us
-        </span>
-      </button>
+      {/* Floating Action Column: Scroll To Top + AI Assistant */}
+      <div className="fixed right-4 lg:right-6 bottom-32 lg:bottom-24 z-40 flex flex-col items-center gap-2 select-none">
+        {/* Scroll To Top (Up Arrow) button with circular scroll filling progress */}
+        {showScrollTop && (
+          <button
+            onClick={handleScrollToTop}
+            className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-card/95 hover:bg-card-hover text-dim hover:text-title border border-line shadow-xl backdrop-blur-md flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 animate-in fade-in zoom-in-75 duration-200 group relative"
+            title="Jump to top"
+            aria-label="Jump to top"
+          >
+            {/* Circular filling SVG progress ring */}
+            <svg
+              className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none p-0.5"
+              viewBox="0 0 40 40"
+            >
+              {/* Background Track */}
+              <circle
+                cx="20"
+                cy="20"
+                r="17"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                fill="none"
+                className="text-line/40"
+              />
+              {/* Animated Filling Progress Ring */}
+              <circle
+                cx="20"
+                cy="20"
+                r="17"
+                stroke="#D4A32A"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="106.81"
+                strokeDashoffset={106.81 - (scrollProgress / 100) * 106.81}
+                className="transition-[stroke-dashoffset] duration-150 ease-out"
+              />
+            </svg>
 
-      {/* TALK TO US DRAWER */}
+            {/* Center Up Arrow */}
+            <ArrowUp className="w-4 h-4 lg:w-4.5 lg:h-4.5 text-title group-hover:-translate-y-0.5 transition-transform relative z-10" />
+
+            <span className="absolute right-full mr-2.5 px-2 py-1 bg-card/95 backdrop-blur-md text-title text-[11px] font-bold rounded-lg shadow-xl border border-line opacity-0 scale-95 origin-right group-hover:opacity-100 group-hover:scale-100 transition-all pointer-events-none whitespace-nowrap">
+              Top
+            </span>
+          </button>
+        )}
+
+        {/* Floating "YouWorship AI" circular button — decreased size */}
+        <button
+          onClick={() => setShowAiDrawer(true)}
+          className="w-10.5 h-10.5 lg:w-11.5 lg:h-11.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-black shadow-[0_6px_24px_rgba(212,163,42,0.35)] rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-[0_10px_32px_rgba(212,163,42,0.55)] active:scale-95 shrink-0 animate-in fade-in slide-in-from-right-4 duration-300 group border border-white/20 relative"
+          title="YouWorship AI Assistant"
+          aria-label="Open YouWorship AI Assistant"
+        >
+          <div className="relative flex items-center justify-center">
+            <Bot className="w-5 h-5 lg:w-5.5 lg:h-5.5 text-black fill-black/15 transition-transform duration-300 group-hover:scale-110" />
+            <Sparkles className="w-2.5 h-2.5 text-black absolute -top-0.5 -right-0.5 animate-pulse" />
+          </div>
+          {/* Tooltip on hover */}
+          <span className="absolute right-full mr-2.5 px-2.5 py-1.5 bg-card/95 backdrop-blur-md text-title text-xs font-bold rounded-xl shadow-xl border border-line opacity-0 scale-95 origin-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none whitespace-nowrap flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#D4A32A]" />
+            <span>YouWorship AI</span>
+          </span>
+        </button>
+      </div>
+
+      {/* YOUWORSHIP AI ASSISTANT DRAWER */}
+      <YouWorshipAiDrawer
+        isOpen={showAiDrawer}
+        onClose={() => setShowAiDrawer(false)}
+      />
+
+      {/* TALK TO US DRAWER (Fallback for footer contact links) */}
       <TalkToUsDrawer
         isOpen={showTalkToUs}
         onClose={() => setShowTalkToUs(false)}
@@ -869,6 +1136,33 @@ function AppLayoutInner({
           setAuthMode("signup");
         }}
       />
+      {/* FEATURE ONBOARDING TOUR */}
+      <FeatureTour />
+
+      {/* GLOBAL PLAYLIST MODALS */}
+      <AddToPlaylistModal
+        song={addToPlaylistSong}
+        isOpen={!!addToPlaylistSong}
+        onClose={() => setAddToPlaylistSong(null)}
+      />
+
+      <CreatePlaylistModal
+        isOpen={isCreatePlaylistOpen}
+        onClose={() => {
+          setIsCreatePlaylistOpen(false);
+          setEditingPlaylist(null);
+        }}
+        initialPlaylist={editingPlaylist}
+      />
+
+      <CollaboratorsModal
+        playlist={collaboratingPlaylist}
+        isOpen={!!collaboratingPlaylist}
+        onClose={() => setCollaboratingPlaylist(null)}
+      />
+
+      {/* GLOBAL PLAY QUEUE DRAWER */}
+      <QueuePanel />
     </div>
   );
 }
@@ -914,25 +1208,25 @@ function LibraryItem({ icon, title, subtitle, collapsed, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative cursor-pointer ${
-        active ? "bg-card-hover" : "hover:bg-card-hover"
+      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left group relative cursor-pointer min-h-[48px] ${
+        active ? "bg-card-hover border border-line/40 text-title" : "hover:bg-card-hover border border-transparent"
       }`}
       title={collapsed ? title : undefined}
     >
       {icon}
       {!collapsed && (
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <div className="flex-1 min-w-0 flex flex-col justify-center leading-snug">
           <span
-            className={`text-sm font-medium truncate ${active ? "text-title" : "text-copy"}`}
+            className={`text-sm font-semibold truncate block ${active ? "text-title" : "text-copy group-hover:text-title"}`}
           >
             {title}
           </span>
-          <span className="text-[11px] text-muted truncate">{subtitle}</span>
+          <span className="text-[11px] text-muted truncate block mt-0.5">{subtitle}</span>
         </div>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-card text-title text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
-          <div className="font-medium">{title}</div>
+        <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-card text-title text-xs font-semibold rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none shadow-xl border border-line">
+          <div className="font-semibold">{title}</div>
           <div className="text-[10px] text-muted">{subtitle}</div>
         </div>
       )}

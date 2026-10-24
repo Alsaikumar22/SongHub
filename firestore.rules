@@ -6,7 +6,7 @@ rules_version = '2';
 // Deploy with:  firebase deploy --only firestore:rules
 //
 // Collections in use:
-//   Youworship_songs            — song catalog (served via public API)
+//   youworship_songs            — song catalog (served via public API)
 //   bible_chapters              — daily Bible verses (public)
 //   Youworship_users/{uid}      — favorites / playlists / recently played
 //   Youworship_users/{uid}/devices/{deviceId}  — YouWorship Connect registry
@@ -37,7 +37,7 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────
     // Public content — browsable without an account.
     // ─────────────────────────────────────────────────────────────
-    match /Youworship_songs/{songId} {
+    match /youworship_songs/{songId} {
       // Songs are public; the API also serves them.
       allow read: if true;
 
@@ -68,6 +68,15 @@ service cloud.firestore {
       // Favorites, playlists, recently played (src/lib/firestore-service.js)
       allow read, write: if isOwner(uid) || isAdmin();
 
+      // ─── Subcollections: Playlists & Recently Played ─────────
+      match /playlists/{playlistId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+
+      match /recentlyPlayed/{songId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+
       // ─── YouWorship Connect — device registry ────────────────
       // Devices register after login, sync presence/playback state,
       // and discover each other — all within the same account.
@@ -75,6 +84,63 @@ service cloud.firestore {
       match /devices/{deviceId} {
         allow read, write: if isOwner(uid) || isAdmin();
       }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Collaborative Playlists — Shared Multi-User Playlists
+    // ─────────────────────────────────────────────────────────────
+    match /playlists/{playlistId} {
+      function isPlaylistOwner() {
+        return request.auth != null && (
+          resource.data.ownerId == request.auth.uid ||
+          request.resource.data.ownerId == request.auth.uid
+        );
+      }
+
+      function isPlaylistEditor() {
+        return request.auth != null && (
+          resource.data.ownerId == request.auth.uid ||
+          (resource.data.collaborators != null && (
+            resource.data.collaborators[request.auth.uid] == 'editor' ||
+            resource.data.collaborators[request.auth.uid].role == 'editor'
+          ))
+        );
+      }
+
+      function isPlaylistCollaborator() {
+        return request.auth != null && (
+          resource.data.ownerId == request.auth.uid ||
+          (resource.data.collaborators != null && resource.data.collaborators[request.auth.uid] != null) ||
+          (resource.data.collaboratorUids != null && request.auth.uid in resource.data.collaboratorUids)
+        );
+      }
+
+      // Read: Allowed for authenticated users (collaborators, owners, or joiners via share link) or admin
+      allow read: if request.auth != null || isAdmin();
+
+      // Create: Authenticated user creating their own playlist
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+
+      // Update:
+      // 1. Owner/Admin: Full update permissions
+      // 2. Editor: Can modify songIds, songAddedBy, and updatedAt
+      // 3. Authenticated Joiner: Can add themselves to collaborators
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        isPlaylistOwner() ||
+        (
+          isPlaylistEditor() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['songIds', 'songAddedBy', 'updatedAt'])
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['collaborators', 'collaboratorUids', 'updatedAt'])
+        )
+      );
+
+      // Delete: Owner or Admin only
+      allow delete: if request.auth != null && (isPlaylistOwner() || isAdmin());
     }
 
     // ─────────────────────────────────────────────────────────────
